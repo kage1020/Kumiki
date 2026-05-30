@@ -1,0 +1,31 @@
+# Feature: localStorage persistence — load on start (once), save on change (debounce).
+
+slot text  : Text = ""
+slot ready : Bool = false
+
+effect loadText cap=storage.read
+                in=Unit
+                out=Result(Option(Text), Text)
+                policy=once
+                map-request={key: "note", decode: Decoder.Json(Text)}
+
+effect saveText cap=storage.write
+                in=Text
+                out=Result(Unit, Text)
+                policy=debounce(300ms)
+                map-request={key: "note", value: $1}
+
+reducer boot   on=app.start          do= emit loadText()
+reducer loaded on=loadText.ok($o, _) do= text  := $o.get-or("")
+                                        ready := true
+reducer edit   on=ui.input(NoteInput)
+    do= text := $el.value
+        emit saveText(text)
+
+tile NoteInput = textarea(bind=text, placeholder="Auto-saved note...")
+tile App = column(NoteInput, text("saved automatically")) {pad: "lg", gap: "md"}
+
+app EffectStorage
+    caps   = [storage.read, storage.write]
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

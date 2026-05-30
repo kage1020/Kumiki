@@ -1,0 +1,21 @@
+# Feature: Set — toggle membership and test with .has.
+
+type Tag = nominal Text where nonempty
+
+slot selected : Set(Tag) = {}
+
+reducer toggleA on=ui.click(TagA) do= selected := selected.toggle("urgent")
+reducer toggleB on=ui.click(TagB) do= selected := selected.toggle("bug")
+
+tile TagA = button(text="urgent", onClick=toggleA) {
+              variant: if selected.has("urgent") then "primary" else "ghost"}
+tile TagB = button(text="bug", onClick=toggleB) {
+              variant: if selected.has("bug") then "primary" else "ghost"}
+tile App = column(
+             text("selected: " + selected.size.show),
+             row(TagA, TagB) {gap: "sm"})
+
+app SetFeature
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

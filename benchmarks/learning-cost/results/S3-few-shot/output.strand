@@ -1,0 +1,89 @@
+# Pomodoro Timer — Strand v0.1
+# Demonstrates: types, slots, reducers (timer event), tiles, fns, app
+
+# ====== Types ======
+
+type Mode      = Work | Break
+type Remaining = nominal Int where between(0, 1500)
+
+# ====== Slots ======
+
+slot mode      : Mode       = Work
+slot remaining : Remaining  = 1500
+slot running   : Bool       = false
+
+# ====== Fns (pure helpers) ======
+
+fn maxFor(m: Mode) -> Int
+   = match m with
+       | Work  -> 1500
+       | Break -> 300
+
+fn nextMode(m: Mode) -> Mode
+   = match m with
+       | Work  -> Break
+       | Break -> Work
+
+fn modeLabel(m: Mode) -> Text
+   = match m with
+       | Work  -> "Work"
+       | Break -> "Break"
+
+fn pad2(n: Int) -> Text
+   = if n < 10 then "0" + n.to-text else n.to-text
+
+fn formatMmSs(secs: Int) -> Text
+   = pad2(secs / 60) + ":" + pad2(secs % 60)
+
+# ====== Reducers ======
+
+reducer start
+    on=ui.click(StartBtn)
+    do= running := true
+
+reducer pause
+    on=ui.click(PauseBtn)
+    do= running := false
+
+reducer reset
+    on=ui.click(ResetBtn)
+    do= running := false
+        remaining := maxFor(mode)
+
+reducer tick
+    on=timer(1s)
+    do= if running
+        then if remaining > 1
+             then remaining := remaining - 1
+             else mode := nextMode(mode)
+                  remaining := maxFor(nextMode(mode))
+        else ()
+
+# ====== Tiles ======
+
+tile StartBtn = button(text="Start", onClick=start) {disabled: running}
+tile PauseBtn = button(text="Pause", onClick=pause) {disabled: not running}
+tile ResetBtn = button(text="Reset", onClick=reset)
+
+tile ModeDisplay = heading(modeLabel(mode)) {size: "xl"}
+
+tile TimeDisplay = text(formatMmSs(remaining)) {size: "xxl", weight: "bold"}
+
+tile Controls = row(StartBtn, PauseBtn, ResetBtn) {gap: "sm"}
+
+tile App
+    = page(
+        heading("Pomodoro") {size: "xxl"},
+        column(
+          ModeDisplay,
+          TimeDisplay,
+          Controls)
+          {gap: "md", align: "center"})
+      {pad: "lg", gap: "md", max-w: 480}
+
+# ====== App ======
+
+app Pomodoro
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

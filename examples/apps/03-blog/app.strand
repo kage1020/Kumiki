@@ -1,0 +1,418 @@
+# Blog SPA — Strand v0.1
+# Demonstrates: routing, HTTP, list+detail+edit, auth, error handling, suspense, fn
+
+# ====== Types ======
+
+type PostId   = nominal Text where uuid
+type UserId   = nominal Text where uuid
+type Session  = {userId: UserId, token: Text}
+
+type Post = {
+    id: PostId,
+    title: Text where nonempty,
+    body: Text,
+    authorId: UserId,
+    publishedAt: Time,
+    tags: List(Text)
+}
+
+type LoadResult(T) = Idle | Loading | Loaded(T) | Failed(HttpError)
+
+# ====== Slots ======
+
+slot session     : Option(Session)                = None
+slot loginEmail  : Text                           = ""
+slot loginPw     : Text                volatile   = ""
+slot loginError  : Option(HttpError)              = None
+slot loginPending: Bool                           = false
+
+slot posts       : Map(PostId, LoadResult(Post))  = {}
+slot postIndex   : LoadResult(List(PostId))       = Idle
+
+slot editor      : Option({title: Text, body: Text, tags: List(Text)}) = None
+slot editSaving  : Bool                           = false
+
+# ====== Effects ======
+
+effect loadSession cap=storage.read
+                   in=Unit
+                   out=Result(Option(Session), Text)
+                   policy=once
+                   map-request={key: "session", decode: Decoder.Json(Option(Session))}
+
+effect saveSession cap=storage.write
+                   in=Option(Session)
+                   out=Result(Unit, Text)
+                   map-request={key: "session", value: $1}
+
+effect login    cap=http.post
+                in={email: Text, password: Text}
+                out=Result(Session, HttpError)
+                policy=latest
+                map-request={url: "/api/auth/login", body: Json($1), decode: Decoder.Json(Session)}
+
+effect logout   cap=http.post
+                in=Unit
+                out=Result(Unit, HttpError)
+                map-request={url: "/api/auth/logout", body: Empty, decode: Decoder.None}
+
+effect fetchIndex cap=http.get
+                  in=Unit
+                  out=Result(List(PostId), HttpError)
+                  policy=latest
+                  map-request={url: "/api/posts", decode: Decoder.Json(List(PostId))}
+
+effect fetchPost  cap=http.get
+                  in=PostId
+                  out=Result(Post, HttpError)
+                  policy=latest-per-key($1)
+                  retry=exponential(3, 200ms, 2.0)
+                  map-request={url: "/api/posts/" + $1.show, decode: Decoder.Json(Post)}
+
+effect savePost   cap=http.put
+                  in={id: PostId, title: Text, body: Text, tags: List(Text)}
+                  out=Result(Post, HttpError)
+                  policy=latest
+                  map-request={url: "/api/posts/" + $1.id.show, body: Json($1), decode: Decoder.Json(Post)}
+
+effect deletePost cap=http.delete
+                  in=PostId
+                  out=Result(Unit, HttpError)
+                  policy=latest-per-key($1)
+                  map-request={url: "/api/posts/" + $1.show, decode: Decoder.None}
+
+# ====== Fns ======
+
+fn routeId(r: Route) -> Option(PostId)
+   = PostId.parse(r.params.get-or("id", ""))
+
+fn isAuthorOf(s: Option(Session), p: Post) -> Bool
+   = match s with
+       | Some(sess) -> sess.userId == p.authorId
+       | None       -> false
+
+fn previewBody(b: Text) -> Text
+   = if b.length > 200 then b.slice(0, 200) + "..." else b
+
+fn formatDate(t: Time) -> Text
+   = t.format("yyyy-MM-dd")
+
+fn sessionLabel(s: Option(Session)) -> Text
+   = match s with
+       | Some(sess) -> "Hi, " + sess.userId.show.slice(0, 8)
+       | None       -> ""
+
+# ====== Lifecycle reducers ======
+
+reducer boot      on=app.start             do= emit loadSession()
+                                               emit fetchIndex()
+
+reducer sessIn    on=loadSession.ok($s,_)  do= session := $s.get-or(None)
+
+reducer indexIn
+    on=fetchIndex.ok($l, _)
+    do= postIndex := Loaded($l)
+        for id in $l {
+          posts[id] := Loading;
+          emit fetchPost(id)
+        }
+
+reducer indexErr  on=fetchIndex.err($e,_)  do= postIndex := Failed($e)
+reducer postIn    on=fetchPost.ok($p,$id)  do= posts[$id] := Loaded($p)
+reducer postErr   on=fetchPost.err($e,$id) do= posts[$id] := Failed($e)
+
+# Direct access to /posts/:id should fetch the post immediately, in parallel with
+# fetchIndex. policy=latest-per-key($1) means a duplicate fetch with the same id
+# cancels any in-flight one.
+reducer loadPostDirect
+    on=route.enter("/posts/:id")
+    do= match routeId($route) with
+            | Some(pid) -> emit fetchPost(pid)
+            | None      -> ()
+
+# ====== Auth ======
+
+reducer doLogin
+    on=ui.submit(LoginForm)
+    do= loginError := None
+        loginPending := true
+        emit login({email: loginEmail, password: loginPw})
+
+reducer loginOk
+    on=login.ok($s, _)
+    do= loginPending := false
+        session := Some($s)
+        loginPw := ""
+        emit saveSession(Some($s))
+        emit navigate({path: "/posts", params: {}, query: {}})
+
+reducer loginFailed
+    on=login.err($e, _)
+    do= loginPending := false
+        loginError := Some($e)
+
+reducer doLogout
+    on=ui.click(LogoutBtn)
+    do= session := None
+        emit saveSession(None)
+        emit logout()
+        emit navigate({path: "/login", params: {}, query: {}})
+
+reducer requireAuth
+    on=route.enter("/posts/:id/edit")
+    do= if session.is-none
+        then emit navigate-replace({path: "/login", params: {}, query: {}})
+        else ()
+
+# ====== Editor ======
+
+reducer startEdit
+    on=route.enter("/posts/:id/edit")
+    do= match routeId($route) with
+            | Some(pid) -> emit fetchPost(pid)
+            | None      -> emit navigate-replace({path: "/posts", params: {}, query: {}})
+
+reducer editorReady
+    on=fetchPost.ok($p, $id)
+    do= if $route.pattern == "/posts/:id/edit" && $route.params.get-or("id", "") == $id.show
+        then editor := Some({title: $p.title, body: $p.body, tags: $p.tags})
+        else ()
+
+reducer editTitle  on=ui.input(TitleInput) do= editor.get.title := $event.value
+reducer editBody   on=ui.input(BodyInput)  do= editor.get.body  := $event.value
+
+reducer saveEdit
+    on=ui.click(SaveEditBtn)
+    do= editSaving := true
+        match routeId($route) with
+            | Some(pid) -> emit savePost({id: pid, title: editor.get.title,
+                                          body: editor.get.body, tags: editor.get.tags})
+            | None      -> ()
+
+reducer saveOk
+    on=savePost.ok($p, _)
+    do= editSaving := false
+        posts[$p.id] := Loaded($p)
+        editor := None
+        emit toast({kind: "success", text: "Saved", duration: Some(Duration.s(2))})
+        emit navigate({path: "/posts/" + $p.id.show, params: {}, query: {}})
+
+reducer saveErr
+    on=savePost.err($e, _)
+    do= editSaving := false
+        emit toast({kind: "error", text: "Failed: " + $e.message, duration: None})
+
+reducer cancelEdit
+    on=route.leave("/posts/:id/edit")
+    do= editor := None
+
+# ====== Tiles: auth/nav ======
+
+tile LogoutBtn = button(text="Logout") {variant: "ghost"}
+
+tile Nav
+    = row(
+        link(to="/posts") {text: "Posts"},
+        link(to="/about") {text: "About"},
+        when(session.is-some,
+          row(
+            text(sessionLabel(session)) {color: "muted"},
+            LogoutBtn
+          ) {gap: "sm"}),
+        when(session.is-none,
+          link(to="/login") {text: "Log in"}))
+      {gap: "md", justify: "between", pad: "md", bg: "surface"}
+
+tile LoginForm
+    = form(
+        column(
+          label(text="Email") {for: "loginEmail"},
+          input(bind=loginEmail, type="email", id="loginEmail", required=true),
+          label(text="Password") {for: "loginPw"},
+          input(bind=loginPw, type="password", id="loginPw", required=true,
+                auto-complete="current-password"),
+          when(loginError.is-some,
+            text(loginError.get.message) {color: "danger"}),
+          button(text="Log in", type="submit", loading=loginPending) {bg: "primary"}
+        ) {gap: "sm"})
+
+tile LoginPage
+    = page(Nav, LoginForm)
+      {pad: "xl", max-w: 400}
+
+# ====== Tiles: posts list ======
+
+tile PostCard
+    in=PostId
+    = match posts.get($1) with
+        | None     -> text("")
+        | Some(lr) -> LoadedPostCard(lr)
+
+tile LoadedPostCard
+    in=LoadResult(Post)
+    = match $1 with
+        | Idle       -> text("")
+        | Loading    -> skeleton(kind="box") {h: 120}
+        | Failed(e)  -> card(text("Failed: " + e.message) {color: "danger"}) {pad: "md"}
+        | Loaded(p)  -> card(
+                          column(
+                            link(to="/posts/" + p.id.show) {
+                              text: p.title, size: "lg", weight: "bold"
+                            },
+                            text(previewBody(p.body)) {color: "muted"},
+                            row(
+                              for t in p.tags
+                                text("#" + t) {key: t, color: "primary", size: "sm"}
+                            ) {gap: "xs"}
+                          ) {gap: "xs"}
+                        ) {pad: "md"}
+
+tile PostList
+    = column(
+        Nav,
+        heading("Posts"),
+        match postIndex with
+          | Idle             -> spinner()
+          | Loading          -> spinner()
+          | Loaded(ids)      -> column(
+                                  for id in ids
+                                    PostCard(id) {key: id.show}
+                                ) {gap: "md"}
+          | Failed(e)        -> ErrorBox(e))
+      {pad: "lg", gap: "md", max-w: 800}
+
+# ====== Tiles: post detail ======
+
+tile PostDetailBody
+    in=Post
+    = column(
+        heading($1.title),
+        text(formatDate($1.publishedAt)) {color: "muted"},
+        markdown($1.body),
+        when(isAuthorOf(session, $1),
+          link(to="/posts/" + $1.id.show + "/edit") {text: "Edit"}))
+        {gap: "md"}
+
+tile PostDetail
+    = column(
+        Nav,
+        match routeId(route) with
+          | None      -> NotFoundInline
+          | Some(pid) -> LoadedPostBody(pid))
+      {pad: "lg", max-w: 720}
+
+tile LoadedPostBody
+    in=PostId
+    = match posts.get($1) with
+        | None     -> NotFoundInline
+        | Some(lr) -> LoadResultBody(lr)
+
+tile LoadResultBody
+    in=LoadResult(Post)
+    = match $1 with
+        | Idle       -> spinner() {size: "lg"}
+        | Loading    -> spinner() {size: "lg"}
+        | Failed(e)  -> ErrorBox(e)
+        | Loaded(p)  -> PostDetailBody(p)
+
+# ====== Tiles: editor ======
+
+tile TitleInput   = input(value=editor.get.title, id="title")
+tile BodyInput    = textarea(value=editor.get.body, id="body", rows=20)
+tile SaveEditBtn  = button(text="Save") {bg: "primary"}
+
+tile PostEditForm
+    = form(
+        column(
+          label(text="Title") {for: "title"},
+          TitleInput,
+          label(text="Body") {for: "body"},
+          BodyInput,
+          row(
+            SaveEditBtn {loading: editSaving},
+            link(to="/posts/" + route.params.get-or("id", "")) {text: "Cancel"}
+          ) {gap: "sm"}
+        ) {gap: "sm"})
+
+tile PostEdit
+    = match editor with
+        | None     -> column(Nav, spinner())
+        | Some(_)  -> column(Nav, heading("Edit Post"), PostEditForm)
+                      {pad: "lg", max-w: 800}
+
+# ====== Tiles: misc ======
+
+tile ErrorBox
+    in=HttpError
+    error-boundary = ErrorFallback
+    = card(
+        column(
+          text("Error " + $1.status.show) {color: "danger", weight: "bold"},
+          text($1.message))
+        {gap: "xs"}
+      ) {pad: "md", bg: "surface"}
+
+tile ErrorFallback
+    in=PanicInfo
+    = column(
+        heading("Something went wrong"),
+        text($1.message) {color: "danger"})
+
+tile NotFoundInline = column(
+                        heading("Post not found"),
+                        link(to="/posts") {text: "Back to list"})
+
+tile NotFound = page(
+                  Nav,
+                  heading("404"),
+                  text("Page not found"),
+                  link(to="/posts") {text: "Home"})
+
+tile About = page(Nav, heading("About"),
+                  text("This is a demo blog SPA built with Strand."))
+
+# ====== Theme ======
+
+theme DefaultTheme = {
+    colors: {bg: "#fafafa", fg: "#1a1a1a", muted: "#666", primary: "#0070f3",
+             surface: "#ffffff", border: "#e0e0e0", danger: "#c4222a", success: "#0a7c2f"},
+    spacing: {xs: "4px", sm: "8px", md: "16px", lg: "24px", xl: "40px", xxl: "64px"},
+    radius: {sm: "4px", md: "8px", lg: "16px"},
+    typography: {family: "system-ui, sans-serif",
+                 size: {sm: "14px", md: "16px", lg: "20px", xl: "28px", xxl: "40px"},
+                 weight: {normal: "400", medium: "500", bold: "700"},
+                 line-height: "1.6"},
+    shadow: {sm: "0 1px 2px rgba(0,0,0,0.08)",
+             md: "0 4px 12px rgba(0,0,0,0.1)"},
+    breakpoints: {sm: "640px", md: "768px", lg: "1024px"}
+}
+
+# ====== App ======
+
+app Blog
+    caps   = [http.get, http.post, http.put, http.delete,
+              storage.read, storage.write,
+              nav.push, nav.replace,
+              notification.show]
+    routes = {
+        "/"               ->> "/posts",
+        "/posts"          -> PostList,
+        "/posts/:id"      -> PostDetail,
+        "/posts/:id/edit" -> PostEdit,
+        "/login"          -> LoginPage,
+        "/about"          -> About,
+        "/404"            -> NotFound
+    }
+    init   = []
+    theme  = DefaultTheme
+    http   = {
+        base-url: "https://api.example.com",
+        headers:  {"Authorization": fmt("Bearer {0}", session.map($1.token).get-or(""))},
+        on-401:   doLogout,
+        timeout:  10000
+    }
+    meta   = {
+        title:       "Strand Blog",
+        description: "A blog SPA built with Strand",
+        favicon:     "/favicon.ico"
+    }

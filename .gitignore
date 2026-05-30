@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+dist/
+build/
+out/
+.turbo/
+*.tsbuildinfo
+
+# Test artifacts
+coverage/
+test-tmp/
+*.strand-ops.jsonl
+
+# Docs site build
+.vitepress/cache/
+.vitepress/dist/
+.astro/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.stackdump
+*.log
+
+# Local env
+.env
+.env.local
+
+# Claude Code local state
+.claude/scheduled_tasks.lock
+
+# Stale example build artifacts (regenerate with `strand build`)
+examples-build/

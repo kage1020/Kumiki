@@ -1,0 +1,24 @@
+# Feature: Result — Ok / Err, constructed from a parse and matched in the view.
+# `Int.parse` returns Option(Int); we lift it into a Result with `match`.
+
+slot raw    : Text              = "42"
+slot parsed : Result(Int, Text) = Ok(42)
+
+reducer edit on=ui.input(RawInput)
+    do= raw    := $el.value
+        parsed := match Int.parse($el.value) with
+                    | Some(n) -> Ok(n)
+                    | None    -> Err("not a number")
+
+tile RawInput = input(bind=raw, placeholder="Type a number")
+tile App = column(
+             RawInput,
+             match parsed with
+               | Ok(n)    -> text("parsed: " + n.show) {color: "primary"}
+               | Err(msg) -> text(msg) {color: "danger"})
+           {pad: "lg", gap: "md"}
+
+app ResultFeature
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

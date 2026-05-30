@@ -1,0 +1,20 @@
+# Feature: routing — path params, redirect (`->>`), and the /404 fallback.
+
+fn currentId(r: Route) -> Text = r.params.get-or("id", "?")
+
+tile Home   = page(heading("Home"),
+                   link(to="/items/42") {text: "Go to item 42"})
+tile Item   = page(heading("Item " + currentId(route)),
+                   link(to="/") {text: "Home"})
+tile NotFound = page(heading("404 — not found"),
+                     link(to="/") {text: "Home"})
+
+app RoutingFeature
+    caps   = []
+    routes = {
+        "/old"        ->> "/",
+        "/"           -> Home,
+        "/items/:id"  -> Item,
+        "/404"        -> NotFound
+    }
+    init   = []

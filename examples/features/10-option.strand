@@ -1,0 +1,29 @@
+# Feature: Option — Some / None and match-based handling.
+
+type UserId = nominal Text where uuid
+
+slot users    : Map(UserId, Text) = {}
+slot selected : Option(UserId)    = None
+
+reducer addAndSelect on=ui.click(AddBtn)
+    do= let id = UserId.fresh()
+        users[id]  := "user " + (users.size + 1).show
+        selected   := Some(id)
+
+reducer deselect on=ui.click(ClearBtn) do= selected := None
+
+fn currentName(us: Map(UserId, Text), sel: Option(UserId)) -> Text
+   = match sel with
+       | None     -> "(none selected)"
+       | Some(id) -> us.get-or(id, "?")
+
+tile AddBtn   = button(text="add + select", onClick=addAndSelect)
+tile ClearBtn = button(text="deselect", onClick=deselect)
+tile App = column(
+             heading(currentName(users, selected)),
+             row(AddBtn, ClearBtn) {gap: "sm"})
+
+app OptionFeature
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

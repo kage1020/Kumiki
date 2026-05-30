@@ -1,0 +1,14 @@
+# Feature: two-way `bind` between an input and a slot.
+
+slot name : Text = ""
+
+tile NameInput = input(bind=name, placeholder="Your name", auto-focus=true)
+tile App = column(
+             NameInput,
+             heading(if name == "" then "Hello, stranger" else "Hello, " + name))
+           {pad: "lg", gap: "md"}
+
+app TextInputBind
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

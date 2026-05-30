@@ -1,0 +1,23 @@
+# Feature: Map — insert, get-or, remove, keys.
+
+type ItemId = nominal Text where uuid
+
+slot items : Map(ItemId, Text) = {}
+
+reducer addItem on=ui.click(AddBtn)
+    do= let id = ItemId.fresh()
+        items[id] := "item " + (items.size + 1).show
+
+reducer clear on=ui.click(ClearBtn) do= items := {}
+
+tile AddBtn   = button(text="add", onClick=addItem)
+tile ClearBtn = button(text="clear", onClick=clear)
+tile App = column(
+             text("count: " + items.size.show),
+             column(for id in items.keys text(items.get-or(id, "?")) {key: id.show}),
+             row(AddBtn, ClearBtn) {gap: "sm"})
+
+app MapFeature
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

@@ -1,0 +1,19 @@
+{
+  "name": "@strand/tests",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Cross-cutting tests: every example in examples/ must parse, typecheck, and build.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "test": "vitest run",
+    "lint": "biome check ."
+  },
+  "devDependencies": {
+    "@strand/compiler": "workspace:*",
+    "@strand/runtime": "workspace:*",
+    "jsdom": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

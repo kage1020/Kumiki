@@ -1,0 +1,19 @@
+# Feature: record type + immutable update via `.copy(field=value)`.
+
+type Profile = {name: Text, age: Int}
+
+slot profile : Profile = {name="Ada", age=36}
+
+reducer birthday on=ui.click(BdayBtn)
+    do= profile := profile.copy(age=profile.age + 1)
+
+tile BdayBtn = button(text="Happy birthday", onClick=birthday)
+tile App = column(
+             heading(profile.name),
+             text("Age: " + profile.age.show),
+             BdayBtn)
+
+app RecordAndCopy
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

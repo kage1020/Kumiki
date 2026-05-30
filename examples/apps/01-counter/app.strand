@@ -1,0 +1,22 @@
+# Counter — Strand v0.1 minimal example
+# 12 lines of code, demonstrates: type, slot, reducer, tile, app
+
+type   N      = nominal Int where between(0, 999)
+slot   count  : N    = 0
+
+reducer inc   on=ui.click(IncBtn)   do= count := count + 1
+reducer dec   on=ui.click(DecBtn)   do= count := count - 1
+reducer reset on=ui.click(ResetBtn) do= count := 0
+
+tile   IncBtn   = button(text="+")
+tile   DecBtn   = button(text="-")
+tile   ResetBtn = button(text="reset")
+
+tile   App = column(
+               heading("Count: " + count),
+               row(DecBtn, ResetBtn, IncBtn) {gap: "sm"})
+
+app    Counter
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

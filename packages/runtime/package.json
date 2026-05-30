@@ -1,0 +1,30 @@
+{
+  "name": "@strand/runtime",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Strand DOM runtime — mounts compiled Strand apps, dispatches effects, manages the signal graph.",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./bundle": "./dist/runtime.bundle.js"
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && esbuild src/index.ts --bundle --format=esm --outfile=dist/runtime.bundle.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "lint": "biome check src test"
+  },
+  "devDependencies": {
+    "esbuild": "catalog:",
+    "jsdom": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

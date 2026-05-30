@@ -1,0 +1,33 @@
+# Feature: an HTTP effect with a `latest` policy, wired through ok/err reducers.
+
+type Quote = {text: Text, author: Text}
+type Load  = Idle | Loading | Loaded(Quote) | Failed(Text)
+
+slot state : Load = Idle
+
+effect fetchQuote cap=http.get
+                  in=Unit
+                  out=Result(Quote, HttpError)
+                  policy=latest
+                  map-request={url: "/api/quote", decode: Decoder.Json(Quote)}
+
+reducer load   on=ui.click(LoadBtn)        do= state := Loading
+                                              emit fetchQuote()
+reducer loaded on=fetchQuote.ok($q, _)     do= state := Loaded($q)
+reducer failed on=fetchQuote.err($e, _)    do= state := Failed("request failed")
+
+tile LoadBtn = button(text="Load quote", onClick=load)
+tile App = column(
+             LoadBtn,
+             match state with
+               | Idle        -> text("Click to load.")
+               | Loading     -> spinner()
+               | Loaded(q)   -> card(text(q.text), text("— " + q.author)) {pad: "md"}
+               | Failed(msg) -> text(msg) {color: "danger"})
+           {pad: "lg", gap: "md"}
+
+app EffectHttp
+    caps   = [http.get]
+    routes = {"/" -> App, "/404" -> App}
+    init   = []
+    http   = {base-url: "https://api.example.com"}

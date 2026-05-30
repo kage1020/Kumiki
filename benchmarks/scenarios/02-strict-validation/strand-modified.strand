@@ -1,0 +1,164 @@
+# TodoMVC — Strand v0.1
+# Demonstrates: types, slots, effects, reducers, tiles, fns, theme, app
+
+# ====== Types ======
+
+type TodoId = nominal Text where uuid
+type Todo   = {id: TodoId, text: Text where nonempty, done: Bool, createdAt: Time}
+type Filter = All | Active | Done
+
+# ====== Slots ======
+
+slot todos  : Map(TodoId, Todo)              = {}
+slot filter : Filter                         = All
+slot draft  : Text where len-lt(100)         = ""
+slot ready  : Bool                           = false
+
+# ====== Effects ======
+
+effect loadTodos cap=storage.read
+                 in=Unit
+                 out=Result(Option(Map(TodoId, Todo)), Text)
+                 policy=once
+                 map-request={key: "todos", decode: Decoder.Json(Map(TodoId, Todo))}
+
+effect saveTodos cap=storage.write
+                 in=Map(TodoId, Todo)
+                 out=Result(Unit, Text)
+                 policy=debounce(300ms)
+                 map-request={key: "todos", value: $1}
+
+# ====== Fns (pure helpers) ======
+
+fn matchFilter(t: Todo, f: Filter) -> Bool
+   = match f with
+       | All     -> true
+       | Active  -> not t.done
+       | Done    -> t.done
+
+fn itemsLeft(ts: Map(TodoId, Todo)) -> Int
+   = ts.filter(not $2.done).size
+
+fn sortedIds(ts: Map(TodoId, Todo)) -> List(TodoId)
+   = ts.keys.sort-by(-ts.get($1).get.createdAt.to-ms)
+
+fn isFilterActive(current: Filter, f: Filter) -> Text
+   = if current == f then "primary" else "ghost"
+
+# ====== Reducers ======
+
+reducer boot         on=app.start            do= emit loadTodos()
+
+reducer todosLoaded  on=loadTodos.ok($m, _)  do= todos := $m.get-or({})
+                                                 ready := true
+
+reducer todosFailed  on=loadTodos.err(_, _)  do= ready := true
+
+reducer addTodo
+    on=ui.submit(NewTodoForm)
+    do= let id = TodoId.fresh()
+        let trimmed = draft.trim
+        if trimmed.length > 0 then {
+          todos[id] := {id, text=trimmed, done=false, createdAt=now};
+          draft := "";
+          emit saveTodos(todos)
+        } else { () }
+
+reducer toggle
+    on=ui.click(TodoRow)
+    do= todos[$el.todoId].done := not todos[$el.todoId].done
+        emit saveTodos(todos)
+
+reducer remove
+    on=ui.click(RemoveBtn)
+    do= todos := todos.remove($el.todoId)
+        emit saveTodos(todos)
+
+reducer clearDone
+    on=ui.click(ClearBtn)
+    do= todos := todos.filter(not $2.done)
+        emit saveTodos(todos)
+
+reducer setFilter
+    on=ui.click(FilterTab)
+    do= filter := $el.filter
+
+# ====== Tiles ======
+
+tile RemoveBtn = button(text="x") {variant: "ghost"}
+tile ClearBtn  = button(text="Clear completed", onClick=clearDone) {variant: "ghost"}
+
+tile TodoRow
+    in=TodoId
+    = row(
+        check(value=todos[$1].done, onClick=toggle) {todoId: $1},
+        text(todos[$1].text) {
+          strike: todos[$1].done,
+          color:  if todos[$1].done then "muted" else "fg"
+        },
+        RemoveBtn {todoId: $1, onClick: remove})
+      {gap: "sm", align: "center"}
+
+tile FilterTab
+    in=Filter
+    = button(text=$1.show, onClick=setFilter) {
+        filter: $1,
+        variant: isFilterActive(filter, $1)
+      }
+
+tile TodoList
+    = column(
+        for id in sortedIds(todos)
+          when(matchFilter(todos[id], filter),
+            TodoRow(id) {key: id.show}))
+      {gap: "xs"}
+
+tile NewTodoForm
+    = form(
+        input(bind=draft, placeholder="What needs to be done?", auto-focus=true))
+
+tile FilterBar
+    = row(FilterTab(All), FilterTab(Active), FilterTab(Done)) {gap: "xs"}
+
+tile Footer
+    = row(
+        text(itemsLeft(todos).show + " items left") {color: "muted"},
+        FilterBar,
+        ClearBtn)
+      {justify: "between", align: "center"}
+
+tile App
+    = page(
+        heading("Todos") {size: "xxl"},
+        NewTodoForm,
+        when(ready,
+          column(TodoList, Footer) {gap: "md"}),
+        when(not ready, spinner() {size: "lg"}))
+      {pad: "lg", gap: "md", max-w: 640}
+
+tile NotFound = page(
+                  heading("404"),
+                  link(to="/") {text: "Back"})
+
+# ====== Theme ======
+
+theme DefaultTheme = {
+    colors:  {bg: "#fafafa", fg: "#1a1a1a", muted: "#888", primary: "#0070f3",
+              surface: "#fff", border: "#e0e0e0", danger: "#c4222a"},
+    spacing: {xs: "4px", sm: "8px", md: "16px", lg: "24px", xl: "40px", xxl: "64px"},
+    radius:  {sm: "4px", md: "8px"},
+    typography: {family: "system-ui, sans-serif",
+                 size: {sm: "14px", md: "16px", lg: "20px", xxl: "32px"},
+                 weight: {normal: "400", bold: "700"},
+                 line-height: "1.5"},
+    shadow:  {sm: "0 1px 2px rgba(0,0,0,0.08)"}
+}
+
+# ====== App ======
+
+app TodoApp
+    caps   = [storage.read, storage.write]
+    routes = {"/" -> App, "/404" -> NotFound}
+    init   = []
+    theme  = DefaultTheme
+    meta   = {title: "Strand TodoMVC", description: "Demo"}

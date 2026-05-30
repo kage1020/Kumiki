@@ -1,0 +1,62 @@
+---
+name: strand-author
+description: Author Strand programs (.strand files). Use when writing or extending a Strand app — the 7-layer model, idioms for state/effects/UI, and how to verify with the compiler. Strand is the declarative app language in this repo (packages/compiler, packages/runtime).
+---
+
+# Authoring Strand
+
+Strand is a declarative front-end app language. A program is a set of definitions across **7 layers** plus an optional theme. There are no files-as-modules; each definition is independent.
+
+## The 7 layers
+
+| layer | role | example |
+|---|---|---|
+| `type` | domain types: nominal, union, record, refinement | `type Filter = All \| Active \| Done` |
+| `slot` | mutable state | `slot count : Int = 0` |
+| `effect` | side effects (http/storage), with capability + policy | `effect save cap=storage.write ...` |
+| `reducer` | `on=<event>` → `do=<state update>` | `reducer inc on=ui.click(Btn) do= count := count + 1` |
+| `tile` | UI components | `tile App = column(heading("Hi"), Btn)` |
+| `fn` | pure helpers (must NOT read slots) | `fn double(n: Int) -> Int = n * 2` |
+| `app` | the root: caps, routes, init, theme | see below |
+
+```
+app MyApp
+    caps   = [storage.read, storage.write]
+    routes = {"/" -> App, "/404" -> NotFound}
+    init   = []
+    theme  = DefaultTheme
+```
+
+`routes` must include a `/404` entry (error E0001). Use `->>` for redirects: `"/old" ->> "/"`.
+
+## Workflow (always verify)
+
+1. Read the relevant spec under `spec/` (language, stdlib, routing, style, forms, http, lifecycle).
+2. Find the closest example in `examples/features/` (one feature each) or `examples/apps/` (size-ordered full apps). Copy its shape.
+3. Write the program.
+4. **Verify before claiming done** — three layers, run all of them:
+   ```sh
+   pnpm --filter @strand/cli exec tsx src/strand.ts check <file>        # parse + typecheck
+   pnpm --filter @strand/cli exec tsx src/strand.ts build <file> ./out  # codegen
+   pnpm --filter @strand/cli exec tsx src/strand.ts smoke <file>        # mount + exercise (headless DOM)
+   ```
+   Or via the `@strand/mcp` tools `strand_check` / `strand_build` / `strand_smoke`.
+
+   **`check` and `build` do NOT prove it runs.** A program can typecheck and
+   codegen yet throw or render nothing when actually used (e.g. calling a method
+   the runtime doesn't implement). `strand smoke` mounts the app and drives every
+   button / input / select, catching that class of bug without a human in a
+   browser. Always smoke before claiming an app works.
+
+## Idioms that trip people up
+
+- **Duration literals** like `1h` only work inside effect policy (`debounce(300ms)`). In expressions use constructors: `now.plus(Duration.h(1))`.
+- **Immutable record update**: `profile.copy(age = profile.age + 1)`.
+- **One write per path-shape per reducer** (E0601): chain instead of writing the same slot twice — `tasks := tasks.remove(id).filter(pred)`. Note `tasks[id].status` and `tasks[id].updatedAt` are *different* shapes and may coexist.
+- **Map/Set/Option/List methods are polymorphic**: `.filter`, `.map`, `.get-or`, `.has`, `.toggle`, `.remove`, `.keys`, `.size`.
+- **Variant payloads in match**: `match opt with | None -> ... | Some(x) -> ...`.
+- **Lambdas** use `$1`, `$2` positional binders (`$2` is the value in Map iteration).
+- **Events** expose `$el` (element data), `$event`, and in route reducers `$route`.
+- **`fn` purity**: a `fn` reading a slot is error E0305 — pass the value as an argument instead.
+
+See `spec/errors.md` for the full diagnostic catalog. When you hit an error you can't resolve, switch to the `strand-debug` skill.

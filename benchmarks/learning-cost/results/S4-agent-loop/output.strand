@@ -1,0 +1,93 @@
+# Pomodoro Timer — Strand
+
+# ====== Types ======
+
+type Mode = Work | Break
+
+# ====== Slots ======
+
+slot mode      : Mode = Work
+slot remaining : Int  = 1500
+slot running   : Bool = false
+
+# ====== Effects ======
+
+effect tick cap=log.write
+            in=Unit
+            out=Result(Unit, Text)
+            policy=debounce(1000ms)
+            map-request={level: "debug", message: "tick", data: {}}
+
+# ====== Fns ======
+
+fn maxFor(m: Mode) -> Int
+   = match m with
+       | Work  -> 1500
+       | Break -> 300
+
+fn nextMode(m: Mode) -> Mode
+   = match m with
+       | Work  -> Break
+       | Break -> Work
+
+fn modeLabel(m: Mode) -> Text
+   = match m with
+       | Work  -> "Work"
+       | Break -> "Break"
+
+fn nextRemaining(r: Int, m: Mode) -> Int
+   = if r > 1 then r - 1 else maxFor(nextMode(m))
+
+fn nextModeAfter(r: Int, m: Mode) -> Mode
+   = if r > 1 then m else nextMode(m)
+
+# ====== Reducers ======
+
+reducer boot
+    on=app.start
+    do= emit tick()
+
+reducer start
+    on=ui.click(StartBtn)
+    do= running := true
+        emit tick()
+
+reducer pause
+    on=ui.click(PauseBtn)
+    do= running := false
+
+reducer reset
+    on=ui.click(ResetBtn)
+    do= running := false
+        remaining := maxFor(mode)
+
+reducer onTick
+    on=tick.ok(_, _)
+    do= if running then {
+          let r = remaining;
+          let m = mode;
+          remaining := nextRemaining(r, m);
+          mode := nextModeAfter(r, m)
+        } else ()
+        emit tick()
+
+# ====== Tiles ======
+
+tile StartBtn = button(text="Start")
+tile PauseBtn = button(text="Pause")
+tile ResetBtn = button(text="Reset")
+
+tile App
+    = page(
+        heading("Pomodoro"),
+        text("Mode: " + modeLabel(mode)),
+        text("Remaining: " + remaining.show + "s"),
+        row(StartBtn, PauseBtn, ResetBtn) {gap: "sm"})
+      {pad: "lg", gap: "md"}
+
+# ====== App ======
+
+app Pomodoro
+    caps   = [log.write]
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

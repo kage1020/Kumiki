@@ -1,0 +1,16 @@
+# Feature: checkbox driven by a reducer toggling a Bool slot.
+
+slot agreed : Bool = false
+
+reducer toggle on=ui.click(AgreeCheck) do= agreed := not agreed
+
+tile AgreeCheck = check(value=agreed, onClick=toggle)
+tile App = column(
+             row(AgreeCheck, text("I agree to the terms")) {gap: "sm", align: "center"},
+             button(text="Continue") {disabled: not agreed})
+           {pad: "lg", gap: "md"}
+
+app CheckboxFeature
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

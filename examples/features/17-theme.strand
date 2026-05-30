@@ -1,0 +1,29 @@
+# Feature: theme tokens + dynamic theme switching (`app.theme = slotName`).
+
+slot themeName : Text = "Light"
+
+reducer toggle on=ui.click(ToggleBtn)
+    do= themeName := if themeName == "Light" then "Dark" else "Light"
+
+tile ToggleBtn = button(text="Toggle theme", onClick=toggle)
+tile App = page(heading("Theme: " + themeName), ToggleBtn) {pad: "lg", gap: "md"}
+
+theme Light = {
+    colors:  {bg: "#ffffff", fg: "#1a1a1a", primary: "#0070f3", surface: "#fff",
+              border: "#e0e0e0", muted: "#888"},
+    spacing: {sm: "8px", md: "16px", lg: "24px"},
+    radius:  {md: "8px"}
+}
+
+theme Dark = {
+    colors:  {bg: "#111", fg: "#eee", primary: "#3291ff", surface: "#1c1c1c",
+              border: "#333", muted: "#999"},
+    spacing: {sm: "8px", md: "16px", lg: "24px"},
+    radius:  {md: "8px"}
+}
+
+app ThemeFeature
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []
+    theme  = themeName

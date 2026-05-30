@@ -1,0 +1,34 @@
+{
+  "name": "@strand/e2e",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Strand real-browser verification tier — runs the same scenarios in Chromium (Playwright) to catch CSS layout, real focus, and rendering bugs jsdom can't see.",
+  "license": "Apache-2.0",
+  "bin": {
+    "strand-e2e": "./src/cli.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "biome check src"
+  },
+  "dependencies": {
+    "@strand/compiler": "workspace:*",
+    "playwright": "^1.60.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  }
+}

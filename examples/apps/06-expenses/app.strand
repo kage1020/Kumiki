@@ -1,0 +1,56 @@
+# Expense tracker — demo for the autonomous iterate loop.
+
+type ExpenseId = nominal Text where uuid
+type Expense   = {id: ExpenseId, label: Text where nonempty, amount: Int}
+
+slot expenses    : Map(ExpenseId, Expense) = {}
+slot draftLabel  : Text                    = ""
+slot draftAmount : Text                    = ""
+slot bigOnly     : Bool                    = false
+
+fn total(es: Map(ExpenseId, Expense)) -> Int
+   = es.values.fold(0, $1 + $2.amount)
+
+fn visibleIds(es: Map(ExpenseId, Expense), big: Bool) -> List(ExpenseId)
+   = es.filter(if big then $2.amount >= 1000 else true).keys
+
+reducer add on=ui.click(AddBtn)
+    do= let id = ExpenseId.fresh()
+        expenses[id] := {id, label=draftLabel, amount=Int.parse(draftAmount).get-or(0)}
+        draftLabel  := ""
+        draftAmount := ""
+
+reducer removeExpense on=ui.click(RemoveBtn)
+    do= expenses := expenses.remove($el.expenseId)
+
+reducer toggleBig on=ui.click(BigToggle)
+    do= bigOnly := not bigOnly
+
+tile LabelInput  = input(bind=draftLabel, placeholder="Label")
+tile AmountInput = input(bind=draftAmount, placeholder="Amount", type="number")
+tile AddBtn      = button(text="Add", onClick=add)
+tile BigToggle   = button(text=if bigOnly then "Show all" else "Big only", onClick=toggleBig)
+tile RemoveBtn   = button(text="x") {variant: "ghost"}
+
+tile Row
+    in=ExpenseId
+    = row(
+        text(expenses[$1].label),
+        text("¥" + expenses[$1].amount.show),
+        RemoveBtn {expenseId: $1, onClick: removeExpense})
+      {gap: "sm", align: "center"}
+
+tile ExpenseList
+    = column(for id in visibleIds(expenses, bigOnly) Row(id) {key: id.show}) {gap: "xs"}
+
+tile App = page(
+             heading("Expenses"),
+             row(LabelInput, AmountInput, AddBtn) {gap: "sm"},
+             row(text("Total: ¥" + total(expenses).show), BigToggle) {justify: "between"},
+             ExpenseList)
+           {pad: "lg", gap: "md"}
+
+app Expenses
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

@@ -1,0 +1,16 @@
+# Feature: conditional rendering with `when(...)` and tile-level `if`.
+
+slot open : Bool = false
+
+reducer toggle on=ui.click(ToggleBtn) do= open := not open
+
+tile ToggleBtn = button(text=if open then "Hide" else "Show", onClick=toggle)
+tile App = column(
+             ToggleBtn,
+             when(open, card(text("Now you see me.")) {pad: "md"}))
+           {pad: "lg", gap: "md"}
+
+app ConditionalUi
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

@@ -1,0 +1,13 @@
+# Feature: layout primitives — column / row / grid with gap & alignment props.
+
+tile Box = card(text("box")) {pad: "md"}
+tile App = column(
+             heading("Layouts"),
+             row(Box, Box, Box) {gap: "sm", align: "center"},
+             grid(Box, Box, Box, Box) {cols: 2, gap: "md"})
+           {pad: "lg", gap: "lg"}
+
+app LayoutFeature
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

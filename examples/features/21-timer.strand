@@ -1,0 +1,15 @@
+# Feature: a timer reducer that fires on a fixed interval.
+
+slot seconds : Int  = 0
+slot running : Bool = true
+
+reducer tick   on=timer(1s)            do= seconds := if running then seconds + 1 else seconds
+reducer toggle on=ui.click(ToggleBtn)  do= running := not running
+
+tile ToggleBtn = button(text=if running then "Pause" else "Resume", onClick=toggle)
+tile App = column(heading(seconds.show + "s"), ToggleBtn) {pad: "lg", gap: "md"}
+
+app TimerFeature
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

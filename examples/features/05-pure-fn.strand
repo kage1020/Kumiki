@@ -1,0 +1,18 @@
+# Feature: pure `fn` helpers.
+# A fn depends only on its arguments — it must not read slots (see errors E0305).
+
+slot celsius : Int = 20
+
+fn toFahrenheit(c: Int) -> Int = c * 9 / 5 + 32
+
+reducer warmer on=ui.click(WarmBtn) do= celsius := celsius + 1
+
+tile WarmBtn = button(text="+1°C", onClick=warmer)
+tile App = column(
+             text(celsius.show + "°C = " + toFahrenheit(celsius).show + "°F"),
+             WarmBtn)
+
+app PureFn
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

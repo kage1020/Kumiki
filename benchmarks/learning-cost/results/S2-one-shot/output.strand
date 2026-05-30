@@ -1,0 +1,62 @@
+# Pomodoro Timer — Strand v0.1
+# 2 modes (Work=1500s, Break=300s), Start / Pause / Reset
+
+type Mode      = Work | Break
+type Remaining = nominal Int where between(0, 1500)
+
+slot mode      : Mode      = Work
+slot remaining : Remaining = 1500
+slot running   : Bool      = false
+
+fn maxFor(m: Mode) -> Int
+   = match m with
+       | Work  -> 1500
+       | Break -> 300
+
+fn nextMode(m: Mode) -> Mode
+   = match m with
+       | Work  -> Break
+       | Break -> Work
+
+reducer start
+    on=ui.click(StartBtn)
+    do= running := true
+
+reducer pause
+    on=ui.click(PauseBtn)
+    do= running := false
+
+reducer reset
+    on=ui.click(ResetBtn)
+    do= running := false
+        remaining := maxFor(mode)
+
+reducer tick
+    on=timer(1s)
+    do= mode      := if running & remaining == 0 then nextMode(mode) else mode
+        remaining := if running & remaining > 0
+                       then remaining - 1
+                       else if running & remaining == 0
+                              then maxFor(nextMode(mode))
+                              else remaining
+
+tile StartBtn = button(text="Start", onClick=start)
+tile PauseBtn = button(text="Pause", onClick=pause)
+tile ResetBtn = button(text="Reset", onClick=reset)
+
+tile ModeLabel = text(match mode with
+                        | Work  -> "Work"
+                        | Break -> "Break")
+
+tile TimeLabel = text("Remaining: " + remaining + "s")
+
+tile App = page(
+             heading("Pomodoro"),
+             ModeLabel,
+             TimeLabel,
+             row(StartBtn, PauseBtn, ResetBtn) {gap: "sm"})
+
+app Pomodoro
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

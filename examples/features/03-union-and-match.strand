@@ -1,0 +1,28 @@
+# Feature: union type + `match` expression.
+# A traffic light cycles through its variants.
+
+type Light = Red | Yellow | Green
+
+slot light : Light = Red
+
+fn next(l: Light) -> Light
+   = match l with
+       | Red    -> Green
+       | Green  -> Yellow
+       | Yellow -> Red
+
+fn label(l: Light) -> Text
+   = match l with
+       | Red    -> "STOP"
+       | Yellow -> "SLOW"
+       | Green  -> "GO"
+
+reducer advance on=ui.click(NextBtn) do= light := next(light)
+
+tile NextBtn = button(text="next", onClick=advance)
+tile App = column(heading(label(light)), NextBtn)
+
+app UnionAndMatch
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

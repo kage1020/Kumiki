@@ -1,0 +1,18 @@
+# Feature: nominal type with a refinement.
+# `between(lo, hi)` clamps the slot — writes outside the range are rejected.
+
+type Volume = nominal Int where between(0, 11)
+
+slot volume : Volume = 5
+
+reducer up   on=ui.click(UpBtn)   do= volume := volume + 1
+reducer down on=ui.click(DownBtn) do= volume := volume - 1
+
+tile UpBtn   = button(text="louder", onClick=up)
+tile DownBtn = button(text="quieter", onClick=down)
+tile App = column(heading("Volume: " + volume.show), row(DownBtn, UpBtn) {gap: "sm"})
+
+app NominalType
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

@@ -1,0 +1,19 @@
+{
+  "steps": [
+    {
+      "label": "typing in Label keeps focus there (no focus steal on re-render)",
+      "do": { "fill": "input[placeholder='Label']", "value": "Coffee" },
+      "expect": { "noErrors": true, "focused": "input[placeholder='Label']" }
+    },
+    { "do": { "fill": "input[placeholder='Amount']", "value": "500" } },
+    { "do": { "clickText": "Add" } },
+    { "do": { "fill": "input[placeholder='Label']", "value": "Rent" } },
+    { "do": { "fill": "input[placeholder='Amount']", "value": "80000" } },
+    { "do": { "clickText": "Add" } },
+    {
+      "label": "big only really hides Coffee (computed visibility), total over all",
+      "do": { "clickText": "Big only" },
+      "expect": { "visible": ["Rent"], "hidden": ["Coffee"], "domIncludes": ["Total: ¥80500"] }
+    }
+  ]
+}

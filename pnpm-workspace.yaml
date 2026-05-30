@@ -1,0 +1,16 @@
+packages:
+  - packages/*
+  - tests
+  - site
+
+catalog:
+  '@biomejs/biome': ^2.4.16
+  '@types/node': ^25.9.1
+  '@vitest/browser': ^4.1.7
+  esbuild: ^0.28.0
+  gpt-tokenizer: ^3.4.0
+  jsdom: ^29.1.1
+  tsx: ^4.22.3
+  typescript: ^6.0.3
+  vite: ^8.0.14
+  vitest: ^4.1.7

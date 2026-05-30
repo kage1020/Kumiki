@@ -1,0 +1,36 @@
+{
+  "steps": [
+    { "do": { "fill": "input[placeholder='Label']", "value": "Coffee" } },
+    { "do": { "fill": "input[placeholder='Amount']", "value": "500" } },
+    {
+      "label": "add coffee (draft clears, total shows)",
+      "do": { "clickText": "Add" },
+      "expect": {
+        "noErrors": true,
+        "state": { "draftLabel": "", "draftAmount": "" },
+        "domIncludes": ["Coffee", "¥500", "Total: ¥500"]
+      }
+    },
+    { "do": { "fill": "input[placeholder='Label']", "value": "Rent" } },
+    { "do": { "fill": "input[placeholder='Amount']", "value": "80000" } },
+    {
+      "label": "add rent (total accumulates)",
+      "do": { "clickText": "Add" },
+      "expect": { "domIncludes": ["Rent", "Total: ¥80500"] }
+    },
+    {
+      "label": "big only hides small, keeps total over all",
+      "do": { "clickText": "Big only" },
+      "expect": {
+        "state": { "bigOnly": true },
+        "domIncludes": ["Rent", "Total: ¥80500"],
+        "domExcludes": ["Coffee"]
+      }
+    },
+    {
+      "label": "remove rent",
+      "do": { "clickText": "x" },
+      "expect": { "domExcludes": ["Rent"], "domIncludes": ["Total: ¥500"] }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+# Feature: select dropdown bound to a slot, with typed options.
+
+type Size = S | M | L
+
+slot size : Size = M
+
+fn sizeOptions() -> List({label: Text, value: Size})
+   = [{label: "Small",  value: S},
+      {label: "Medium", value: M},
+      {label: "Large",  value: L}]
+
+tile SizeSelect = select(bind=size, options=sizeOptions(), placeholder="Pick a size")
+tile App = column(
+             SizeSelect,
+             text("chosen: " + size.show))
+           {pad: "lg", gap: "md"}
+
+app SelectFeature
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

@@ -1,0 +1,20 @@
+# Feature: Time / Duration — `now`, Duration constructors, and Time.plus.
+# Time/Duration are raw milliseconds at runtime; `.plus` is ms addition.
+
+slot deadline   : Time = now.plus(Duration.h(1))
+slot extensions : Int  = 0
+
+reducer extend on=ui.click(ExtendBtn)
+    do= deadline   := deadline.plus(Duration.h(1))
+        extensions := extensions + 1
+
+tile ExtendBtn = button(text="+1 hour", onClick=extend)
+tile App = column(
+             text("deadline: " + deadline.show),
+             text("extended " + extensions.show + " time(s)"),
+             ExtendBtn)
+
+app TimeAndDuration
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

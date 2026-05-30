@@ -1,0 +1,40 @@
+// Compile a .strand file to a self-contained module, import it, and return the
+// AppShape it exposes (without auto-mounting). Mirrors the CLI's build-and-load
+// helper so the smoke tests can mount apps under their own control.
+
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { compile } from "@strand/compiler";
+import { nodeRuntimeBundleReader } from "@strand/compiler/node";
+import type { AppShape } from "@strand/runtime";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const TMP_ROOT = join(here, "..", ".smoke-tmp");
+mkdirSync(TMP_ROOT, { recursive: true });
+
+export async function loadApp(strandPath: string): Promise<AppShape> {
+  const src = readFileSync(strandPath, "utf8");
+  const result = compile(src, {
+    runtimeSpecifier: "ignored",
+    bundle: true,
+    readRuntimeBundle: nodeRuntimeBundleReader,
+  });
+  if (result.kind !== "ok") {
+    throw new Error(
+      `compile failed: ${result.errors.map((e) => `${e.code} ${e.message}`).join(", ")}`,
+    );
+  }
+  // Stop the bundle at `globalThis.__strandApp = App` instead of auto-mounting.
+  const patched = result.js.replace(/mount\(App, document\.getElementById\("root"\)\);?/, "");
+
+  const dir = mkdtempSync(join(TMP_ROOT, "app-"));
+  const file = join(dir, "app.mjs");
+  writeFileSync(file, patched);
+  const url = `${pathToFileURL(file).href}?t=${Date.now()}`;
+  await import(/* @vite-ignore */ url);
+
+  const app = (globalThis as unknown as { __strandApp?: AppShape }).__strandApp;
+  if (!app) throw new Error("compiled module did not expose __strandApp");
+  return app;
+}

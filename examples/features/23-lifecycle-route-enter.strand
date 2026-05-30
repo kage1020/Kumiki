@@ -1,0 +1,20 @@
+# Feature: lifecycle reducers — app.start and route.enter.
+
+slot started : Bool = false
+slot visits  : Int  = 0
+
+reducer boot    on=app.start              do= started := true
+reducer onEnter on=route.enter("/page")   do= visits := visits + 1
+
+tile Home = page(heading("Home"),
+                 text("booted: " + started.show),
+                 link(to="/page") {text: "Visit page"})
+tile Page = page(heading("Page"),
+                 text("entered " + visits.show + " time(s)"),
+                 link(to="/") {text: "Home"})
+tile NotFound = page(heading("404"), link(to="/") {text: "Home"})
+
+app LifecycleFeature
+    caps   = []
+    routes = {"/" -> Home, "/page" -> Page, "/404" -> NotFound}
+    init   = []

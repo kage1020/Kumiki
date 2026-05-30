@@ -1,0 +1,238 @@
+# Kanban Board SPA — Strand v0.1
+
+# ====== Types ======
+
+type CardId = nominal Text where uuid
+type Column = Todo | Doing | Done
+type Card   = {id: CardId, title: Text, column: Column, createdAt: Time}
+
+# ====== Slots ======
+
+slot cards : Map(CardId, Card) = {}
+slot draft : Text              = ""
+slot ready : Bool              = false
+
+# ====== Effects ======
+
+effect loadCards cap=storage.read
+                 in=Unit
+                 out=Result(Option(Map(CardId, Card)), Text)
+                 policy=once
+                 map-request={key: "kanban-cards", decode: Decoder.Json(Map(CardId, Card))}
+
+effect saveCards cap=storage.write
+                 in=Map(CardId, Card)
+                 out=Result(Unit, Text)
+                 policy=debounce(300ms)
+                 map-request={key: "kanban-cards", value: $1}
+
+# ====== Fns ======
+
+fn columnTitle(c: Column) -> Text
+   = match c with
+       | Todo  -> "Todo"
+       | Doing -> "Doing"
+       | Done  -> "Done"
+
+fn columnCount(ts: Map(CardId, Card), c: Column) -> Int
+   = ts.filter($2.column == c).size
+
+fn columnIds(ts: Map(CardId, Card), c: Column) -> List(CardId)
+   = ts.keys.filter(ts[$1].column == c).sort-by(ts[$1].createdAt.to-ms)
+
+fn previousColumn(c: Column) -> Column
+   = match c with
+       | Todo  -> Todo
+       | Doing -> Todo
+       | Done  -> Doing
+
+fn nextColumn(c: Column) -> Column
+   = match c with
+       | Todo  -> Doing
+       | Doing -> Done
+       | Done  -> Done
+
+fn canMoveLeft(c: Column) -> Bool
+   = match c with
+       | Todo  -> false
+       | Doing -> true
+       | Done  -> true
+
+fn canMoveRight(c: Column) -> Bool
+   = match c with
+       | Todo  -> true
+       | Doing -> true
+       | Done  -> false
+
+# ====== Reducers ======
+
+reducer boot
+    on=app.start
+    do= emit loadCards()
+
+reducer cardsLoaded
+    on=loadCards.ok($m, _)
+    do= cards := $m.get-or({})
+        ready := true
+
+reducer cardsFailed
+    on=loadCards.err(_, _)
+    do= ready := true
+
+reducer addCard
+    on=ui.submit(NewCardForm)
+    do= let clean = draft.trim
+        let id = CardId.fresh()
+        cards := if clean.is-empty then cards else cards.insert(id, {id, title=clean, column=Todo, createdAt=now})
+        draft := if clean.is-empty then draft else ""
+        emit saveCards(cards)
+
+reducer moveLeft
+    on=ui.click(MoveLeftBtn)
+    do= cards[$el.cardId].column := previousColumn(cards[$el.cardId].column)
+        emit saveCards(cards)
+
+reducer moveRight
+    on=ui.click(MoveRightBtn)
+    do= cards[$el.cardId].column := nextColumn(cards[$el.cardId].column)
+        emit saveCards(cards)
+
+reducer deleteCard
+    on=ui.click(DeleteBtn)
+    do= cards := cards.remove($el.cardId)
+        emit saveCards(cards)
+
+# ====== Tiles ======
+
+tile AddBtn
+    = button(text="Add", disabled=draft.trim.is-empty) {
+        bg: "primary",
+        color: "bg"
+      }
+
+tile NewCardForm
+    = form(
+        row(
+          input(bind=draft, placeholder="Add a card...", id="newCardTitle"),
+          AddBtn
+        ) {gap: "sm", align: "center"})
+
+tile MoveLeftBtn
+    in=CardId
+    = button(text="←", onClick=moveLeft, disabled=not canMoveLeft(cards[$1].column)) {
+        cardId: $1,
+        variant: "ghost",
+        aria-label: "Move left"
+      }
+
+tile MoveRightBtn
+    in=CardId
+    = button(text="→", onClick=moveRight, disabled=not canMoveRight(cards[$1].column)) {
+        cardId: $1,
+        variant: "ghost",
+        aria-label: "Move right"
+      }
+
+tile DeleteBtn
+    in=CardId
+    = button(text="✕", onClick=deleteCard) {
+        cardId: $1,
+        variant: "ghost",
+        color: "danger",
+        aria-label: "Delete card"
+      }
+
+tile BoardCard
+    in=CardId
+    = card(
+        column(
+          text(cards[$1].title) {weight: "medium"},
+          row(
+            MoveLeftBtn($1),
+            MoveRightBtn($1),
+            DeleteBtn($1)
+          ) {gap: "xs", justify: "end", align: "center"}
+        ) {gap: "sm"}
+      ) {pad: "md", bg: "bg", radius: "md", shadow: "sm"}
+
+tile BoardColumn
+    in=Column
+    = panel(
+        column(
+          row(
+            heading(columnTitle($1) + " (" + columnCount(cards, $1).show + ")") {level: 2, size: "lg"},
+            text("")
+          ) {justify: "between", align: "center"},
+          scroll(
+            column(
+              for id in columnIds(cards, $1)
+                BoardCard(id) {key: id.show}
+            ) {gap: "sm"}
+          ) {direction: "y", max-height: 640}
+        ) {gap: "md"}
+      ) {pad: "md", bg: "surface", radius: "md"}
+
+tile Board
+    = grid(
+        BoardColumn(Todo),
+        BoardColumn(Doing),
+        BoardColumn(Done)
+      ) {cols: {base: 1, md: 3}, gap: "md"}
+
+tile App
+    = page(
+        column(
+          heading("Kanban Board") {size: "xxl"},
+          NewCardForm,
+          when(ready, Board),
+          when(not ready, spinner() {size: "lg"})
+        ) {gap: "lg"}
+      ) {pad: "lg", bg: "bg"}
+
+tile NotFound
+    = page(
+        column(
+          heading("404"),
+          link(to="/") {text: "Back to board"}
+        ) {gap: "md"}
+      ) {pad: "lg"}
+
+# ====== Theme ======
+
+theme DefaultTheme = {
+    colors: {
+        bg: "#f7f8fb",
+        fg: "#171923",
+        muted: "#6b7280",
+        primary: "#2563eb",
+        surface: "#ffffff",
+        border: "#d9dee8",
+        danger: "#c4222a",
+        success: "#0a7c2f"
+    },
+    spacing: {xs: "4px", sm: "8px", md: "16px", lg: "24px", xl: "40px", xxl: "64px"},
+    radius: {sm: "4px", md: "8px", lg: "16px"},
+    typography: {
+        family: "system-ui, sans-serif",
+        size: {sm: "14px", md: "16px", lg: "20px", xl: "28px", xxl: "36px"},
+        weight: {normal: "400", medium: "500", bold: "700"},
+        line-height: "1.5"
+    },
+    shadow: {
+        sm: "0 1px 2px rgba(15,23,42,0.08)",
+        md: "0 8px 24px rgba(15,23,42,0.10)"
+    },
+    breakpoints: {sm: "640px", md: "768px", lg: "1024px"}
+}
+
+# ====== App ======
+
+app KanbanApp
+    caps   = [storage.read, storage.write]
+    routes = {"/" -> App, "/404" -> NotFound}
+    init   = []
+    theme  = DefaultTheme
+    meta   = {
+        title: "Strand Kanban Board",
+        description: "A persistent Kanban board SPA"
+    }

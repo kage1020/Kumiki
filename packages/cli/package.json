@@ -1,0 +1,39 @@
+{
+  "name": "@strand/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Strand CLI — build, check, and AI-edit (list/view/add/replace/remove/rename/fix) Strand sources.",
+  "license": "Apache-2.0",
+  "bin": {
+    "strand": "./src/strand.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "lint": "biome check src test",
+    "strand": "tsx src/strand.ts"
+  },
+  "dependencies": {
+    "@strand/compiler": "workspace:*",
+    "@strand/runtime": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^28.0.3",
+    "@types/node": "catalog:",
+    "jsdom": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

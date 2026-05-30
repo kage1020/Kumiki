@@ -1,0 +1,21 @@
+# Feature: List.fold(init, expr) — left fold; in the lambda $1=acc, $2=elem.
+# Also reachable via Map.values.fold to sum a collection.
+
+slot nums : List(Int) = [10, 20, 30]
+
+fn sum(xs: List(Int)) -> Int = xs.fold(0, $1 + $2)
+fn max(xs: List(Int)) -> Int = xs.fold(0, if $2 > $1 then $2 else $1)
+
+reducer add on=ui.click(AddBtn) do= nums := nums.push(nums.length * 5)
+
+tile AddBtn = button(text="add", onClick=add)
+tile App = column(
+             text("sum: " + sum(nums).show),
+             text("max: " + max(nums).show),
+             AddBtn)
+           {pad: "lg", gap: "md"}
+
+app FoldFeature
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

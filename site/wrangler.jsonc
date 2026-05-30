@@ -1,0 +1,7 @@
+{
+  // Cloudflare Pages config for the Strand docs site.
+  // Deploy locally with:  wrangler pages deploy  (run from this directory)
+  // The CI workflow (.github/workflows/deploy-site.yml) deploys on push to main.
+  "name": "strand",
+  "pages_build_output_dir": "dist"
+}

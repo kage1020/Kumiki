@@ -1,0 +1,10 @@
+# Synced docs (single source lives at repo root: ../spec, ../guide, ...)
+/spec
+/guide
+/examples
+/design-notes
+
+# VitePress build output / cache
+/dist
+/.vitepress/dist
+/.vitepress/cache

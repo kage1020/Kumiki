@@ -742,4 +742,4 @@ app Counter
     init   = []
 ```
 
-→ [./stdlib.md](./stdlib.md), [./routing.md](./routing.md), [examples/apps/01-counter/app.strand](../examples/apps/01-counter/app.strand)
+→ [./stdlib.md](./stdlib.md), [./routing.md](./routing.md), [examples/apps/01-counter/app.strand](https://github.com/kage1020/Strand/blob/main/examples/apps/01-counter/app.strand)

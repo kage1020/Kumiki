@@ -43,4 +43,4 @@ pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/
 
 ## 次へ
 
-[your-first-app.md](./your-first-app.md) で Counter を一から書く。
+[Your First App](./your-first-app.md) で Counter を一から書く。

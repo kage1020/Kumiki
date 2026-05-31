@@ -43,4 +43,4 @@ Open `out/index.html` in a browser and it runs. `app.js` is the generated pure l
 
 ## Next
 
-Write a Counter from scratch in [your-first-app.md](./your-first-app.md).
+Write a Counter from scratch in [Your First App](./your-first-app.md).

@@ -2,7 +2,7 @@
 
 [English](./your-first-app.md) · 日本語
 
-7 レイヤを順に足しながら、動く Counter を組み立てる。完成形は [../examples/apps/01-counter/app.strand](https://github.com/kage1020/Strand/blob/main/examples/apps/01-counter/app.strand)。
+7 レイヤを順に足しながら、動く Counter を組み立てる。完成形は [examples/apps/01-counter/app.strand](https://github.com/kage1020/Strand/blob/main/examples/apps/01-counter/app.strand)。
 
 ## 1. 状態を宣言する（slot）
 
@@ -49,8 +49,8 @@ pnpm --filter @strand/cli exec tsx src/strand.ts build counter.strand ./out
 
 ## 発展
 
-- 値の範囲を縛りたい → nominal 型 + refinement（[../examples/features/02-nominal-type.strand](https://github.com/kage1020/Strand/blob/main/examples/features/02-nominal-type.strand)）
-- 入力欄と双方向結合 → `bind`（[../examples/features/13-text-input-bind.strand](https://github.com/kage1020/Strand/blob/main/examples/features/13-text-input-bind.strand)）
-- 一覧を描く → `for ... in`（[../examples/features/07-list.strand](https://github.com/kage1020/Strand/blob/main/examples/features/07-list.strand)）
+- 値の範囲を縛りたい → nominal 型 + refinement（[examples/features/02-nominal-type.strand](https://github.com/kage1020/Strand/blob/main/examples/features/02-nominal-type.strand)）
+- 入力欄と双方向結合 → `bind`（[examples/features/13-text-input-bind.strand](https://github.com/kage1020/Strand/blob/main/examples/features/13-text-input-bind.strand)）
+- 一覧を描く → `for ... in`（[examples/features/07-list.strand](https://github.com/kage1020/Strand/blob/main/examples/features/07-list.strand)）
 
-考え方の全体像は [thinking-in-strand.md](./thinking-in-strand.md) へ。
+考え方の全体像は [Thinking in Strand](./thinking-in-strand.md) へ。

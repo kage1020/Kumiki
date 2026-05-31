@@ -312,5 +312,5 @@ slot password : Text          volatile  = ""    ; not written to the episode log
 
 ## 7.11 Next
 
-- How to write tests → [./testing.md](./testing.md)
-- AI editing API → [./ai-edit.md](./ai-edit.md)
+- How to write tests → [Testing](./testing.md)
+- AI editing API → [AI Editing](./ai-edit.md)

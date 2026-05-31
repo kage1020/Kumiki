@@ -26,7 +26,7 @@ Strand には Hooks の呼び出し順序ルールも、依存配列も、Contex
 
 ## 1 reducer 1 書き込み（パス形状粒度）
 
-1 つの reducer 内で同じ **パス形状**へ複数回書くと [E0601](../spec/errors.md#e06xx--reducer-の書き込み規則)。これは「更新が 1 箇所に集約される」ことを保証し、部分編集を安全にする。
+1 つの reducer 内で同じ **パス形状**へ複数回書くと [E0601](../spec/errors.md#e06xx---reducer-の書き込み規則)。これは「更新が 1 箇所に集約される」ことを保証し、部分編集を安全にする。
 
 ```strand
 # NG: tasks への二重書き込み
@@ -41,4 +41,4 @@ tasks := tasks.remove(id).filter(pred)
 
 ## AI が部分編集しやすい設計
 
-各定義が独立し参照が明示的なので、`@strand/cli` / `@strand/mcp` は **定義単位**で list / view / add / replace / remove / rename / fix できる。これが「AI が並列に触れる」狙いの中核。詳しくは [../spec/ai-edit.md](../spec/ai-edit.md)。
+各定義が独立し参照が明示的なので、`@strand/cli` / `@strand/mcp` は **定義単位**で list / view / add / replace / remove / rename / fix できる。これが「AI が並列に触れる」狙いの中核。詳しくは [AI Editing](../spec/ai-edit.md)。

@@ -417,5 +417,5 @@ effect uploadFile  cap=http.post
 
 ## 5.12 Next
 
-- HTTP details → [./http.md](./http.md)
-- Lifecycle → [./lifecycle.md](./lifecycle.md)
+- HTTP details → [HTTP / Storage](./http.md)
+- Lifecycle → [Lifecycle](./lifecycle.md)

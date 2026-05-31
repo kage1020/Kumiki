@@ -4,8 +4,6 @@ English · [日本語](./http.ja.md)
 
 All interaction with the outside world is done via **effects**. This section describes the detailed specification of the effects provided by the standard library.
 
----
-
 ## 6.1 HTTP Common
 
 ### 6.1.1 capability
@@ -453,5 +451,5 @@ A `volatile` slot is excluded from persistence.
 
 ## 6.12 Next
 
-- Persistence lifecycle → [./lifecycle.md](./lifecycle.md)
-- Mocking in replay → [./testing.md](./testing.md)
+- Persistence lifecycle → [Lifecycle](./lifecycle.md)
+- Mocking in replay → [Testing](./testing.md)

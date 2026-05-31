@@ -1,8 +1,8 @@
-# Recipes (Reverse Lookup)
+# Recipes
 
 English · [日本語](./recipes.ja.md)
 
-Each recipe links to a corresponding minimal example. The fastest path is to look at the example first, then confirm the details in [../spec/](../spec/).
+Each recipe links to a corresponding minimal example. The fastest path is to look at the example first, then confirm the details in [Strand Specification](../spec/).
 
 ## State
 

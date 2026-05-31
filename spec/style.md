@@ -383,5 +383,5 @@ app TodoApp
 
 ## 4.12 Next
 
-- Form styling → [./forms.md](./forms.md)
-- Accessibility → [./lifecycle.md](./lifecycle.md)
+- Form styling → [Forms](./forms.md)
+- Accessibility → [Lifecycle](./lifecycle.md)

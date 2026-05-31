@@ -26,7 +26,7 @@ Strand has no rules about the order of Hook calls, no dependency arrays, and no 
 
 ## One Write per Reducer (Path-Shape Granularity)
 
-Writing to the same **path shape** multiple times within a single reducer triggers [E0601](../spec/errors.md#e06xx--reducer-write-rules). This guarantees that "updates are consolidated in one place," making partial edits safe.
+Writing to the same **path shape** multiple times within a single reducer triggers [E0601](../spec/errors.md#e06xx---reducer-write-rules). This guarantees that "updates are consolidated in one place," making partial edits safe.
 
 ```strand
 # NG: double write to tasks
@@ -41,4 +41,4 @@ tasks := tasks.remove(id).filter(pred)
 
 ## A Design Easy for AI to Partially Edit
 
-Because each definition is independent and references are explicit, `@strand/cli` / `@strand/mcp` can list / view / add / replace / remove / rename / fix at the **per-definition** level. This is the core of the goal that "AI can work in parallel." For details, see [../spec/ai-edit.md](../spec/ai-edit.md).
+Because each definition is independent and references are explicit, `@strand/cli` / `@strand/mcp` can list / view / add / replace / remove / rename / fix at the **per-definition** level. This is the core of the goal that "AI can work in parallel." For details, see [AI Editing](../spec/ai-edit.md).

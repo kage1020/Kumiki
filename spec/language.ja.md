@@ -10,7 +10,7 @@ Strand プログラムは **7 種類の定義の集合**である。物理的な
 (layer, name, body, content-hash)
 ```
 
-テキスト表現は graph からの projection であり、必要なときに `strand view` で取り出せる（→ [./ai-edit.md](./ai-edit.md)）。
+テキスト表現は graph からの projection であり、必要なときに `strand view` で取り出せる（→ [AI Editing](./ai-edit.md)）。
 
 ```ebnf
 program     ::= definition*
@@ -643,7 +643,7 @@ items.fold(0, $1 + $2.price)               ; ($1: acc, $2: elem)
 - 参照は **名前で書き**、CRDT graph 保存時に content-hash に解決
 - リネーム = 新名で別 hash を作り参照を更新する CRDT op
 
-→ [./ai-edit.md](./ai-edit.md)
+→ [AI Editing](./ai-edit.md)
 
 ---
 
@@ -679,7 +679,7 @@ route-entry ::= string '->' identifier        ; tile 名へ
 emit-list  ::= effect-call (',' effect-call)*
 ```
 
-→ [./routing.md](./routing.md), [./http.md](./http.md)
+→ [Routing](./routing.md), [HTTP / Storage](./http.md)
 
 ```strand
 app TodoApp
@@ -742,4 +742,4 @@ app Counter
     init   = []
 ```
 
-→ [./stdlib.md](./stdlib.md), [./routing.md](./routing.md), [examples/apps/01-counter/app.strand](https://github.com/kage1020/Strand/blob/main/examples/apps/01-counter/app.strand)
+→ [Standard Library](./stdlib.md), [Routing](./routing.md), [examples/apps/01-counter/app.strand](https://github.com/kage1020/Strand/blob/main/examples/apps/01-counter/app.strand)

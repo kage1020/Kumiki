@@ -4,8 +4,6 @@ English · [日本語](./stdlib.ja.md)
 
 Strand's standard library is designed with the goal of being "**minimal and complete**". It does not provide multiple functions for the same purpose (so as not to make the AI's choice ambiguous).
 
----
-
 ## 2.1 Built-in Types
 
 ### 2.1.1 Primitives
@@ -419,7 +417,7 @@ Writing an unlisted capability in `app.caps` is a compile error. Registration of
 
 The standard effect corresponding to each capability. If the capability is in `app.caps`, it is automatically usable.
 
-→ For the detailed specification, see [./http.md](./http.md).
+→ For the detailed specification, see [HTTP / Storage](./http.md).
 
 ### 2.6.1 Navigation
 

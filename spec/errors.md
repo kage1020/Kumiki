@@ -41,7 +41,7 @@ An app that declares `app.routes` must include a route for the `/404` pattern. U
 
 > `app.routes must include a "/404" entry`
 
-**Fix**: Add a route to a 404 tile, such as `route "/404" -> NotFound`. See [./routing.md](./routing.md) for details.
+**Fix**: Add a route to a 404 tile, such as `route "/404" -> NotFound`. See [Routing](./routing.md) for details.
 
 ## E01xx — Name Resolution
 
@@ -51,7 +51,7 @@ An event handler argument / prop refers to a reducer name that does not exist.
 
 > `Reference to undefined reducer "<name>"`
 
-**Fix**: Check the spelling of the reducer name. `strand fix` can suggest a close name (→ [./ai-edit.md](./ai-edit.md)).
+**Fix**: Check the spelling of the reducer name. `strand fix` can suggest a close name (→ [AI Editing](./ai-edit.md)).
 
 ### E0103 `undef-ref` / `undef-slot`
 
@@ -92,7 +92,7 @@ A capability required by an effect is not declared in `app.caps`.
 
 > `Effect "<effect>" requires capability "<cap>" which is not declared in app.caps`
 
-**Fix**: Add the required capability to `app.caps`. For details on the capability model, see [./lifecycle.md](./lifecycle.md).
+**Fix**: Add the required capability to `app.caps`. For details on the capability model, see [Lifecycle](./lifecycle.md).
 
 ### E0305 `fn-impurity`
 
@@ -110,7 +110,7 @@ Within the same reducer, the same slot path shape (lvalue shape) is written more
 
 > `Slot path "<shape>" is written more than once in this reducer`
 
-**Note**: The granularity is **path shape**. `issues[id].status` and `issues[id].updatedAt` are considered different shapes and can coexist, but double assignment to `count` is forbidden. For the rationale, see [../design-notes/rationale.md](../design-notes/rationale.md).
+**Note**: The granularity is **path shape**. `issues[id].status` and `issues[id].updatedAt` are considered different shapes and can coexist, but double assignment to `count` is forbidden. For the rationale, see [Rationale](../design-notes/rationale.md).
 
 ## E07xx — Accessibility (a11y)
 
@@ -128,11 +128,11 @@ a11y checking is enabled via `check(program, { strictA11y: true })`.
 
 > `link must have inner text or aria-label`
 
-**Fix**: Provide visible text, or an `aria-label` / `alt`. For general guidance on forms, see [./forms.md](./forms.md).
+**Fix**: Provide visible text, or an `aria-label` / `alt`. For general guidance on forms, see [Forms](./forms.md).
 
 ## E08xx — Runtime Hazards
 
-A band for statically catching, at the `check` stage, "code" that passes type checking but breaks at runtime. For the three-layer verification model, see [./testing.md](./testing.md) §8.10.
+A band for statically catching, at the `check` stage, "code" that passes type checking but breaks at runtime. For the three-layer verification model, see [Testing](./testing.md) §8.10.
 
 ### E0801 `unimplemented-method`
 
@@ -140,6 +140,6 @@ A method call of the form `obj.method(...)` does not exist in the set of methods
 
 > `Method ".<name>" is not implemented by the runtime`
 
-**Note**: The set of implemented methods is solely authoritative in `@strand/compiler`'s `KNOWN_METHODS` (kept in sync with code generation's `methodCallJs`). Calling a no-argument method with `()` is also caught by this band. For the list of standard library methods, see [./stdlib.md](./stdlib.md).
+**Note**: The set of implemented methods is solely authoritative in `@strand/compiler`'s `KNOWN_METHODS` (kept in sync with code generation's `methodCallJs`). Calling a no-argument method with `()` is also caught by this band. For the list of standard library methods, see [Standard Library](./stdlib.md).
 
 **Fix**: Correct it to the right method name, or rewrite the operation using implemented means such as `match` / `fold`. If you need an unimplemented specification method, implement it in `packages/` and add a working example in `examples/`.

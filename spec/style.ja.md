@@ -383,5 +383,5 @@ app TodoApp
 
 ## 4.12 次
 
-- フォームのスタイル → [./forms.md](./forms.md)
-- アクセシビリティ → [./lifecycle.md](./lifecycle.md)
+- フォームのスタイル → [Forms](./forms.md)
+- アクセシビリティ → [Lifecycle](./lifecycle.md)

@@ -1,11 +1,11 @@
 {
-  "name": "@strand/e2e",
+  "name": "@kumiki/e2e",
   "version": "0.1.0",
   "type": "module",
-  "description": "Strand real-browser verification tier — runs the same scenarios in Chromium (Playwright) to catch CSS layout, real focus, and rendering bugs jsdom can't see.",
+  "description": "Kumiki real-browser verification tier — runs the same scenarios in Chromium (Playwright) to catch CSS layout, real focus, and rendering bugs jsdom can't see.",
   "license": "Apache-2.0",
   "bin": {
-    "strand-e2e": "./src/cli.ts"
+    "kumiki-e2e": "./src/cli.ts"
   },
   "exports": {
     ".": {
@@ -23,7 +23,7 @@
     "lint": "biome check src"
   },
   "dependencies": {
-    "@strand/compiler": "workspace:*",
+    "@kumiki/compiler": "workspace:*",
     "playwright": "^1.60.0"
   },
   "devDependencies": {

@@ -1,4 +1,4 @@
-// Public API of @strand/cli — the programmatic surface behind the `strand` command.
+// Public API of @kumiki/cli — the programmatic surface behind the `kumiki` command.
 
 export { type AutoPatch, fixCmd, planFixes } from "./fix.ts";
 export { addDef, removeDef, renameDef, replaceDef } from "./mutate.ts";

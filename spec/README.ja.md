@@ -1,10 +1,10 @@
-# Strand 仕様
+# Kumiki 仕様
 
 [English](./README.md) · 日本語
 
-ここは Strand 言語とランタイムの**正規（normative）仕様**である。実装（`packages/`）と本仕様が食い違った場合、原則として本仕様を正とし、どちらを直すかを設計判断として記録する（→ [Design Notes](../design-notes/)）。
+ここは Kumiki 言語とランタイムの**正規（normative）仕様**である。実装（`packages/`）と本仕様が食い違った場合、原則として本仕様を正とし、どちらを直すかを設計判断として記録する（→ [Design Notes](../design-notes/)）。
 
-チュートリアルや how-to は仕様ではなく [Strand Guide](../guide/) に置く。動作する実例は [Strand Examples](../examples/) にある。
+チュートリアルや how-to は仕様ではなく [Kumiki Guide](../guide/) に置く。動作する実例は [Kumiki Examples](../examples/) にある。
 
 ## 目次
 

@@ -79,7 +79,7 @@ Phase 4 で **扱わない**：
 | 判断 | 理由 |
 |---|---|
 | Theme tokens は **コンパイル時** に展開しない | slot 切替でテーマ切換できるよう runtime resolve |
-| 状態スタイルは動的 CSS 注入 (data-strand-id + pseudo-class) | inline style で hover を書く方法はないので |
+| 状態スタイルは動的 CSS 注入 (data-kumiki-id + pseudo-class) | inline style で hover を書く方法はないので |
 | Responsive は viewport size を watch しない | `matchMedia` でブレークポイント別 class を切替 |
 | a11y は警告のデフォルト | 既存例の互換性のため。`--strict-a11y` でエラー化 |
 | エラー境界は try/catch ベース | render 中の例外を捕捉、tile 階層単位 |

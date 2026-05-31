@@ -4,14 +4,14 @@
 
 ## ゴール
 
-`examples/apps/01-counter/app.strand` を入力に `strand build` を実行すると、ブラウザで開いて `+` / `−` / `reset` ボタンが機能する単一の SPA がビルドされる。
+`examples/apps/01-counter/app.kumiki` を入力に `kumiki build` を実行すると、ブラウザで開いて `+` / `−` / `reset` ボタンが機能する単一の SPA がビルドされる。
 
 人間が編集する流れ：
 
 ```bash
 pnpm install
 pnpm build
-pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand out/counter
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki out/counter
 node benchmarks/scripts/serve.mjs out/counter 5173
 ```
 
@@ -49,7 +49,7 @@ packages/
 │       └── index.ts          ← ランタイムエントリ（mount）、slot ストア + dirty tracking、仮想 tile → DOM 反映
 └── cli/
     └── src/
-        └── strand.ts         ← strand build コマンド
+        └── kumiki.ts         ← kumiki build コマンド
 ```
 
 ## 受け入れ基準（AC）
@@ -69,7 +69,7 @@ TDD で先に固める。
 
 ### AC-Parser
 
-`examples/apps/01-counter/app.strand` 全体を入力して、AST の以下のノード数：
+`examples/apps/01-counter/app.kumiki` 全体を入力して、AST の以下のノード数：
 
 - TypeDef: 1（N）
 - SlotDef: 1（count）
@@ -103,7 +103,7 @@ TDD で先に固める。
 ### AC-CLI
 
 ```bash
-pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand out/counter
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki out/counter
 ```
 
 - 終了コード 0
@@ -113,7 +113,7 @@ pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/
 ### AC-E2E
 
 `test/e2e.test.ts` で：
-- `examples/apps/01-counter/app.strand` を読んで build
+- `examples/apps/01-counter/app.kumiki` を読んで build
 - 出力された JS を eval / dynamic import
 - jsdom 上で mount
 - `+` イベント dispatch → DOM テキストが "Count: 1" に変わる
@@ -124,7 +124,7 @@ pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/
 |---|---|---|
 | 1 | プロジェクトセットアップ | `pnpm test` で 0 件成功 |
 | 2 | AST 型 + Lexer | `lexer.test.ts` の全例 |
-| 3 | Parser | `parser.test.ts` で `examples/apps/01-counter/app.strand` パース成功 |
+| 3 | Parser | `parser.test.ts` で `examples/apps/01-counter/app.kumiki` パース成功 |
 | 4 | Typecheck | `typecheck.test.ts` で AC-Typecheck の正常/異常各ケース |
 | 5 | Codegen | `codegen.test.ts` で生成 JS が期待形に近い構造 |
 | 6 | Runtime | `runtime.test.ts` で jsdom 上のマウント・更新が確認 |
@@ -136,10 +136,10 @@ pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/
 | 判断 | 理由 |
 |---|---|
 | PoC は単一パッケージにする | monorepo は次フェーズ。Phase 1 は速度優先 |
-| 手書き再帰下降パーサ | 依存追加（acorn/peggy 等）を避け、Strand の構文だけで動く |
+| 手書き再帰下降パーサ | 依存追加（acorn/peggy 等）を避け、Kumiki の構文だけで動く |
 | ランタイムは「全 tile 再描画 + DOM diff なし」 | Phase 1 では性能より動作優先。初回描画後は dirty 検知→該当 tile のみ再生成 |
 | IR は省略、直接 JS にコード生成 | Phase 1 は IR を介さず短絡。Phase 2 で IR を挟む |
-| 開発サーバはビルド出力（`out/`）を直接配信 | strand dev は Phase 2 |
+| 開発サーバはビルド出力（`out/`）を直接配信 | kumiki dev は Phase 2 |
 | signal graph も Phase 1 では実装せず | 全 slot 変更時に該当 tile を再描画する素朴な実装 |
 
 ## 完了の定義

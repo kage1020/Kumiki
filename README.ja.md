@@ -1,10 +1,10 @@
-# Strand
+# Kumiki
 
 [English](./README.md) · 日本語
 
-**AI が書き・直し・並列に触ることを最優先に設計した、宣言的 Web アプリ言語とランタイム（experimental, v0.1）**
+**AI の、AI による、AI のための Web フレームワーク。** 定義同士は組木（_kumiki_）のように噛み合う——釘も糊も、隠れた状態もない——から、AI が並列にアプリを書き・直し・組み替えても壊れない。（experimental, v0.1）
 
-```strand
+```kumiki
 slot count : Int = 0
 
 reducer inc on=ui.click(IncBtn) do= count := count + 1
@@ -18,13 +18,13 @@ app Counter
     init   = []
 ```
 
-Strand は JSX・Hooks・依存配列・Provider といった「人間の認知に最適化された」装置を持たない。代わりに **7 レイヤ**（type / slot / effect / reducer / tile / fn / app）の独立した定義の集合としてアプリを表す。構文オーバーヘッドが小さく、定義同士の依存が明示的で、AI が安全に部分編集できる。
+Kumiki は JSX・Hooks・依存配列・Provider といった「人間の認知に最適化された」装置を持たない。代わりに **7 レイヤ**（type / slot / effect / reducer / tile / fn / app）の独立した定義の集合としてアプリを表す。構文オーバーヘッドが小さく、定義同士の依存が明示的で、AI が安全に部分編集できる。
 
 > ⚠️ **experimental**。言語・ランタイム・ツールは変わりうる。本番利用は想定していない。
 
-## なぜ Strand か
+## なぜ Kumiki か
 
-クロスベンダーの実測で、LLM は仕様書だけを与えられた状態から Strand アプリを 1300 行規模まで書けることを確認している（[design-notes/learning-cost-v4.md](./design-notes/learning-cost-v4.md)）。React 比でトークン効率も高い（[design-notes/benchmark.md](./design-notes/benchmark.md)）。
+クロスベンダーの実測で、LLM は仕様書だけを与えられた状態から Kumiki アプリを 1300 行規模まで書けることを確認している（[design-notes/learning-cost-v4.md](./design-notes/learning-cost-v4.md)）。React 比でトークン効率も高い（[design-notes/benchmark.md](./design-notes/benchmark.md)）。
 
 ## リポジトリ構成
 
@@ -44,9 +44,9 @@ pnpm install
 pnpm build          # 全パッケージをビルド
 pnpm test           # 全テスト
 
-# Strand プログラムを検査・ビルド
-pnpm --filter @strand/cli exec tsx src/strand.ts check examples/apps/01-counter/app.strand
-pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand ./out
+# Kumiki プログラムを検査・ビルド
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts check examples/apps/01-counter/app.kumiki
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki ./out
 ```
 
 はじめての人は [guide/getting-started.md](./guide/getting-started.md) → [guide/your-first-app.md](./guide/your-first-app.md) へ。
@@ -55,10 +55,10 @@ pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/
 
 | パッケージ | 内容 |
 |---|---|
-| [`@strand/compiler`](./packages/compiler/) | lexer・parser・typechecker・codegen |
-| [`@strand/runtime`](./packages/runtime/) | DOM ランタイム（signal graph・mount・dispatch） |
-| [`@strand/cli`](./packages/cli/) | `strand` コマンド（build / check / list / view / add / replace / remove / rename / fix） |
-| [`@strand/mcp`](./packages/mcp/) | MCP サーバー。コンパイラと AI 編集・仕様検索を MCP ツールとして公開 |
+| [`@kumiki/compiler`](./packages/compiler/) | lexer・parser・typechecker・codegen |
+| [`@kumiki/runtime`](./packages/runtime/) | DOM ランタイム（signal graph・mount・dispatch） |
+| [`@kumiki/cli`](./packages/cli/) | `kumiki` コマンド（build / check / list / view / add / replace / remove / rename / fix） |
+| [`@kumiki/mcp`](./packages/mcp/) | MCP サーバー。コンパイラと AI 編集・仕様検索を MCP ツールとして公開 |
 
 ## 運用モデル
 

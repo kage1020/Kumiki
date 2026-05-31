@@ -1,15 +1,15 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
-import { compile, lex, parse, check } from "@strand/compiler";
+import { compile, lex, parse, check } from "@kumiki/compiler";
 // The prebuilt runtime bundle, inlined as a string so generated apps are
 // fully self-contained and runnable inside the preview iframe.
-import runtimeBundle from "@strand/runtime/bundle?raw";
+import runtimeBundle from "@kumiki/runtime/bundle?raw";
 
 type Diag = { code: string; kind: string; message: string; line: number; col: number };
 
 // Load every feature example at build time so the playground ships with a
 // browsable catalog. Paths are relative to this component (repo root is ../../..).
-const exampleModules = import.meta.glob("../../examples/features/*.strand", {
+const exampleModules = import.meta.glob("../../examples/features/*.kumiki", {
   query: "?raw",
   import: "default",
   eager: true,
@@ -115,13 +115,13 @@ function registerWebMcpTools(): void {
 
   mc.registerTool(
     {
-      name: "strand_compile",
+      name: "kumiki_compile",
       description:
-        "Compile the given Strand source. Returns ok plus generated JS size, or a list of diagnostics (codes per spec/errors.md).",
+        "Compile the given Kumiki source. Returns ok plus generated JS size, or a list of diagnostics (codes per spec/errors.md).",
       annotations: { readOnlyHint: true },
       inputSchema: {
         type: "object",
-        properties: { source: { type: "string", description: "Strand source text" } },
+        properties: { source: { type: "string", description: "Kumiki source text" } },
         required: ["source"],
       },
       execute: (input: Record<string, unknown>) => {
@@ -143,7 +143,7 @@ function registerWebMcpTools(): void {
 
   mc.registerTool(
     {
-      name: "strand_list_examples",
+      name: "kumiki_list_examples",
       description: "List the feature examples available in the playground.",
       annotations: { readOnlyHint: true },
       inputSchema: { type: "object", properties: {} },
@@ -154,11 +154,11 @@ function registerWebMcpTools(): void {
 
   mc.registerTool(
     {
-      name: "strand_load_example",
+      name: "kumiki_load_example",
       description: "Load a named feature example into the playground editor and preview it.",
       inputSchema: {
         type: "object",
-        properties: { name: { type: "string", description: "Example file name, e.g. 07-list.strand" } },
+        properties: { name: { type: "string", description: "Example file name, e.g. 07-list.kumiki" } },
         required: ["name"],
       },
       execute: (input: Record<string, unknown>) => {
@@ -171,8 +171,8 @@ function registerWebMcpTools(): void {
 
   mc.registerTool(
     {
-      name: "strand_set_source",
-      description: "Replace the playground editor's source with the given Strand code and preview it.",
+      name: "kumiki_set_source",
+      description: "Replace the playground editor's source with the given Kumiki code and preview it.",
       inputSchema: {
         type: "object",
         properties: { source: { type: "string" } },
@@ -223,7 +223,7 @@ interface WebMcp {
         v-model="source"
         class="sp-editor"
         spellcheck="false"
-        aria-label="Strand source"
+        aria-label="Kumiki source"
       ></textarea>
       <div class="sp-preview">
         <iframe v-if="ok" :srcdoc="srcdoc" title="preview" sandbox="allow-scripts"></iframe>

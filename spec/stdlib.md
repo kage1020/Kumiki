@@ -2,7 +2,7 @@
 
 English · [日本語](./stdlib.ja.md)
 
-Strand's standard library is designed with the goal of being "**minimal and complete**". It does not provide multiple functions for the same purpose (so as not to make the AI's choice ambiguous).
+Kumiki's standard library is designed with the goal of being "**minimal and complete**". It does not provide multiple functions for the same purpose (so as not to make the AI's choice ambiguous).
 
 ## 2.1 Built-in Types
 
@@ -69,14 +69,14 @@ map(expr)                   : Map(K, V')       ; within expr, $1=key, $2=value
 
 `.entries` returns a **sequence of 2-element arrays** as `List(Tuple(K, V))`. A subsequent `map` / `sort-by` / `filter` lambda can handle them as `$1=key, $2=value` via runtime destructuring:
 
-```strand
+```kumiki
 fn sortedByCreatedAt(m: Map(Id, Item)) -> List(Id)
    = m.entries.sort-by($2.createdAt).map($1)
 ```
 
 `get-or` is a polymorphic method that **can also be used for Option**:
 
-```strand
+```kumiki
 m.get-or(k, default)         ; Map: default if there is no value
 opt.get-or(default)          ; Option: default if None, v if Some(v)
 ```
@@ -130,7 +130,7 @@ zip(other)                  : List(Tuple(T, U))
 
 **Parenthesis-free shortcut**: argument-less methods (`is-empty` / `length` / `reverse` / `sort` / `unique` / `head` / `tail` / `last`) **can omit `()` and be written like a field**:
 
-```strand
+```kumiki
 slot todos : List(Todo) = []
 fn count() -> Int = todos.length              ; parenthesis-free OK
 fn empty?() -> Bool = todos.is-empty          ; same as above
@@ -195,7 +195,7 @@ abs, neg, min(b), max(b), clamp(lo, hi)
 show, to-float (Int), to-int (Float, truncated)
 ```
 
-`x.show` is the **common-to-all-types** stringification method. Int / Float / Bool / variant / nominal all return `.show : Text`. Strand has no name called `to-text`.
+`x.show` is the **common-to-all-types** stringification method. Int / Float / Bool / variant / nominal all return `.show : Text`. Kumiki has no name called `to-text`.
 
 ### 2.2.8 Time
 
@@ -221,7 +221,7 @@ to-ms                       : Int
 
 Time / Duration are represented at runtime as a **raw number of milliseconds**. An operation like `time.plus(Duration.h(72))` is expanded into a simple ms addition.
 
-```strand
+```kumiki
 fn isSoon(due: Time) -> Bool = due < now.plus(Duration.h(72))
 fn elapsed(start: Time) -> Duration = now.diff(start)
 ```
@@ -230,7 +230,7 @@ fn elapsed(start: Time) -> Duration = now.diff(start)
 
 ## 2.3 Tile Primitive Elements
 
-Strand's built-in tiles. They are **semantic tags** and are not literal translations of HTML tags.
+Kumiki's built-in tiles. They are **semantic tags** and are not literal translations of HTML tags.
 
 ### 2.3.1 Structural Elements
 
@@ -421,7 +421,7 @@ The standard effect corresponding to each capability. If the capability is in `a
 
 ### 2.6.1 Navigation
 
-```strand
+```kumiki
 effect navigate    cap=nav.push     in={path: Text, params: Map(Text, Text)}  out=Unit
 effect navigate-replace cap=nav.replace in={path: Text, params: Map(Text, Text)} out=Unit
 effect navigate-back   cap=nav.back  in=Unit  out=Unit
@@ -429,13 +429,13 @@ effect navigate-back   cap=nav.back  in=Unit  out=Unit
 
 ### 2.6.2 Toast
 
-```strand
+```kumiki
 effect toast       cap=notification.show  in={kind: Text, text: Text}  out=Unit
 ```
 
 ### 2.6.3 Log
 
-```strand
+```kumiki
 effect log         cap=log.write    in={level: Text, message: Text, data: Map(Text, Text)}  out=Unit
 ```
 
@@ -443,9 +443,9 @@ effect log         cap=log.write    in={level: Text, message: Text, data: Map(Te
 
 ## 2.7 Frequently Wanted Types Such as Numeric/Currency Are Intentionally Not Provided
 
-Types such as `Money`, `Percent`, and `Decimal` are defined on the application side using `nominal`. Strand is unopinionated.
+Types such as `Money`, `Percent`, and `Decimal` are defined on the application side using `nominal`. Kumiki is unopinionated.
 
-```strand
+```kumiki
 type Cents = nominal Int where positive
 type Yen   = nominal Int where positive
 ```

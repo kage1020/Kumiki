@@ -2,7 +2,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
-import { check, compile } from "@strand/compiler";
+import { check, compile } from "@kumiki/compiler";
 import { fixCmd } from "./fix.ts";
 import { addDef, removeDef, renameDef, replaceDef } from "./mutate.ts";
 import { runCmd, smokeCmd } from "./smoke.ts";
@@ -12,13 +12,13 @@ const require = createRequire(import.meta.url);
 
 function usage(): never {
   console.error("Usage:");
-  console.error("  strand build <input.strand> <outdir>");
-  console.error("  strand list <input.strand> [layer]");
-  console.error("  strand view <input.strand> <qname> [--with-deps]");
-  console.error("  strand refs <input.strand> <qname>");
-  console.error("  strand check <input.strand> [--strict-a11y]");
-  console.error("  strand smoke <input.strand>");
-  console.error("  strand run <input.strand> <scenario.json>");
+  console.error("  kumiki build <input.kumiki> <outdir>");
+  console.error("  kumiki list <input.kumiki> [layer]");
+  console.error("  kumiki view <input.kumiki> <qname> [--with-deps]");
+  console.error("  kumiki refs <input.kumiki> <qname>");
+  console.error("  kumiki check <input.kumiki> [--strict-a11y]");
+  console.error("  kumiki smoke <input.kumiki>");
+  console.error("  kumiki run <input.kumiki> <scenario.json>");
   process.exit(2);
 }
 
@@ -134,10 +134,10 @@ async function main(argv: string[]): Promise<void> {
       return;
     }
     case "add": {
-      // strand add <file> <layer> <name> <body>
+      // kumiki add <file> <layer> <name> <body>
       const [, , , file, layer, name, ...rest] = argv;
       if (!file || !layer || !name || rest.length === 0) {
-        console.error("Usage: strand add <file> <layer> <name> <body>");
+        console.error("Usage: kumiki add <file> <layer> <name> <body>");
         process.exit(2);
       }
       const body = rest.join(" ");
@@ -151,10 +151,10 @@ async function main(argv: string[]): Promise<void> {
       return;
     }
     case "replace": {
-      // strand replace <file> <qname> <body>
+      // kumiki replace <file> <qname> <body>
       const [, , , file, qname, ...rest] = argv;
       if (!file || !qname || rest.length === 0) {
-        console.error("Usage: strand replace <file> <qname> <body>");
+        console.error("Usage: kumiki replace <file> <qname> <body>");
         process.exit(2);
       }
       const body = rest.join(" ");
@@ -170,7 +170,7 @@ async function main(argv: string[]): Promise<void> {
     case "remove": {
       const [, , , file, qname] = argv;
       if (!file || !qname) {
-        console.error("Usage: strand remove <file> <qname> [--cascade]");
+        console.error("Usage: kumiki remove <file> <qname> [--cascade]");
         process.exit(2);
       }
       try {
@@ -185,7 +185,7 @@ async function main(argv: string[]): Promise<void> {
     case "rename": {
       const [, , , file, qname, newName] = argv;
       if (!file || !qname || !newName) {
-        console.error("Usage: strand rename <file> <qname> <new-name>");
+        console.error("Usage: kumiki rename <file> <qname> <new-name>");
         process.exit(2);
       }
       try {
@@ -200,7 +200,7 @@ async function main(argv: string[]): Promise<void> {
     case "fix": {
       const file = argv[3];
       if (!file) {
-        console.error("Usage: strand fix <file> [--apply] [<code>]");
+        console.error("Usage: kumiki fix <file> [--apply] [<code>]");
         process.exit(2);
       }
       const apply = argv.includes("--apply");
@@ -216,7 +216,7 @@ async function main(argv: string[]): Promise<void> {
 function buildRuntimeBundle(): string {
   // The prebuilt runtime bundle is a browser-ready ESM module that already
   // exports mount / _stdlib / builtinEffects.
-  const runtimeBundlePath = require.resolve("@strand/runtime/bundle");
+  const runtimeBundlePath = require.resolve("@kumiki/runtime/bundle");
   return readFileSync(runtimeBundlePath, "utf8");
 }
 
@@ -226,7 +226,7 @@ function buildHtml(): string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Strand App</title>
+  <title>Kumiki App</title>
   <style>
     body { font-family: system-ui, sans-serif; margin: 0; padding: 24px; background: #fafafa; color: #1a1a1a; }
     button { padding: 6px 12px; font-size: 16px; cursor: pointer; }

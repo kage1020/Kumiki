@@ -2,9 +2,9 @@
 layout: home
 
 hero:
-  name: Strand
-  text: The declarative web app language AI writes
-  tagline: No JSX, no Hooks, no dependency arrays. An experimental language and runtime that represents an app as independent definitions across 7 layers.
+  name: Kumiki
+  text: A web framework of AI, by AI, for AI
+  tagline: Definitions interlock like Japanese joinery (kumiki) — no JSX, no Hooks, no hidden state — so AI can write, edit, and reassemble an app in parallel. Experimental.
   actions:
     - theme: brand
       text: Get started

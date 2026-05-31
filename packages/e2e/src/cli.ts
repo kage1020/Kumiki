@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-// strand-e2e <input.strand> <scenario.json> [--headed]
+// kumiki-e2e <input.kumiki> <scenario.json> [--headed]
 // Runs a scenario in a real Chromium and prints the trace.
 
 import { readFileSync } from "node:fs";
@@ -10,7 +10,7 @@ async function main(argv: string[]): Promise<void> {
   const file = argv[2];
   const scenarioPath = argv[3];
   if (!file || !scenarioPath) {
-    console.error("Usage: strand-e2e <input.strand> <scenario.json> [--headed]");
+    console.error("Usage: kumiki-e2e <input.kumiki> <scenario.json> [--headed]");
     process.exit(2);
   }
   const source = readFileSync(resolve(process.cwd(), file), "utf8");

@@ -4,13 +4,13 @@ English · [日本語](./language.ja.md)
 
 ## 1.1 Overall Program Structure
 
-A Strand program is a **set of 7 kinds of definitions**. There are no physical file boundaries; each definition is stored in a content-addressable graph as the following 4-tuple:
+A Kumiki program is a **set of 7 kinds of definitions**. There are no physical file boundaries; each definition is stored in a content-addressable graph as the following 4-tuple:
 
 ```
 (layer, name, body, content-hash)
 ```
 
-The textual representation is a projection from the graph and can be retrieved with `strand view` when needed (→ [AI Editing](./ai-edit.md)).
+The textual representation is a projection from the graph and can be retrieved with `kumiki view` when needed (→ [AI Editing](./ai-edit.md)).
 
 ```ebnf
 program     ::= definition*
@@ -142,7 +142,7 @@ Arbitrary Boolean predicates are prohibited. Reason: if the AI is forced to writ
 
 ### 1.3.4 Examples
 
-```strand
+```kumiki
 type UserId    = nominal Text where len-eq(36)
 type Email     = nominal Text where email
 type Url       = nominal Text where url
@@ -183,7 +183,7 @@ init-expr   ::= literal | record-literal | collection-literal | builtin-call
 
 ### 1.4.3 Examples
 
-```strand
+```kumiki
 slot todos       : Map(TodoId, Todo)              = {}
 slot filter      : Filter                         = All
 slot draft       : Text where len-lt(280)         = ""
@@ -227,7 +227,7 @@ map-expr        ::= record-literal       ; conversion from high-level effect →
 
 ### 1.5.3 Examples
 
-```strand
+```kumiki
 effect loadUser  cap=http.get
                  in=UserId
                  out=Result(User, HttpError)
@@ -297,7 +297,7 @@ In other words, you can mix one-line layout and block layout. When writing in ne
 
 A selector is **`TileName`** or **`TileName#id`** only (CSS attribute selectors have been removed).
 
-```strand
+```kumiki
 reducer add     on=ui.click(AddBtn)         do= ...
 reducer toggle  on=ui.click(TodoRow)        do= ...
 reducer submit  on=ui.submit(LoginForm#new) do= ...
@@ -306,7 +306,7 @@ reducer login   on=ui.submit(form#login)    do= ... ; ❌ 'form' is a built-in e
 
 To bind events directly to built-in elements (`button`, `input`, `form`, etc.), **create a wrapper tile**:
 
-```strand
+```kumiki
 tile LoginForm = form(...) {id: "main"}
 
 reducer doLogin
@@ -316,7 +316,7 @@ reducer doLogin
 
 Or, when identifying with `tile-ref#id`, this is the case where a tile is displayed multiple times:
 
-```strand
+```kumiki
 tile NewForm = form(...) {id: "new"}
 
 reducer add on=ui.submit(NewForm) do= ...
@@ -328,7 +328,7 @@ reducer add on=ui.submit(NewForm) do= ...
 
 An lvalue is a **path**, and you can directly mutate nested fields or the contents of an Option. The compiler expands this into an immutable update.
 
-```strand
+```kumiki
 ; These reducer statements:
 todos[id].done := true
 editor.title := "New"
@@ -344,7 +344,7 @@ editor := editor.map($1.copy(body="Body"))
 
 **`.copy(field=value, ...)`**: a shortcut for an immutable update of a record. It looks like a method call, but internally the named args are collected and expanded into `recordCopy(rec, {field: value, ...})`. You can update multiple fields at once:
 
-```strand
+```kumiki
 editor := editor.copy(title="New", body="Body", updatedAt=now)
 issue.copy(status=Done, priority=High)
 ```
@@ -378,7 +378,7 @@ issue.copy(status=Done, priority=High)
 
 ### 1.6.6 Examples
 
-```strand
+```kumiki
 reducer addTodo
     on=ui.submit(NewTodoForm)
     do= let id = TodoId.fresh()
@@ -460,7 +460,7 @@ pattern      ::= identifier
 
 An event handler **takes a reducer name**:
 
-```strand
+```kumiki
 button(text="Save", onClick=saveTodo) {todoId: $1}
 ```
 
@@ -468,7 +468,7 @@ With `onClick=saveTodo`, the reducer `saveTodo` is called on click. `{todoId: $1
 
 ### 1.7.4 Examples
 
-```strand
+```kumiki
 tile TodoRow  in=TodoId
               = row(
                   check(value=todos[$1].done, onClick=toggle) {todoId: $1},
@@ -516,7 +516,7 @@ fn-param    ::= identifier ':' type-expr
 
 ### 1.8.4 Examples
 
-```strand
+```kumiki
 fn matchFilter(t: Todo, f: Filter) -> Bool
    = match f with
        | All     -> true
@@ -541,7 +541,7 @@ fn matchPostTag(lr: LoadResult(Post), tag: Option(Text)) -> Bool
 
 ### 1.8.5 Calling from tile / reducer
 
-```strand
+```kumiki
 tile TodoList = column(
                   for id in todos.keys
                     when(matchFilter(todos[id], filter), TodoRow(id)))
@@ -560,7 +560,7 @@ fn normalizeAll(ts: Map(TodoId, Todo)) -> Map(TodoId, Todo)
 
 Since there are no lambdas, passing higher-order functions uses either a "fn name" or an "expression fragment":
 
-```strand
+```kumiki
 items.map(double)         ; registered fn name
 items.map($1 * 2)         ; expression fragment ($1 is the element)
 items.filter(matchFilter($1, filter))  ; embed a fn call in an expression fragment
@@ -568,7 +568,7 @@ items.filter(matchFilter($1, filter))  ; embed a fn call in an expression fragme
 
 Partial application is **written explicitly** (no currying):
 
-```strand
+```kumiki
 fn isActiveOnly(t: Todo) -> Bool = matchFilter(t, Active)
 items.filter(isActiveOnly)
 ```
@@ -623,7 +623,7 @@ unop        ::= '-' | '!'
 
 ### 1.9.2 Alternatives to Higher-Order Functions
 
-```strand
+```kumiki
 items.map($1 * 2)                          ; expression fragment
 items.map(formatPrice)                     ; fn name
 items.filter(matchFilter($1, filter))      ; fn call
@@ -681,7 +681,7 @@ emit-list  ::= effect-call (',' effect-call)*
 
 → [Routing](./routing.md), [HTTP / Storage](./http.md)
 
-```strand
+```kumiki
 app TodoApp
     caps   = [storage.read, storage.write, http.get]
     routes = {"/" -> TodoList, "/todo/:id" -> TodoDetail, "/404" -> NotFound}
@@ -693,7 +693,7 @@ app TodoApp
 
 ## 1.13 Counterexamples
 
-```strand
+```kumiki
 # ❌ local state
 tile Foo = let x = 0 in button(text=x.show)   # assignment inside a tile is not allowed (let binds an expression, but is not a substitute for a slot)
 
@@ -720,7 +720,7 @@ reducer r on=ui.change(input[type=file]) do= ...   # write it by tile name
 
 ## 1.14 Complete Example: Counter
 
-```strand
+```kumiki
 type N      = nominal Int where between(0, 999)
 slot count  : N    = 0
 
@@ -742,4 +742,4 @@ app Counter
     init   = []
 ```
 
-→ [Standard Library](./stdlib.md), [Routing](./routing.md), [examples/apps/01-counter/app.strand](https://github.com/kage1020/Strand/blob/main/examples/apps/01-counter/app.strand)
+→ [Standard Library](./stdlib.md), [Routing](./routing.md), [examples/apps/01-counter/app.kumiki](https://github.com/kage1020/Kumiki/blob/main/examples/apps/01-counter/app.kumiki)

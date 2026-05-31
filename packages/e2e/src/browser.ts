@@ -1,10 +1,10 @@
 // Real-browser verification tier. Runs the SAME scenario format as the jsdom
 // `runScenario`, but in Chromium via Playwright, so it catches what jsdom can't:
 // CSS layout / visibility, real focus management, and real rendering. State is
-// still the oracle — read from `window.__strandApp.live` in the page.
+// still the oracle — read from `window.__kumikiApp.live` in the page.
 
-import { compile } from "@strand/compiler";
-import { nodeRuntimeBundleReader } from "@strand/compiler/node";
+import { compile } from "@kumiki/compiler";
+import { nodeRuntimeBundleReader } from "@kumiki/compiler/node";
 import { chromium, type Page } from "playwright";
 
 export type Action =
@@ -89,7 +89,7 @@ export async function runScenarioInBrowser(
     page.on("pageerror", (e) => errorBuf.push(String(e)));
 
     await page.setContent(buildHtml(compiled.js), { waitUntil: "load" });
-    await page.waitForFunction("window.__strandApp !== undefined", null, { timeout: 5000 });
+    await page.waitForFunction("window.__kumikiApp !== undefined", null, { timeout: 5000 });
     await page.waitForTimeout(settleMs);
 
     for (const step of scenario.steps) {
@@ -127,7 +127,7 @@ export async function runScenarioInBrowser(
 
 // Serialized into the page to read sanitized slot state.
 const snapshotStateFn = `(() => {
-  const live = (window.__strandApp && window.__strandApp.live) || {};
+  const live = (window.__kumikiApp && window.__kumikiApp.live) || {};
   const seen = new WeakSet();
   const san = (v) => {
     if (v === null || typeof v !== "object") return typeof v === "function" ? "[fn]" : v;
@@ -156,13 +156,13 @@ async function performAction(page: Page, a: Action): Promise<void> {
   if ("dispatch" in a) {
     await page.evaluate(
       (arg: { n: string; p: Record<string, unknown> }) =>
-        window.__strandApp?._dispatch?.(arg.n, arg.p),
+        window.__kumikiApp?._dispatch?.(arg.n, arg.p),
       { n: a.dispatch, p: (a.payload ?? {}) as Record<string, unknown> },
     );
     return;
   }
   if ("navigate" in a) {
-    await page.evaluate((path: string) => window.__strandApp?._navigate?.(path), a.navigate);
+    await page.evaluate((path: string) => window.__kumikiApp?._navigate?.(path), a.navigate);
     return;
   }
   if ("clickText" in a) {
@@ -265,7 +265,7 @@ function j(v: unknown): string {
 
 declare global {
   interface Window {
-    __strandApp?: {
+    __kumikiApp?: {
       live?: Record<string, unknown>;
       _dispatch?: (n: string, p: Record<string, unknown>) => void;
       _navigate?: (path: string) => void;

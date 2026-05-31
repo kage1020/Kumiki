@@ -1,13 +1,13 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { mount } from "@strand/runtime";
+import { mount } from "@kumiki/runtime";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildAndLoad } from "./helpers/build-and-load.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const COUNTER = resolve(here, "../../../examples/apps/01-counter/app.strand");
+const COUNTER = resolve(here, "../../../examples/apps/01-counter/app.kumiki");
 
-describe("counter e2e (built from .strand)", () => {
+describe("counter e2e (built from .kumiki)", () => {
   let root: HTMLElement;
   const rootId = "counter-root";
 

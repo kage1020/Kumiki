@@ -6,8 +6,8 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { compile, type StrandError } from "@strand/compiler";
-import { nodeRuntimeBundleReader } from "@strand/compiler/node";
+import { compile, type KumikiError } from "@kumiki/compiler";
+import { nodeRuntimeBundleReader } from "@kumiki/compiler/node";
 import { describe, expect, it } from "vitest";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -16,7 +16,7 @@ const examplesDir = join(here, "..", "examples");
 function listFeatureExamples(): string[] {
   const dir = join(examplesDir, "features");
   return readdirSync(dir)
-    .filter((f) => f.endsWith(".strand"))
+    .filter((f) => f.endsWith(".kumiki"))
     .map((f) => join(dir, f));
 }
 
@@ -25,7 +25,7 @@ function listAppExamples(): string[] {
   return readdirSync(dir)
     .map((name) => join(dir, name))
     .filter((p) => statSync(p).isDirectory())
-    .map((p) => join(p, "app.strand"))
+    .map((p) => join(p, "app.kumiki"))
     .filter((p) => {
       try {
         return statSync(p).isFile();
@@ -35,7 +35,7 @@ function listAppExamples(): string[] {
     });
 }
 
-function fmtErrors(errors: StrandError[]): string {
+function fmtErrors(errors: KumikiError[]): string {
   return errors
     .map((e) => `${e.code} ${e.kind} @ ${e.pos.line}:${e.pos.col}: ${e.message}`)
     .join("\n");

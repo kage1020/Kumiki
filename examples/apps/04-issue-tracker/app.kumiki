@@ -1,4 +1,4 @@
-# Issue Tracker — Strand v0.1
+# Issue Tracker — Kumiki v0.1
 # GitHub-style issues: list/filter, detail+comments, new issue form, settings, persistence.
 
 # ====== Types ======
@@ -721,6 +721,6 @@ app IssueTracker
     theme  = themeName
     meta   = {
         title:       "Issue Tracker",
-        description: "A small Issue Tracker SPA built with Strand",
+        description: "A small Issue Tracker SPA built with Kumiki",
         favicon:     "/favicon.ico"
     }

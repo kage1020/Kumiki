@@ -2,11 +2,11 @@
 
 [English](./your-first-app.md) · 日本語
 
-7 レイヤを順に足しながら、動く Counter を組み立てる。完成形は [examples/apps/01-counter/app.strand](https://github.com/kage1020/Strand/blob/main/examples/apps/01-counter/app.strand)。
+7 レイヤを順に足しながら、動く Counter を組み立てる。完成形は [examples/apps/01-counter/app.kumiki](https://github.com/kage1020/Kumiki/blob/main/examples/apps/01-counter/app.kumiki)。
 
 ## 1. 状態を宣言する（slot）
 
-```strand
+```kumiki
 slot count : Int = 0
 ```
 
@@ -14,7 +14,7 @@ slot count : Int = 0
 
 ## 2. 更新を書く（reducer）
 
-```strand
+```kumiki
 reducer inc on=ui.click(IncBtn) do= count := count + 1
 ```
 
@@ -22,7 +22,7 @@ reducer inc on=ui.click(IncBtn) do= count := count + 1
 
 ## 3. UI を組む（tile）
 
-```strand
+```kumiki
 tile IncBtn = button(text="+1", onClick=inc)
 tile App    = column(heading("Count: " + count.show), IncBtn)
 ```
@@ -31,7 +31,7 @@ tile App    = column(heading("Count: " + count.show), IncBtn)
 
 ## 4. まとめる（app）
 
-```strand
+```kumiki
 app Counter
     caps   = []
     routes = {"/" -> App, "/404" -> App}
@@ -43,14 +43,14 @@ app Counter
 ## 5. 検査して動かす
 
 ```sh
-pnpm --filter @strand/cli exec tsx src/strand.ts check counter.strand
-pnpm --filter @strand/cli exec tsx src/strand.ts build counter.strand ./out
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts check counter.kumiki
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build counter.kumiki ./out
 ```
 
 ## 発展
 
-- 値の範囲を縛りたい → nominal 型 + refinement（[examples/features/02-nominal-type.strand](https://github.com/kage1020/Strand/blob/main/examples/features/02-nominal-type.strand)）
-- 入力欄と双方向結合 → `bind`（[examples/features/13-text-input-bind.strand](https://github.com/kage1020/Strand/blob/main/examples/features/13-text-input-bind.strand)）
-- 一覧を描く → `for ... in`（[examples/features/07-list.strand](https://github.com/kage1020/Strand/blob/main/examples/features/07-list.strand)）
+- 値の範囲を縛りたい → nominal 型 + refinement（[examples/features/02-nominal-type.kumiki](https://github.com/kage1020/Kumiki/blob/main/examples/features/02-nominal-type.kumiki)）
+- 入力欄と双方向結合 → `bind`（[examples/features/13-text-input-bind.kumiki](https://github.com/kage1020/Kumiki/blob/main/examples/features/13-text-input-bind.kumiki)）
+- 一覧を描く → `for ... in`（[examples/features/07-list.kumiki](https://github.com/kage1020/Kumiki/blob/main/examples/features/07-list.kumiki)）
 
-考え方の全体像は [Thinking in Strand](./thinking-in-strand.md) へ。
+考え方の全体像は [Thinking in Kumiki](./thinking-in-kumiki.md) へ。

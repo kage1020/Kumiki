@@ -1,4 +1,4 @@
-# Strand ガイド
+# Kumiki ガイド
 
 [English](./README.md) · 日本語
 
@@ -6,7 +6,7 @@
 
 1. [getting-started.md](./getting-started.md) — 環境構築と最初の check / build
 2. [your-first-app.md](./your-first-app.md) — Counter を一から組み立てる
-3. [thinking-in-strand.md](./thinking-in-strand.md) — 7 レイヤの考え方と React との対比
+3. [thinking-in-kumiki.md](./thinking-in-kumiki.md) — 7 レイヤの考え方と React との対比
 4. [recipes.md](./recipes.md) — よくあるパターンの逆引き
 
 動く実例は [../examples/](../examples/) を併読すること。

@@ -4,7 +4,7 @@
 
 ## ゴール
 
-`examples/apps/02-todomvc/app.strand` を入力に `strand build` を実行すると、ブラウザで開いて以下が動作する：
+`examples/apps/02-todomvc/app.kumiki` を入力に `kumiki build` を実行すると、ブラウザで開いて以下が動作する：
 
 - Todo の追加（input + Enter）
 - 完了トグル（checkbox）
@@ -118,7 +118,7 @@ tile TodoList = column(for id in todos.keys when(matchFilter(todos[id], filter),
 ### AC-CLI
 
 ```
-pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/02-todomvc/app.strand out/todomvc
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/02-todomvc/app.kumiki out/todomvc
 ```
 
 - 終了コード 0

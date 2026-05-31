@@ -6,14 +6,14 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const COUNTER_PATH = resolve(here, "../../../examples/apps/01-counter/app.strand");
-const CLI_PATH = resolve(here, "../src/strand.ts");
+const COUNTER_PATH = resolve(here, "../../../examples/apps/01-counter/app.kumiki");
+const CLI_PATH = resolve(here, "../src/kumiki.ts");
 
-describe("strand build CLI", () => {
+describe("kumiki build CLI", () => {
   let outDir: string;
 
   beforeEach(() => {
-    outDir = mkdtempSync(join(tmpdir(), "strand-cli-"));
+    outDir = mkdtempSync(join(tmpdir(), "kumiki-cli-"));
   });
 
   afterEach(() => {
@@ -36,7 +36,7 @@ describe("strand build CLI", () => {
     const app = readFileSync(join(outDir, "app.js"), "utf8");
     expect(app).toMatch(/import \{ mount[^}]*\} from "\.\/runtime\.js"/);
     expect(app).toContain('tile: "IncBtn"');
-    expect(app).toContain('__strandApp._dispatch("inc"');
+    expect(app).toContain('__kumikiApp._dispatch("inc"');
 
     const runtime = readFileSync(join(outDir, "runtime.js"), "utf8");
     expect(runtime).toContain("function mount");

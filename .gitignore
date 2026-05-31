@@ -12,7 +12,7 @@ out/
 # Test artifacts
 coverage/
 test-tmp/
-*.strand-ops.jsonl
+*.kumiki-ops.jsonl
 
 # Docs site build
 .vitepress/cache/
@@ -32,5 +32,5 @@ Thumbs.db
 # Claude Code local state
 .claude/scheduled_tasks.lock
 
-# Stale example build artifacts (regenerate with `strand build`)
+# Stale example build artifacts (regenerate with `kumiki build`)
 examples-build/

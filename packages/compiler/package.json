@@ -1,8 +1,8 @@
 {
-  "name": "@strand/compiler",
+  "name": "@kumiki/compiler",
   "version": "0.1.0",
   "type": "module",
-  "description": "Strand compiler — lexer, parser, typechecker, and code generator.",
+  "description": "Kumiki compiler — lexer, parser, typechecker, and code generator.",
   "license": "Apache-2.0",
   "exports": {
     ".": {
@@ -25,7 +25,7 @@
     "lint": "biome check src test"
   },
   "dependencies": {
-    "@strand/runtime": "workspace:*"
+    "@kumiki/runtime": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

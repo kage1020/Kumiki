@@ -2,7 +2,7 @@
 
 English · [日本語](./learning-cost-v4.ja.md)
 
-A sequel to [v1](./learning-cost-v1.md) (Pomodoro), [v2](./learning-cost-v2.md) (Kanban), and [v3](./learning-cost-v3.md) (Issue Tracker, 727 LOC). We measure the AI's practical upper limit with **the largest-scale** Project Management Tool in Strand v0.1.
+A sequel to [v1](./learning-cost-v1.md) (Pomodoro), [v2](./learning-cost-v2.md) (Kanban), and [v3](./learning-cost-v3.md) (Issue Tracker, 727 LOC). We measure the AI's practical upper limit with **the largest-scale** Project Management Tool in Kumiki v0.1.
 
 ## Purpose
 
@@ -45,15 +45,15 @@ v4 verifies with a **Project Management Tool** (Asana / Linear-like, 5 routes, 2
 ### P-Claude (1255 LOC) — 1-write violation at typecheck
 
 P-Claude wrote the most comprehensively, but in the `deleteTask` reducer:
-```strand
+```kumiki
 tasks := tasks.remove(tid)
 tasks := tasks.filter(taskNotChildOf($2, tid))   # ← E0601 on the 2nd write to the same path
 ```
-This is a violation of Strand's **1-reducer-1-write constraint** (path-shape granularity, [Language Core](../spec/language.md) §1.6.4). Chaining as `tasks := tasks.remove(tid).filter(...)` passes within 1-write. With agent-loop it is within self-recovery range, but in one-shot writing it violated. This is a **reject as the specification intends**, not an implementation bug.
+This is a violation of Kumiki's **1-reducer-1-write constraint** (path-shape granularity, [Language Core](../spec/language.md) §1.6.4). Chaining as `tasks := tasks.remove(tid).filter(...)` passes within 1-write. With agent-loop it is within self-recovery range, but in one-shot writing it violated. This is a **reject as the specification intends**, not an implementation bug.
 
 ### P-Gemini (606 LOC) — tuple argument to a tile
 
-Gemini was the most concise, but passed a **tuple literal argument to a tile** as in `StatusColumn((p.id, Backlog))`. Strand's tile arguments are a single value, and tuple literals are unsupported. It brought in out-of-spec syntax. In the spec, a record argument `{projectId: ..., status: ...}` should be used (P-Codex wrote it correctly in this form).
+Gemini was the most concise, but passed a **tuple literal argument to a tile** as in `StatusColumn((p.id, Backlog))`. Kumiki's tile arguments are a single value, and tuple literals are unsupported. It brought in out-of-spec syntax. In the spec, a record argument `{projectId: ..., status: ...}` should be used (P-Codex wrote it correctly in this form).
 
 ## Specification ↔ Implementation Divergences Revealed by Browser Operation Verification (7 in v4)
 
@@ -93,7 +93,7 @@ These are routes never trodden in small-scale apps, reconfirming the v3 insight 
 
 ## Cumulative Summary (v1–v4)
 
-The Strand implementation gaps detected and fixed across 4 rounds of learning cost verification total **38**:
+The Kumiki implementation gaps detected and fixed across 4 rounds of learning cost verification total **38**:
 
 | Scope | Cumulative count |
 |---|---:|
@@ -114,18 +114,18 @@ After fixing all, 71 tests pass + full operation of the 4 apps Pomodoro / Kanban
 | **Dynamic consistency** | △ 7 additional gaps in v4 → all fixed |
 | **Fundamental defect of the language specification** | **none**. All detected cases were filled in as implementation gaps |
 
-**Conclusion**: Strand v0.1 reached a level where the AI gets a 1300 LOC-class practical SaaS-equivalent SPA working in one-shot writing. Medium-scale business apps (project management / ticket management / admin screens) have entirely entered the range of AI one-shot writing.
+**Conclusion**: Kumiki v0.1 reached a level where the AI gets a 1300 LOC-class practical SaaS-equivalent SPA working in one-shot writing. Medium-scale business apps (project management / ticket management / admin screens) have entirely entered the range of AI one-shot writing.
 
 ## Reproduction
 
 ```bash
 node benchmarks/scripts/learning-cost-eval.mjs \
-  benchmarks/learning-cost-v4/results/P-Claude/output.strand \
-  benchmarks/learning-cost-v4/results/P-Codex/output.strand \
-  benchmarks/learning-cost-v4/results/P-Gemini/output.strand
+  benchmarks/learning-cost-v4/results/P-Claude/output.kumiki \
+  benchmarks/learning-cost-v4/results/P-Codex/output.kumiki \
+  benchmarks/learning-cost-v4/results/P-Gemini/output.kumiki
 
-pnpm --filter @strand/cli exec tsx src/strand.ts build \
-  benchmarks/learning-cost-v4/results/P-Codex/output.strand \
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build \
+  benchmarks/learning-cost-v4/results/P-Codex/output.kumiki \
   out/pm-tool
 node benchmarks/scripts/serve.mjs out/pm-tool 5193 &
 # → http://localhost:5193/

@@ -79,7 +79,7 @@ The samples reuse Counter / TodoMVC / Blog SPA as-is, and additional features im
 | Decision | Reason |
 |---|---|
 | Theme tokens are not expanded at **compile time** | Runtime resolve so the theme can be switched via a slot |
-| State styling is dynamic CSS injection (data-strand-id + pseudo-class) | There is no way to write hover with inline styles |
+| State styling is dynamic CSS injection (data-kumiki-id + pseudo-class) | There is no way to write hover with inline styles |
 | Responsive does not watch the viewport size | Switch per-breakpoint classes with `matchMedia` |
 | a11y defaults to warnings | For compatibility with the existing examples. `--strict-a11y` turns them into errors |
 | The error boundary is try/catch-based | Captures exceptions during render, per tile hierarchy |

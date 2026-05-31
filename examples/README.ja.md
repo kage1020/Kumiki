@@ -1,10 +1,10 @@
-# Strand Examples
+# Kumiki Examples
 
 [English](./README.md) · 日本語
 
-このディレクトリは Strand の**網羅的な実例集**である。運用方針として、質問・issue・バグ報告があるたびにここへ例を追加し、「リポジトリを見れば疑問が解決する」状態を維持する。
+このディレクトリは Kumiki の**網羅的な実例集**である。運用方針として、質問・issue・バグ報告があるたびにここへ例を追加し、「リポジトリを見れば疑問が解決する」状態を維持する。
 
-すべての例は CI でパース・型検査・ビルドが検証される（→ [Tests](https://github.com/kage1020/Strand/tree/main/tests)）。壊れた例はマージされない。
+すべての例は CI でパース・型検査・ビルドが検証される（→ [Tests](https://github.com/kage1020/Kumiki/tree/main/tests)）。壊れた例はマージされない。
 
 ## 構成
 
@@ -28,8 +28,8 @@
 
 ```sh
 # 型検査
-pnpm --filter @strand/cli exec tsx src/strand.ts check examples/apps/01-counter/app.strand
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts check examples/apps/01-counter/app.kumiki
 
 # ビルド（index.html / app.js / runtime.js を出力）
-pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand ./out
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki ./out
 ```

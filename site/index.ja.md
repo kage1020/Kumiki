@@ -2,9 +2,9 @@
 layout: home
 
 hero:
-  name: Strand
-  text: AI が書く宣言的 Web アプリ言語
-  tagline: JSX も Hooks も依存配列もない。7 レイヤの独立した定義でアプリを表す、experimental な言語とランタイム。
+  name: Kumiki
+  text: AI の、AI による、AI のための Web フレームワーク
+  tagline: 定義同士は組木のように噛み合う——JSX も Hooks も隠れた状態もない——から、AI が並列にアプリを書き・直し・組み替えられる。experimental。
   actions:
     - theme: brand
       text: はじめる

@@ -22,7 +22,7 @@
 
 各メソッドに対応する高レベル effect が標準提供される：
 
-```strand
+```kumiki
 effect http-get cap=http.get
                 in={
                   url: Url,
@@ -48,7 +48,7 @@ effect http-post cap=http.post
 
 ### 6.1.3 HttpBody 型
 
-```strand
+```kumiki
 type HttpBody = Json(JsonValue)
               | Form(Map(Text, Text))
               | Multipart(Map(Text, FormValue))
@@ -59,7 +59,7 @@ type HttpBody = Json(JsonValue)
 
 ### 6.1.4 Decoder 型
 
-```strand
+```kumiki
 type Decoder = Json(TypeRef)        ; JSON を型に decode
              | Text                  ; 文字列のまま
              | Bytes                 ; バイト列のまま
@@ -75,7 +75,7 @@ type Decoder = Json(TypeRef)        ; JSON を型に decode
 - `Accept: application/json`（Decoder が Json のとき）
 - `Content-Type: application/json`（HttpBody が Json のとき）
 - `Content-Type: multipart/form-data`（Multipart のとき）
-- `User-Agent: Strand/0.1`
+- `User-Agent: Kumiki/0.1`
 
 ユーザー指定の headers が優先される。
 
@@ -85,7 +85,7 @@ type Decoder = Json(TypeRef)        ; JSON を型に decode
 
 ### 6.2.1 GET
 
-```strand
+```kumiki
 type UserId = nominal Text where uuid
 type User   = {id: UserId, name: Text, email: Email}
 
@@ -104,9 +104,9 @@ reducer fetchUser
         emit loadUser($el.userId)
 ```
 
-実装時、Strand コンパイラは `loadUser` を以下に展開する：
+実装時、Kumiki コンパイラは `loadUser` を以下に展開する：
 
-```strand
+```kumiki
 emit http-get({
     url:     apiBase + "/users/" + $1.show,
     headers: {},
@@ -119,7 +119,7 @@ emit http-get({
 
 ### 6.2.2 POST
 
-```strand
+```kumiki
 effect createTodo cap=http.post
                   in={text: Text}
                   out=Result(Todo, HttpError)
@@ -145,7 +145,7 @@ reducer added
 
 `app.http` で全 HTTP effect に自動付与する header を宣言できる：
 
-```strand
+```kumiki
 app App
     caps   = [http.get, http.post, storage.read]
     routes = {"/" -> Home, "/404" -> NotFound}
@@ -170,7 +170,7 @@ app App
 
 ### 6.3.2 401 のグローバル処理
 
-```strand
+```kumiki
 reducer handleUnauthorized
     on=app.http-401
     do= session := None
@@ -185,7 +185,7 @@ reducer handleUnauthorized
 
 `policy=latest` または `policy=latest-per-key(...)` で自動キャンセルされる。手動キャンセルは：
 
-```strand
+```kumiki
 effect cancel cap=http.cancel in=EffectId out=Unit
 
 reducer cancelSearch
@@ -199,7 +199,7 @@ reducer cancelSearch
 
 ## 6.5 リトライ
 
-```strand
+```kumiki
 effect loadCritical cap=http.get
                     in=Text
                     out=Result(Text, HttpError)
@@ -220,7 +220,7 @@ effect loadCritical cap=http.get
 
 URL テンプレートや path パラメータを書きたい場合は、ユーザーがラッパ effect を宣言する：
 
-```strand
+```kumiki
 slot apiBase : Url = "https://api.example.com"
 
 effect loadUser cap=http.get
@@ -251,7 +251,7 @@ effect loadUser cap=http.get
 
 ### 6.7.2 標準 effect (localStorage)
 
-```strand
+```kumiki
 effect storage-read   cap=storage.read
                       in={key: Text, decode: Decoder}
                       out=Result(Option(Decoded), Text)
@@ -271,7 +271,7 @@ effect storage-clear  cap=storage.write
 
 ### 6.7.3 例
 
-```strand
+```kumiki
 slot todos : Map(TodoId, Todo) = {}
 
 effect saveTodos cap=storage.write
@@ -304,7 +304,7 @@ reducer onChange
 
 `session-*` も同じ形。`indexed-*` はキー指定が `{store: Text, key: Text}` になる以外は同じ。
 
-```strand
+```kumiki
 effect indexed-read cap=indexed.read
                     in={store: Text, key: Text, decode: Decoder}
                     out=Result(Option(Decoded), Text)
@@ -320,7 +320,7 @@ effect indexed-query cap=indexed.read
 
 IndexedDB の `store` は `app.indexed-db` で宣言：
 
-```strand
+```kumiki
 app App
     ...
     indexed-db = {
@@ -339,14 +339,14 @@ app App
 
 ### 6.8.1 起動時ロード
 
-```strand
+```kumiki
 reducer boot on=app.start do= emit loadAll()
 reducer loaded on=loadAll.ok($data, _) do= state := $data
 ```
 
 ### 6.8.2 変更を debounce で保存
 
-```strand
+```kumiki
 effect save cap=storage.write
             in=Map(TodoId, Todo)
             out=Result(Unit, Text)
@@ -360,7 +360,7 @@ reducer afterChange
 
 ### 6.8.3 楽観的更新 + サーバ同期
 
-```strand
+```kumiki
 reducer addOptimistic
     on=ui.submit(NewTodoForm)
     do= let id = TodoId.fresh()
@@ -391,7 +391,7 @@ reducer addErr
 | `retry` | `none` |
 | `Accept` | `application/json` |
 | `Content-Type` (Json body 時) | `application/json` |
-| `User-Agent` | `Strand/0.1` |
+| `User-Agent` | `Kumiki/0.1` |
 | `credentials` | `same-origin` |
 
 ストレージ effect のデフォルト：
@@ -408,13 +408,13 @@ reducer addErr
 
 ### 6.10.1 CSP / CORS
 
-Strand ランタイムは standard fetch を使うので、CORS の挙動はブラウザの fetch と同じ。CSP はサーバ側で設定する（Strand は関与しない）。
+Kumiki ランタイムは standard fetch を使うので、CORS の挙動はブラウザの fetch と同じ。CSP はサーバ側で設定する（Kumiki は関与しない）。
 
 ### 6.10.2 トークンの保存
 
-`localStorage` にアクセストークンを保存するのは XSS 脆弱性のリスク。Strand のドキュメントとしては **HTTP-only cookie + `credentials: "include"`** を推奨する。
+`localStorage` にアクセストークンを保存するのは XSS 脆弱性のリスク。Kumiki のドキュメントとしては **HTTP-only cookie + `credentials: "include"`** を推奨する。
 
-```strand
+```kumiki
 app App
     ...
     http = {
@@ -427,7 +427,7 @@ app App
 
 slot は episode log に**含まれる**。パスワード等を slot に置く場合は `volatile=true` を指定する：
 
-```strand
+```kumiki
 slot password : Text = ""
     volatile = true        ; episode log に書き込まれない、リロードでも消える
 ```

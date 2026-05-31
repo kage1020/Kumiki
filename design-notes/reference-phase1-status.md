@@ -1,8 +1,8 @@
-# Strand Reference Implementation — Phase 1
+# Kumiki Reference Implementation — Phase 1
 
 English · [日本語](./reference-phase1-status.ja.md)
 
-Phase 1 PoC: with 01-counter.strand as input, **lexer → parser → typecheck → codegen → runtime** runs in series, and the Counter SPA works in the browser.
+Phase 1 PoC: with 01-counter.kumiki as input, **lexer → parser → typecheck → codegen → runtime** runs in series, and the Counter SPA works in the browser.
 
 ## Status
 
@@ -34,7 +34,7 @@ packages/
 │       └── index.ts           mount / DOM rendering / dispatch
 └── cli/
     └── src/
-        └── strand.ts          strand build command
+        └── kumiki.ts          kumiki build command
 ```
 
 ## Usage
@@ -51,7 +51,7 @@ pnpm lint
 ### Building Counter
 
 ```bash
-pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand out/counter
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki out/counter
 # → index.html, app.js, runtime.js are emitted to out/counter/
 ```
 
@@ -89,6 +89,6 @@ Points intentionally kept small in Phase 1:
 |---|---|
 | no signal graph, full re-render on every click | a naive implementation without DOM diff, prioritizing operation |
 | direct JS output without going through an IR | sufficient for Phase 1; insert an IR in Phase 2 |
-| `strand build` only (dev / check separately) | focus on the core experience |
+| `kumiki build` only (dev / check separately) | focus on the core experience |
 | test the runtime with hand-written AppShape on Vitest jsdom | codegen→runtime integration via CLI smoke and manually |
 | do not use `new Function` | following the security warning, also avoiding tmp files / dynamic import, unifying on isolated tests |

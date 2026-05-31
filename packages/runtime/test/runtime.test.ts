@@ -1,5 +1,5 @@
-import type { AppShape } from "@strand/runtime";
-import { mount } from "@strand/runtime";
+import type { AppShape } from "@kumiki/runtime";
+import { mount } from "@kumiki/runtime";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 // Hand-crafted AppShape mirroring the counter example, using the Phase 2 runtime contract.

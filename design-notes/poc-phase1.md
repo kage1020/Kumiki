@@ -4,14 +4,14 @@ English · [日本語](./poc-phase1.ja.md)
 
 ## Goal
 
-Running `strand build` with `examples/apps/01-counter/app.strand` as input builds a single SPA that, when opened in the browser, has working `+` / `−` / `reset` buttons.
+Running `kumiki build` with `examples/apps/01-counter/app.kumiki` as input builds a single SPA that, when opened in the browser, has working `+` / `−` / `reset` buttons.
 
 The flow for a human editor:
 
 ```bash
 pnpm install
 pnpm build
-pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand out/counter
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki out/counter
 node benchmarks/scripts/serve.mjs out/counter 5173
 ```
 
@@ -49,7 +49,7 @@ packages/
 │       └── index.ts          ← runtime entry (mount), slot store + dirty tracking, virtual tile → DOM reflection
 └── cli/
     └── src/
-        └── strand.ts         ← strand build command
+        └── kumiki.ts         ← kumiki build command
 ```
 
 ## Acceptance Criteria (AC)
@@ -69,7 +69,7 @@ Locked down first with TDD.
 
 ### AC-Parser
 
-Feeding all of `examples/apps/01-counter/app.strand`, the following AST node counts:
+Feeding all of `examples/apps/01-counter/app.kumiki`, the following AST node counts:
 
 - TypeDef: 1 (N)
 - SlotDef: 1 (count)
@@ -103,7 +103,7 @@ When the generated JS is mounted onto the DOM in the browser:
 ### AC-CLI
 
 ```bash
-pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand out/counter
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki out/counter
 ```
 
 - Exit code 0
@@ -113,7 +113,7 @@ pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/
 ### AC-E2E
 
 In `test/e2e.test.ts`:
-- Read `examples/apps/01-counter/app.strand` and build
+- Read `examples/apps/01-counter/app.kumiki` and build
 - eval / dynamic-import the output JS
 - Mount on jsdom
 - Dispatch a `+` event → the DOM text changes to "Count: 1"
@@ -124,7 +124,7 @@ In `test/e2e.test.ts`:
 |---|---|---|
 | 1 | Project setup | `pnpm test` succeeds with 0 cases |
 | 2 | AST types + Lexer | all examples in `lexer.test.ts` |
-| 3 | Parser | `parser.test.ts` parses `examples/apps/01-counter/app.strand` successfully |
+| 3 | Parser | `parser.test.ts` parses `examples/apps/01-counter/app.kumiki` successfully |
 | 4 | Typecheck | `typecheck.test.ts` covers each normal/abnormal case of AC-Typecheck |
 | 5 | Codegen | `codegen.test.ts` checks the generated JS has a structure close to the expected form |
 | 6 | Runtime | `runtime.test.ts` confirms mounting and updating on jsdom |
@@ -136,10 +136,10 @@ In `test/e2e.test.ts`:
 | Decision | Reason |
 |---|---|
 | Make the PoC a single package | A monorepo is for the next phase. Phase 1 prioritizes speed |
-| Hand-written recursive-descent parser | Avoids adding dependencies (acorn/peggy, etc.) and runs on Strand's syntax alone |
+| Hand-written recursive-descent parser | Avoids adding dependencies (acorn/peggy, etc.) and runs on Kumiki's syntax alone |
 | Runtime is "re-render all tiles + no DOM diff" | Phase 1 prioritizes operation over performance. After the initial render, dirty detection → regenerate only the affected tile |
 | Omit the IR, generate JS code directly | Phase 1 short-circuits without going through an IR. Phase 2 inserts an IR |
-| The dev server serves the build output (`out/`) directly | strand dev is for Phase 2 |
+| The dev server serves the build output (`out/`) directly | kumiki dev is for Phase 2 |
 | The signal graph is also not implemented in Phase 1 | A naive implementation that re-renders the affected tile whenever any slot changes |
 
 ## Definition of Done

@@ -1,4 +1,4 @@
-// Public API of @strand/compiler.
+// Public API of @kumiki/compiler.
 export type * from "./ast.ts";
 export { type CodegenOptions, codegen, RUNTIME_HELPERS } from "./codegen.ts";
 export {
@@ -11,4 +11,4 @@ export {
 } from "./compile.ts";
 export { lex } from "./lexer.ts";
 export { ParseError, parse } from "./parser.ts";
-export { check, type StrandError } from "./typecheck.ts";
+export { check, type KumikiError } from "./typecheck.ts";

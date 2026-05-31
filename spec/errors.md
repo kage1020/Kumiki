@@ -2,14 +2,14 @@
 
 English · [日本語](./errors.ja.md)
 
-The diagnostics reported by the Strand compiler (`@strand/compiler`) split into two families: **parse errors** and **type-check errors**. This document enumerates both normatively. If a code is added or changed on the implementation side, this document must be updated at the same time.
+The diagnostics reported by the Kumiki compiler (`@kumiki/compiler`) split into two families: **parse errors** and **type-check errors**. This document enumerates both normatively. If a code is added or changed on the implementation side, this document must be updated at the same time.
 
 ## The Form of an Error
 
-A type-check error is represented as a `StrandError`:
+A type-check error is represented as a `KumikiError`:
 
 ```ts
-type StrandError = {
+type KumikiError = {
   code: string;   // a stable identifier such as "E0103"
   kind: string;   // a machine-readable classification such as "undef-slot"
   message: string; // a human-facing message (includes the target name)
@@ -51,7 +51,7 @@ An event handler argument / prop refers to a reducer name that does not exist.
 
 > `Reference to undefined reducer "<name>"`
 
-**Fix**: Check the spelling of the reducer name. `strand fix` can suggest a close name (→ [AI Editing](./ai-edit.md)).
+**Fix**: Check the spelling of the reducer name. `kumiki fix` can suggest a close name (→ [AI Editing](./ai-edit.md)).
 
 ### E0103 `undef-ref` / `undef-slot`
 
@@ -140,6 +140,6 @@ A method call of the form `obj.method(...)` does not exist in the set of methods
 
 > `Method ".<name>" is not implemented by the runtime`
 
-**Note**: The set of implemented methods is solely authoritative in `@strand/compiler`'s `KNOWN_METHODS` (kept in sync with code generation's `methodCallJs`). Calling a no-argument method with `()` is also caught by this band. For the list of standard library methods, see [Standard Library](./stdlib.md).
+**Note**: The set of implemented methods is solely authoritative in `@kumiki/compiler`'s `KNOWN_METHODS` (kept in sync with code generation's `methodCallJs`). Calling a no-argument method with `()` is also caught by this band. For the list of standard library methods, see [Standard Library](./stdlib.md).
 
 **Fix**: Correct it to the right method name, or rewrite the operation using implemented means such as `match` / `fold`. If you need an unimplemented specification method, implement it in `packages/` and add a working example in `examples/`.

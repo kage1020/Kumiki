@@ -1,11 +1,11 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { mount } from "@strand/runtime";
+import { mount } from "@kumiki/runtime";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildAndLoad } from "./helpers/build-and-load.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const BLOG = resolve(here, "../../../examples/apps/03-blog/app.strand");
+const BLOG = resolve(here, "../../../examples/apps/03-blog/app.kumiki");
 
 const flush = (ms = 0) => new Promise<void>((r) => setTimeout(r, ms));
 
@@ -14,7 +14,7 @@ function mockFetch(): void {
     "/api/posts": ["p001", "p002"],
     "/api/posts/p001": {
       id: "p001",
-      title: "Hello Strand",
+      title: "Hello Kumiki",
       body: "Hello body content",
       authorId: "u001",
       publishedAt: 1779000000000,
@@ -42,7 +42,7 @@ function mockFetch(): void {
   }) as typeof fetch;
 }
 
-describe("blog e2e (built from .strand)", () => {
+describe("blog e2e (built from .kumiki)", () => {
   let root: HTMLElement;
   const rootId = "blog-root";
   let disposers: Array<{ dispose: () => void }> = [];
@@ -98,9 +98,9 @@ describe("blog e2e (built from .strand)", () => {
     await flush(30);
     await flush(30);
     const titles = Array.from(
-      root.querySelectorAll<HTMLAnchorElement>('[data-strand-tile="link"]'),
+      root.querySelectorAll<HTMLAnchorElement>('[data-kumiki-tile="link"]'),
     ).map((a) => a.textContent ?? "");
-    expect(titles).toContain("Hello Strand");
+    expect(titles).toContain("Hello Kumiki");
     expect(titles).toContain("Routing demo");
   });
 
@@ -111,8 +111,8 @@ describe("blog e2e (built from .strand)", () => {
     await flush(30);
     await flush(30);
     const link = Array.from(
-      root.querySelectorAll<HTMLAnchorElement>('[data-strand-tile="link"]'),
-    ).find((a) => a.textContent === "Hello Strand");
+      root.querySelectorAll<HTMLAnchorElement>('[data-kumiki-tile="link"]'),
+    ).find((a) => a.textContent === "Hello Kumiki");
     expect(link).toBeDefined();
     link?.click();
     expect(location.pathname).toBe("/posts/p001");
@@ -133,7 +133,7 @@ describe("blog e2e (built from .strand)", () => {
     track(mount(app, root));
     await flush(30);
     // The Nav row uses bg: "surface" — should be set to theme.colors.surface.
-    const surfaces = Array.from(root.querySelectorAll<HTMLElement>('[data-strand-tile="row"]'))
+    const surfaces = Array.from(root.querySelectorAll<HTMLElement>('[data-kumiki-tile="row"]'))
       .map((el) => el.style.background)
       .filter(Boolean);
     expect(surfaces.length).toBeGreaterThan(0);

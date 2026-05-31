@@ -4,7 +4,7 @@ English · [日本語](./poc-phase2.ja.md)
 
 ## Goal
 
-Running `strand build` with `examples/apps/02-todomvc/app.strand` as input, opening the result in the browser makes the following work:
+Running `kumiki build` with `examples/apps/02-todomvc/app.kumiki` as input, opening the result in the browser makes the following work:
 
 - Adding a Todo (input + Enter)
 - Toggling done (checkbox)
@@ -118,7 +118,7 @@ tile TodoList = column(for id in todos.keys when(matchFilter(todos[id], filter),
 ### AC-CLI
 
 ```
-pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/02-todomvc/app.strand out/todomvc
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/02-todomvc/app.kumiki out/todomvc
 ```
 
 - Exit code 0

@@ -2,33 +2,33 @@
 
 [English](./poc-ai-edit.md) · 日本語
 
-`../spec/ai-edit.md` で書いた CLI を実装し、Strand の "AI 専用" 思想の中核
+`../spec/ai-edit.md` で書いた CLI を実装し、Kumiki の "AI 専用" 思想の中核
 である **構造化編集 + 参照整合性 + op-log** を動作させる。
 
-CRDT graph store の本格実装はせず、`.strand` ファイル単位の **read-parse-mutate-write** で
+CRDT graph store の本格実装はせず、`.kumiki` ファイル単位の **read-parse-mutate-write** で
 動かす。並列 op の収束は本格 CRDT ではなく「op を順序付け、parse 失敗・
 ref-integrity 違反を検出して reject」のレベル。
 
 ## ゴール
 
 ```bash
-strand list                                    # 全定義名
-strand list slot                               # 特定レイヤ
-strand view slot.todos                         # 単一定義
-strand view --with-deps reducer.add            # 依存込み
-strand refs slot.todos                         # 参照元
-strand check                                   # 型・参照・effect 全部
-strand check --strict-a11y                     # a11y warning もエラー扱い
-strand add slot users 'Map(UserId, User) = {}' # 新規追加
-strand replace slot.todos 'Map(TodoId, Todo) = {}'
-strand remove slot.draft                       # 参照があれば --cascade なしならエラー
-strand remove slot.draft --cascade             # 参照箇所も削除
-strand rename slot.draft newTodoText           # リネーム + 参照書き換え
-strand fix                                     # 検出した修復可能エラーを自動修正
-strand fix --apply E0103                       # 特定コードだけ
+kumiki list                                    # 全定義名
+kumiki list slot                               # 特定レイヤ
+kumiki view slot.todos                         # 単一定義
+kumiki view --with-deps reducer.add            # 依存込み
+kumiki refs slot.todos                         # 参照元
+kumiki check                                   # 型・参照・effect 全部
+kumiki check --strict-a11y                     # a11y warning もエラー扱い
+kumiki add slot users 'Map(UserId, User) = {}' # 新規追加
+kumiki replace slot.todos 'Map(TodoId, Todo) = {}'
+kumiki remove slot.draft                       # 参照があれば --cascade なしならエラー
+kumiki remove slot.draft --cascade             # 参照箇所も削除
+kumiki rename slot.draft newTodoText           # リネーム + 参照書き換え
+kumiki fix                                     # 検出した修復可能エラーを自動修正
+kumiki fix --apply E0103                       # 特定コードだけ
 ```
 
-全 op は `<file>.strand-ops.jsonl` に追記される（git でレビュー可能）。
+全 op は `<file>.kumiki-ops.jsonl` に追記される（git でレビュー可能）。
 
 ## スコープ
 
@@ -44,7 +44,7 @@ strand fix --apply E0103                       # 特定コードだけ
 | `remove <qname> [--cascade]` | ✓ | dependent ops も自動生成 |
 | `rename <qname> <new>` | ✓ | 名前変更 + 参照箇所の置換 |
 | `fix [--apply] [<code>]` | ✓ | did-you-mean、欠落 /404、ほか |
-| op-log JSONL | ✓ | `<file>.strand-ops.jsonl` |
+| op-log JSONL | ✓ | `<file>.kumiki-ops.jsonl` |
 | MCP server | × | 後のフェーズへ |
 | 真の CRDT 並列 merge | × | parse + ref-integrity だけで近似 |
 
@@ -61,21 +61,21 @@ strand fix --apply E0103                       # 特定コードだけ
 ## 受け入れ基準
 
 ### AC-list/view
-- `pnpm --filter @strand/cli exec tsx src/strand.ts list` で examples/apps/02-todomvc/app.strand の全 35 定義（type/slot/effect/reducer/fn/tile/app/theme 合計）を表示
-- `pnpm --filter @strand/cli exec tsx src/strand.ts view slot.todos` で `slot todos : Map(TodoId, Todo) = {}` を返す
-- `pnpm --filter @strand/cli exec tsx src/strand.ts view --with-deps reducer.addTodo` で関連 fn / slot も同梱
+- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts list` で examples/apps/02-todomvc/app.kumiki の全 35 定義（type/slot/effect/reducer/fn/tile/app/theme 合計）を表示
+- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts view slot.todos` で `slot todos : Map(TodoId, Todo) = {}` を返す
+- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts view --with-deps reducer.addTodo` で関連 fn / slot も同梱
 
 ### AC-refs
-- `pnpm --filter @strand/cli exec tsx src/strand.ts refs slot.todos` で todos を参照する reducer / tile / fn の (name, file, line) を列挙
+- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts refs slot.todos` で todos を参照する reducer / tile / fn の (name, file, line) を列挙
 
 ### AC-mutate
-- `pnpm --filter @strand/cli exec tsx src/strand.ts add slot foo 'Int = 0'` でファイル末尾に slot 追加、op-log に記録
-- `pnpm --filter @strand/cli exec tsx src/strand.ts replace slot.draft 'Text = ""'` で該当 slot だけ書き換え
-- `pnpm --filter @strand/cli exec tsx src/strand.ts remove slot.draft` で参照ありなら exit code 1 + エラー、`--cascade` でカスケード削除
-- `pnpm --filter @strand/cli exec tsx src/strand.ts rename slot.draft newTodoText` で定義 + 全参照を rename
+- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts add slot foo 'Int = 0'` でファイル末尾に slot 追加、op-log に記録
+- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts replace slot.draft 'Text = ""'` で該当 slot だけ書き換え
+- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts remove slot.draft` で参照ありなら exit code 1 + エラー、`--cascade` でカスケード削除
+- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts rename slot.draft newTodoText` で定義 + 全参照を rename
 
 ### AC-fix
-- examples/apps/02-todomvc/app.strand に `slot usres : Int = 0; reducer r on=ui.click(B) do= usres := 1` のような typo を入れて `strand fix` がパッチ提案
+- examples/apps/02-todomvc/app.kumiki に `slot usres : Int = 0; reducer r on=ui.click(B) do= usres := 1` のような typo を入れて `kumiki fix` がパッチ提案
 - `--apply` で実適用
 
 ### AC-並列 op
@@ -83,7 +83,7 @@ strand fix --apply E0103                       # 特定コードだけ
 
 ## 実装順序
 
-1. **Definition store**: `.strand` を parse して `Map<qname, { def, fileRange }>` を作る
+1. **Definition store**: `.kumiki` を parse して `Map<qname, { def, fileRange }>` を作る
 2. **list/view/refs/check**: read-only コマンド
 3. **add/replace/remove/rename**: write-back
 4. **op-log**: 各 mutate op で JSONL append

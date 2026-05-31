@@ -1,4 +1,4 @@
-# Strand Guide
+# Kumiki Guide
 
 English · [日本語](./README.ja.md)
 
@@ -6,7 +6,7 @@ While the specification ([../spec/](../spec/)) defines "what is correct," this g
 
 1. [getting-started.md](./getting-started.md) — Setup and your first check / build
 2. [your-first-app.md](./your-first-app.md) — Build a Counter from scratch
-3. [thinking-in-strand.md](./thinking-in-strand.md) — The 7 layers and a comparison with React
+3. [thinking-in-kumiki.md](./thinking-in-kumiki.md) — The 7 layers and a comparison with React
 4. [recipes.md](./recipes.md) — Reverse lookup for common patterns
 
 Read alongside the working examples in [../examples/](../examples/).

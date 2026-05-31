@@ -1,16 +1,16 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { mount } from "@strand/runtime";
+import { mount } from "@kumiki/runtime";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildAndLoad } from "./helpers/build-and-load.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const TODOMVC = resolve(here, "../../../examples/apps/02-todomvc/app.strand");
+const TODOMVC = resolve(here, "../../../examples/apps/02-todomvc/app.kumiki");
 
 const flush = (ms = 0) => new Promise<void>((r) => setTimeout(r, ms));
 
 function getInput(root: HTMLElement): HTMLInputElement {
-  const inp = root.querySelector('input[data-strand-bind="draft"]');
+  const inp = root.querySelector('input[data-kumiki-bind="draft"]');
   if (!inp) throw new Error("draft input not found");
   return inp as HTMLInputElement;
 }
@@ -18,17 +18,17 @@ function getInput(root: HTMLElement): HTMLInputElement {
 function getRows(root: HTMLElement): HTMLElement[] {
   // Each TodoRow expands to a `row` with a checkbox + text + remove button.
   // We pick rows whose first child is a label containing a checkbox.
-  return Array.from(root.querySelectorAll<HTMLElement>('[data-strand-tile="row"]')).filter(
+  return Array.from(root.querySelectorAll<HTMLElement>('[data-kumiki-tile="row"]')).filter(
     (row) => {
       const first = row.children[0];
-      return first?.getAttribute?.("data-strand-tile") === "check";
+      return first?.getAttribute?.("data-kumiki-tile") === "check";
     },
   );
 }
 
 function rowTexts(root: HTMLElement): string[] {
   return getRows(root).map((r) => {
-    const span = r.querySelector<HTMLElement>('[data-strand-tile="text"]');
+    const span = r.querySelector<HTMLElement>('[data-kumiki-tile="text"]');
     return span?.textContent ?? "";
   });
 }
@@ -43,12 +43,12 @@ async function typeInto(input: HTMLInputElement, text: string): Promise<void> {
 }
 
 function submitForm(root: HTMLElement): void {
-  const form = root.querySelector<HTMLFormElement>('[data-strand-tile="form"]');
+  const form = root.querySelector<HTMLFormElement>('[data-kumiki-tile="form"]');
   if (!form) throw new Error("form not found");
   form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
 }
 
-describe("TodoMVC e2e (built from .strand)", () => {
+describe("TodoMVC e2e (built from .kumiki)", () => {
   let root: HTMLElement;
   const rootId = "todomvc-root";
   let disposers: Array<{ dispose: () => void }> = [];
@@ -102,13 +102,13 @@ describe("TodoMVC e2e (built from .strand)", () => {
     submitForm(root);
     await flush();
     const check = root.querySelector<HTMLInputElement>(
-      '[data-strand-tile="check"] input[type="checkbox"]',
+      '[data-kumiki-tile="check"] input[type="checkbox"]',
     );
     expect(check?.checked).toBe(false);
     check?.dispatchEvent(new Event("change", { bubbles: true }));
     await flush();
     const recheck = root.querySelector<HTMLInputElement>(
-      '[data-strand-tile="check"] input[type="checkbox"]',
+      '[data-kumiki-tile="check"] input[type="checkbox"]',
     );
     expect(recheck?.checked).toBe(true);
   });
@@ -121,7 +121,7 @@ describe("TodoMVC e2e (built from .strand)", () => {
     await flush();
     expect(rowTexts(root)).toEqual(["ephemeral"]);
     const removeBtn = Array.from(
-      root.querySelectorAll<HTMLButtonElement>('[data-strand-tile="button"]'),
+      root.querySelectorAll<HTMLButtonElement>('[data-kumiki-tile="button"]'),
     ).find((b) => b.textContent === "x");
     removeBtn?.click();
     await flush();
@@ -139,14 +139,14 @@ describe("TodoMVC e2e (built from .strand)", () => {
     await flush();
     // Toggle the first row done.
     const firstCheckbox = root.querySelectorAll<HTMLInputElement>(
-      '[data-strand-tile="check"] input[type="checkbox"]',
+      '[data-kumiki-tile="check"] input[type="checkbox"]',
     )[0];
     firstCheckbox.dispatchEvent(new Event("change", { bubbles: true }));
     await flush();
 
     // Find the filter buttons (text "All" / "Active" / "Done").
     const allBtns = Array.from(
-      root.querySelectorAll<HTMLButtonElement>('[data-strand-tile="button"]'),
+      root.querySelectorAll<HTMLButtonElement>('[data-kumiki-tile="button"]'),
     );
     const active = allBtns.find((b) => b.textContent === "Active");
     const done = allBtns.find((b) => b.textContent === "Done");
@@ -171,7 +171,7 @@ describe("TodoMVC e2e (built from .strand)", () => {
     submitForm(root);
     await flush();
     const checkboxes = root.querySelectorAll<HTMLInputElement>(
-      '[data-strand-tile="check"] input[type="checkbox"]',
+      '[data-kumiki-tile="check"] input[type="checkbox"]',
     );
     // Toggle one (whichever happens to be "drop"). For simplicity, toggle both
     // and clear-completed should remove both.
@@ -180,7 +180,7 @@ describe("TodoMVC e2e (built from .strand)", () => {
     checkboxes[1].dispatchEvent(new Event("change", { bubbles: true }));
     await flush();
     const clearBtn = Array.from(
-      root.querySelectorAll<HTMLButtonElement>('[data-strand-tile="button"]'),
+      root.querySelectorAll<HTMLButtonElement>('[data-kumiki-tile="button"]'),
     ).find((b) => b.textContent === "Clear completed");
     clearBtn?.click();
     await flush();

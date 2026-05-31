@@ -2,7 +2,7 @@
 
 English · [日本語](./ai-edit.ja.md)
 
-Strand code is stored not in physical files but in a **content-addressable CRDT graph**. Rather than editing text files, an AI agent issues **structured editing operations (ops)**.
+Kumiki code is stored not in physical files but in a **content-addressable CRDT graph**. Rather than editing text files, an AI agent issues **structured editing operations (ops)**.
 
 This provides:
 
@@ -19,8 +19,8 @@ This provides:
 │  (a set of definitions, each content-addressable) │
 └─────────────────────────────────────────────────┘
         ↑                          ↓
-        │                          │ strand view
-        │ strand op apply          │
+        │                          │ kumiki view
+        │ kumiki op apply          │
         │                          ↓
 ┌──────────────┐          ┌──────────────────────┐
 │   AI agent   │ ←─────── │ projection (text)    │
@@ -31,50 +31,50 @@ What the AI sees is a **projection (a text cross-section)** of the graph. What t
 
 ---
 
-## 9.2 The strand CLI
+## 9.2 The kumiki CLI
 
 ### 9.2.1 Read Commands
 
 ```bash
-strand view <selector>              # render a definition as text and output it
-strand view slot.todos              # a single definition
-strand view 'slot.*'                # wildcard
-strand view --with-deps reducer.add # output related definitions together
-strand view --hash slot.todos       # display the content-hash
-strand view --history slot.todos    # this definition's edit history
-strand view --refs slot.todos       # list the referrers of this definition
-strand list <layer>                 # all definition names within a layer
-strand list                         # all definition names (with layer prefix)
+kumiki view <selector>              # render a definition as text and output it
+kumiki view slot.todos              # a single definition
+kumiki view 'slot.*'                # wildcard
+kumiki view --with-deps reducer.add # output related definitions together
+kumiki view --hash slot.todos       # display the content-hash
+kumiki view --history slot.todos    # this definition's edit history
+kumiki view --refs slot.todos       # list the referrers of this definition
+kumiki list <layer>                 # all definition names within a layer
+kumiki list                         # all definition names (with layer prefix)
 ```
 
 ### 9.2.2 Write Commands
 
 ```bash
-strand add <layer> <name> <body>            # add a new definition
-strand replace <layer>.<name> <body>        # replace a definition
-strand edit <layer>.<name> <patch>          # partial edit (e.g., inside a reducer's do=)
-strand rename <layer>.<old> <new>           # rename (hash invariant)
-strand remove <layer>.<name>                # remove (fails if referenced)
-strand patch apply <file>                   # apply a CRDT op bundle
-strand patch revert <op-id>                 # revert a specific op
+kumiki add <layer> <name> <body>            # add a new definition
+kumiki replace <layer>.<name> <body>        # replace a definition
+kumiki edit <layer>.<name> <patch>          # partial edit (e.g., inside a reducer's do=)
+kumiki rename <layer>.<old> <new>           # rename (hash invariant)
+kumiki remove <layer>.<name>                # remove (fails if referenced)
+kumiki patch apply <file>                   # apply a CRDT op bundle
+kumiki patch revert <op-id>                 # revert a specific op
 ```
 
 ### 9.2.3 Validation Commands
 
 ```bash
-strand check                       # types, references, effects, everything
-strand check --types               # types only
-strand check --refs                # referential integrity only
-strand check --effects             # capability/policy consistency only
-strand check --a11y                # accessibility conventions
+kumiki check                       # types, references, effects, everything
+kumiki check --types               # types only
+kumiki check --refs                # referential integrity only
+kumiki check --effects             # capability/policy consistency only
+kumiki check --a11y                # accessibility conventions
 ```
 
 ### 9.2.4 Fix Assistance
 
 ```bash
-strand fix --auto-patch <error-id>          # propose a CRDT op that auto-fixes the error
-strand fix --apply                          # apply the proposal as-is
-strand fix --interactive                    # apply proposals one at a time with confirmation
+kumiki fix --auto-patch <error-id>          # propose a CRDT op that auto-fixes the error
+kumiki fix --apply                          # apply the proposal as-is
+kumiki fix --interactive                    # apply proposals one at a time with confirmation
 ```
 
 ## 9.3 The Form of a CRDT op
@@ -121,7 +121,7 @@ strand fix --interactive                    # apply proposals one at a time with
 
 ### 9.3.3 op Convergence Guarantees
 
-The Strand graph is an **Add-Wins LWW-Map** (last-write-wins + add takes priority over remove).
+The Kumiki graph is an **Add-Wins LWW-Map** (last-write-wins + add takes priority over remove).
 
 - When same-name adds come from multiple agents: the winner is decided by the lexicographic order of `op-id`
 - When add and remove cross: add wins (better to keep it than to create a dangling reference)
@@ -134,17 +134,17 @@ These are mathematically guaranteed to converge. However, **semantic consistency
 
 Even though CRDT guarantees syntactic convergence, **semantic conflicts** are a separate matter:
 
-- A: `strand remove slot.draft`
-- B: `strand add tile.NewForm input(bind=draft)`
+- A: `kumiki remove slot.draft`
+- B: `kumiki add tile.NewForm input(bind=draft)`
 
 After both converge as CRDT, the reference from `tile.NewForm` to `slot.draft` becomes dangling.
 
-Strand prevents this in **two stages**:
+Kumiki prevents this in **two stages**:
 
 ### 9.4.1 Pre-Check at op Issuance
 
 ```bash
-strand remove slot.draft
+kumiki remove slot.draft
 # Error: cannot remove slot.draft (referenced by 3 tiles, 2 reducers)
 #   tile.NewForm:1
 #   tile.Compose:4
@@ -173,7 +173,7 @@ resolve:
 transaction commit
 ```
 
-The resolve policy is set via `strand config conflict-policy <strict|heal|warn>`. Default is `strict`.
+The resolve policy is set via `kumiki config conflict-policy <strict|heal|warn>`. Default is `strict`.
 
 ## 9.5 hash Computation and Reference Resolution
 
@@ -194,7 +194,7 @@ A name reference like `users` in the source text is recorded within the graph st
 
 ### 9.5.3 Names at Display Time
 
-When retrieved via `strand view`, hashes are turned back into human-readable names (**labels**).
+When retrieved via `kumiki view`, hashes are turned back into human-readable names (**labels**).
 
 ## 9.6 Error Codes and Automatic Repair
 
@@ -254,11 +254,11 @@ All errors are structured:
 ```bash
 # AI agent script
 while true; do
-    errors=$(strand check --json)
+    errors=$(kumiki check --json)
     if [ -z "$errors" ]; then break; fi
     for err in $errors; do
         if has_auto_patch "$err"; then
-            strand patch apply <(echo "$err" | jq .auto-patch)
+            kumiki patch apply <(echo "$err" | jq .auto-patch)
         else
             # delegate the fix to the AI
             echo "$err" | ai-fix
@@ -267,32 +267,32 @@ while true; do
 done
 ```
 
-With `strand fix --auto-patch <code>`, errors that have an auto-patch are resolved structurally. Only errors without an auto-patch are placed in the AI's context for it to fix.
+With `kumiki fix --auto-patch <code>`, errors that have an auto-patch are resolved structurally. Only errors without an auto-patch are placed in the AI's context for it to fix.
 
 ## 9.7 MCP Server
 
-Strand can run as a Model Context Protocol server, allowing AI agents to call tools directly:
+Kumiki can run as a Model Context Protocol server, allowing AI agents to call tools directly:
 
 ```bash
-strand mcp serve --store ./project.strand-store
+kumiki mcp serve --store ./project.kumiki-store
 ```
 
 The tools provided:
 
 | tool name | Arguments | Return value |
 |---|---|---|
-| `strand_view` | `selector: string, with_deps?: bool` | definition text |
-| `strand_list` | `layer?: string` | list of definition names |
-| `strand_add` | `layer, name, body` | op-id |
-| `strand_replace` | `qname, body` | op-id |
-| `strand_edit` | `qname, patch` | op-id |
-| `strand_rename` | `qname, new_name` | op-id |
-| `strand_remove` | `qname, cascade?: bool` | op-id |
-| `strand_check` | `scope?: string` | error list (JSON) |
-| `strand_fix` | `error_code, apply?: bool` | patch (JSON) |
-| `strand_refs` | `qname` | list of referrers |
-| `strand_history` | `qname` | op history |
-| `strand_episode` | `episode_id` | episode log |
+| `kumiki_view` | `selector: string, with_deps?: bool` | definition text |
+| `kumiki_list` | `layer?: string` | list of definition names |
+| `kumiki_add` | `layer, name, body` | op-id |
+| `kumiki_replace` | `qname, body` | op-id |
+| `kumiki_edit` | `qname, patch` | op-id |
+| `kumiki_rename` | `qname, new_name` | op-id |
+| `kumiki_remove` | `qname, cascade?: bool` | op-id |
+| `kumiki_check` | `scope?: string` | error list (JSON) |
+| `kumiki_fix` | `error_code, apply?: bool` | patch (JSON) |
+| `kumiki_refs` | `qname` | list of referrers |
+| `kumiki_history` | `qname` | op history |
+| `kumiki_episode` | `episode_id` | episode log |
 
 From the AI, these are called in place of file operations.
 
@@ -323,10 +323,10 @@ agent-2: slot.user*,  reducer.user-*, tile.User*
 agent-3: slot.route,  reducer.route-*
 ```
 
-This is a convention, but an **ownership lock** (optional) can be added to the Strand compiler:
+This is a convention, but an **ownership lock** (optional) can be added to the Kumiki compiler:
 
 ```bash
-strand lock agent-1 'slot.todos*,reducer.todo-*'
+kumiki lock agent-1 'slot.todos*,reducer.todo-*'
 ```
 
 If another agent issues an op in the same namespace, it is rejected.
@@ -349,28 +349,28 @@ The runtime episode log is recorded against the build artifact. ops are **the ed
 In early implementation, the graph store can also be **projected as a set of files within a directory**:
 
 ```
-project.strand/
+project.kumiki/
 ├── types/
-│   ├── User.strand
-│   └── TodoId.strand
+│   ├── User.kumiki
+│   └── TodoId.kumiki
 ├── slots/
-│   └── todos.strand
+│   └── todos.kumiki
 ├── effects/
-│   └── loadTodo.strand
+│   └── loadTodo.kumiki
 ├── reducers/
-│   └── add.strand
+│   └── add.kumiki
 ├── tiles/
-│   ├── TodoRow.strand
-│   └── App.strand
+│   ├── TodoRow.kumiki
+│   └── App.kumiki
 ├── fns/
-│   └── matchFilter.strand
-└── .strand/
+│   └── matchFilter.kumiki
+└── .kumiki/
     ├── store.crdt        ← CRDT graph body (binary)
     ├── op-log.jsonl
     └── episode-log.jsonl
 ```
 
-`strand sync` performs bidirectional sync: file edit → convert to op → apply to store, or store change → reflect to files.
+`kumiki sync` performs bidirectional sync: file edit → convert to op → apply to store, or store change → reflect to files.
 
 This allows coexistence with existing Git-based workflows. However, **the true source of compatibility is on the graph store side**.
 

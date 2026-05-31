@@ -1,8 +1,8 @@
-# @strand/site
+# @kumiki/site
 
 [English](./README.md) · 日本語
 
-Strand ドキュメントサイト（VitePress）。`spec/` `guide/` `examples/` `design-notes/` を単一ソースとして配信し、ブラウザ内 **Playground**（コンパイラ + ランタイムをブラウザで実行）と **WebMCP** ツールを備える。
+Kumiki ドキュメントサイト（VitePress）。`spec/` `guide/` `examples/` `design-notes/` を単一ソースとして配信し、ブラウザ内 **Playground**（コンパイラ + ランタイムをブラウザで実行）と **WebMCP** ツールを備える。
 
 ## 仕組み
 
@@ -11,24 +11,24 @@ Strand ドキュメントサイト（VitePress）。`spec/` `guide/` `examples/`
 ## 開発
 
 ```sh
-pnpm --filter @strand/site dev      # 同期 + dev サーバ
-pnpm --filter @strand/site build    # 同期 + 本番ビルド → site/dist
-pnpm --filter @strand/site preview
+pnpm --filter @kumiki/site dev      # 同期 + dev サーバ
+pnpm --filter @kumiki/site build    # 同期 + 本番ビルド → site/dist
+pnpm --filter @kumiki/site preview
 ```
 
-Playground は `@strand/runtime/bundle?raw` を取り込むため、ビルド前に runtime バンドルが必要。`pnpm exec turbo run build --filter=@strand/site` を使えば依存（runtime/compiler）が自動で先にビルドされる。
+Playground は `@kumiki/runtime/bundle?raw` を取り込むため、ビルド前に runtime バンドルが必要。`pnpm exec turbo run build --filter=@kumiki/site` を使えば依存（runtime/compiler）が自動で先にビルドされる。
 
-## デプロイ（Cloudflare Pages → strand.kage1020.com）
+## デプロイ（Cloudflare Pages → kumiki.kage1020.com）
 
 CI（[`.github/workflows/deploy-site.yml`](../.github/workflows/deploy-site.yml)）が `main` への push で自動デプロイする。事前に以下が必要:
 
-1. Cloudflare で Pages プロジェクト `strand` を作成。
+1. Cloudflare で Pages プロジェクト `kumiki` を作成。
 2. リポジトリの GitHub Secrets に `CLOUDFLARE_API_TOKEN`（Pages 編集権限）と `CLOUDFLARE_ACCOUNT_ID` を登録。
-3. Pages プロジェクトの **Custom domains** に `strand.kage1020.com` を追加（DNS は Cloudflare 側で CNAME を自動設定）。
+3. Pages プロジェクトの **Custom domains** に `kumiki.kage1020.com` を追加（DNS は Cloudflare 側で CNAME を自動設定）。
 
 手動デプロイは:
 
 ```sh
-pnpm exec turbo run build --filter=@strand/site
+pnpm exec turbo run build --filter=@kumiki/site
 cd site && wrangler pages deploy   # wrangler.jsonc の pages_build_output_dir=dist を使用
 ```

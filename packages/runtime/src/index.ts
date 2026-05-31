@@ -1,4 +1,4 @@
-// Strand v0.1 runtime — Phase 3 browser runtime.
+// Kumiki v0.1 runtime — Phase 3 browser runtime.
 
 export {
   type Action,
@@ -240,7 +240,7 @@ export function mount(app: AppShape, target: HTMLElement): { dispose: () => void
     ) {
       const el = active as HTMLInputElement;
       snap = {
-        bind: el.dataset.strandBind ?? undefined,
+        bind: el.dataset.kumikiBind ?? undefined,
         id: el.id || undefined,
         path: domPath(el, target),
         selStart: el.selectionStart,
@@ -257,7 +257,7 @@ export function mount(app: AppShape, target: HTMLElement): { dispose: () => void
 
     if (snap) {
       let sel: Element | null = snap.bind
-        ? target.querySelector(`[data-strand-bind="${snap.bind}"]`)
+        ? target.querySelector(`[data-kumiki-bind="${snap.bind}"]`)
         : snap.id
           ? target.querySelector(`#${CSS.escape(snap.id)}`)
           : null;
@@ -359,7 +359,7 @@ export function mount(app: AppShape, target: HTMLElement): { dispose: () => void
 
   // Apply theme defaults to <body> and inject base CSS for tile primitives.
   // Reset the cache so subsequent mounts (e.g. across parallel tests) always
-  // re-bind the global `__strandApp` reference, even if the theme name matches.
+  // re-bind the global `__kumikiApp` reference, even if the theme name matches.
   lastAppliedThemeName = null;
   applyThemeDefaults(app);
   lastAppliedThemeName =
@@ -600,7 +600,7 @@ function registerBuiltinEffects(
     name: "log",
     cap: "log.write",
     invoke: async (input) => {
-      console.log("[strand]", input);
+      console.log("[kumiki]", input);
       return { kind: "ok", value: null };
     },
   };
@@ -667,7 +667,7 @@ function renderTile(node: TileNode): HTMLElement {
     case "page":
     case "column": {
       const div = document.createElement("div");
-      div.dataset.strandTile = node.kind;
+      div.dataset.kumikiTile = node.kind;
       div.style.display = "flex";
       div.style.flexDirection = "column";
       applyContainerProps(div, node.props);
@@ -678,7 +678,7 @@ function renderTile(node: TileNode): HTMLElement {
     }
     case "row": {
       const div = document.createElement("div");
-      div.dataset.strandTile = "row";
+      div.dataset.kumikiTile = "row";
       div.style.display = "flex";
       div.style.flexDirection = "row";
       applyContainerProps(div, node.props);
@@ -695,7 +695,7 @@ function renderTile(node: TileNode): HTMLElement {
     case "region":
     case "scroll": {
       const div = document.createElement("div");
-      div.dataset.strandTile = node.kind;
+      div.dataset.kumikiTile = node.kind;
       if (node.kind === "card") {
         // Default padding only if the prop didn't override it.
         if (!node.props || node.props.pad === undefined) div.style.padding = "16px";
@@ -717,7 +717,7 @@ function renderTile(node: TileNode): HTMLElement {
     }
     case "grid": {
       const div = document.createElement("div");
-      div.dataset.strandTile = "grid";
+      div.dataset.kumikiTile = "grid";
       div.style.display = "grid";
       const cols = node.props?.cols;
       if (typeof cols === "number") div.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
@@ -731,26 +731,26 @@ function renderTile(node: TileNode): HTMLElement {
     }
     case "divider": {
       const hr = document.createElement("hr");
-      hr.dataset.strandTile = "divider";
+      hr.dataset.kumikiTile = "divider";
       return hr;
     }
     case "heading": {
       const h = document.createElement("h1");
-      h.dataset.strandTile = "heading";
+      h.dataset.kumikiTile = "heading";
       h.textContent = node.text;
       applyTextProps(h, node.props);
       return h;
     }
     case "text": {
       const span = document.createElement("span");
-      span.dataset.strandTile = "text";
+      span.dataset.kumikiTile = "text";
       span.textContent = node.text;
       applyTextProps(span, node.props);
       return span;
     }
     case "button": {
       const b = document.createElement("button");
-      b.dataset.strandTile = "button";
+      b.dataset.kumikiTile = "button";
       b.textContent = node.text;
       if (node.disabled) b.disabled = true;
       if (node.props?.onClick) {
@@ -763,7 +763,7 @@ function renderTile(node: TileNode): HTMLElement {
     }
     case "input": {
       const inp = document.createElement("input");
-      inp.dataset.strandTile = "input";
+      inp.dataset.kumikiTile = "input";
       inp.type = node.type ?? "text";
       if (node.placeholder) inp.placeholder = node.placeholder;
       if (node.required) inp.required = true;
@@ -774,15 +774,15 @@ function renderTile(node: TileNode): HTMLElement {
           node.bindPath && node.bindPath.length > 0
             ? `${node.bind}.${node.bindPath.join(".")}`
             : node.bind;
-        inp.dataset.strandBind = fullPath;
+        inp.dataset.kumikiBind = fullPath;
       }
       inp.value = node.value ?? "";
       if (node.bind) {
         const slotName = node.bind;
         const bindPath = node.bindPath;
         inp.addEventListener("input", () => {
-          const win = window as unknown as { __strandApp?: AppShape };
-          const app = win.__strandApp as AppShape & {
+          const win = window as unknown as { __kumikiApp?: AppShape };
+          const app = win.__kumikiApp as AppShape & {
             _setSlot?: (n: string, v: unknown) => void;
             live?: Record<string, unknown>;
           };
@@ -810,7 +810,7 @@ function renderTile(node: TileNode): HTMLElement {
     }
     case "textarea": {
       const ta = document.createElement("textarea");
-      ta.dataset.strandTile = "textarea";
+      ta.dataset.kumikiTile = "textarea";
       if (node.rows) ta.rows = node.rows;
       if (node.placeholder) ta.placeholder = node.placeholder;
       if (node.id) ta.id = node.id;
@@ -819,15 +819,15 @@ function renderTile(node: TileNode): HTMLElement {
           node.bindPath && node.bindPath.length > 0
             ? `${node.bind}.${node.bindPath.join(".")}`
             : node.bind;
-        ta.dataset.strandBind = fullPath;
+        ta.dataset.kumikiBind = fullPath;
       }
       ta.value = node.value ?? "";
       if (node.bind) {
         const slotName = node.bind;
         const bindPath = node.bindPath;
         ta.addEventListener("input", () => {
-          const win = window as unknown as { __strandApp?: AppShape };
-          const app = win.__strandApp as AppShape & {
+          const win = window as unknown as { __kumikiApp?: AppShape };
+          const app = win.__kumikiApp as AppShape & {
             _setSlot?: (n: string, v: unknown) => void;
             live?: Record<string, unknown>;
           };
@@ -845,7 +845,7 @@ function renderTile(node: TileNode): HTMLElement {
     }
     case "check": {
       const wrap = document.createElement("label");
-      wrap.dataset.strandTile = "check";
+      wrap.dataset.kumikiTile = "check";
       const inp = document.createElement("input");
       inp.type = "checkbox";
       inp.checked = node.checked;
@@ -859,13 +859,13 @@ function renderTile(node: TileNode): HTMLElement {
     }
     case "spinner": {
       const span = document.createElement("span");
-      span.dataset.strandTile = "spinner";
+      span.dataset.kumikiTile = "spinner";
       span.textContent = "…";
       return span;
     }
     case "select": {
       const sel = document.createElement("select");
-      sel.dataset.strandTile = "select";
+      sel.dataset.kumikiTile = "select";
       const options = (node.options ?? []) as Array<{ label: unknown; value: unknown }>;
       const currentValue = node.value;
       // Serialize a value to a stable key. Must recurse into variant payloads
@@ -901,8 +901,8 @@ function renderTile(node: TileNode): HTMLElement {
         const k = sel.value;
         const matched = options.find((o) => valueKey(o.value) === k);
         if (matched === undefined) return;
-        const win = window as unknown as { __strandApp?: AppShape };
-        const app = win.__strandApp as AppShape & {
+        const win = window as unknown as { __kumikiApp?: AppShape };
+        const app = win.__kumikiApp as AppShape & {
           _setSlot?: (n: string, v: unknown) => void;
           live?: Record<string, unknown>;
         };
@@ -927,7 +927,7 @@ function renderTile(node: TileNode): HTMLElement {
     }
     case "radio": {
       const wrap = document.createElement("label");
-      wrap.dataset.strandTile = "radio";
+      wrap.dataset.kumikiTile = "radio";
       const inp = document.createElement("input");
       inp.type = "radio";
       if (node.group) inp.name = String(node.group);
@@ -948,7 +948,7 @@ function renderTile(node: TileNode): HTMLElement {
     }
     case "skeleton": {
       const div = document.createElement("div");
-      div.dataset.strandTile = "skeleton";
+      div.dataset.kumikiTile = "skeleton";
       div.style.background = "#eee";
       div.style.borderRadius = "8px";
       div.style.minHeight = "60px";
@@ -958,7 +958,7 @@ function renderTile(node: TileNode): HTMLElement {
     }
     case "form": {
       const form = document.createElement("form");
-      form.dataset.strandTile = "form";
+      form.dataset.kumikiTile = "form";
       form.addEventListener("submit", (e) => {
         e.preventDefault();
         if (node.props?.onSubmit) node.props.onSubmit(node.props.el ?? {});
@@ -970,7 +970,7 @@ function renderTile(node: TileNode): HTMLElement {
     }
     case "label": {
       const lbl = document.createElement("label");
-      lbl.dataset.strandTile = "label";
+      lbl.dataset.kumikiTile = "label";
       lbl.textContent = node.text;
       const forAttr = node.props?.for;
       if (typeof forAttr === "string") lbl.htmlFor = forAttr;
@@ -978,14 +978,14 @@ function renderTile(node: TileNode): HTMLElement {
     }
     case "link": {
       const a = document.createElement("a");
-      a.dataset.strandTile = "link";
+      a.dataset.kumikiTile = "link";
       a.href = node.to;
       a.textContent = node.text;
       a.addEventListener("click", (e) => {
         if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
         e.preventDefault();
-        const win = window as unknown as { __strandApp?: AppShape };
-        const nav = (win.__strandApp as AppShape & { _navigate?: (p: string, r?: boolean) => void })
+        const win = window as unknown as { __kumikiApp?: AppShape };
+        const nav = (win.__kumikiApp as AppShape & { _navigate?: (p: string, r?: boolean) => void })
           ?._navigate;
         if (nav) nav(node.to, false);
       });
@@ -993,7 +993,7 @@ function renderTile(node: TileNode): HTMLElement {
     }
     case "markdown": {
       const div = document.createElement("div");
-      div.dataset.strandTile = "markdown";
+      div.dataset.kumikiTile = "markdown";
       // Minimal markdown: paragraphs split on blank lines, single line breaks preserved.
       const text = node.text ?? "";
       const paragraphs = text.split(/\n\s*\n/);
@@ -1007,7 +1007,7 @@ function renderTile(node: TileNode): HTMLElement {
     }
     case "image": {
       const img = document.createElement("img");
-      img.dataset.strandTile = "image";
+      img.dataset.kumikiTile = "image";
       img.src = node.src;
       const alt = node.props?.alt;
       if (typeof alt === "string") img.alt = alt;
@@ -1015,7 +1015,7 @@ function renderTile(node: TileNode): HTMLElement {
     }
     case "icon": {
       const span = document.createElement("span");
-      span.dataset.strandTile = "icon";
+      span.dataset.kumikiTile = "icon";
       span.textContent = `[${node.name}]`;
       return span;
     }
@@ -1065,19 +1065,19 @@ function ensureAnimationStyles(): void {
   if (animationStylesInjected) return;
   animationStylesInjected = true;
   const css = `
-@keyframes strand-fade { from { opacity: 0 } to { opacity: 1 } }
-@keyframes strand-slide-up { from { transform: translateY(8px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
-@keyframes strand-slide-down { from { transform: translateY(-8px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
-.strand-anim { animation-fill-mode: both; animation-timing-function: ease; animation-duration: 300ms; }
-.strand-anim-fade { animation-name: strand-fade; }
-.strand-anim-slide-up { animation-name: strand-slide-up; }
-.strand-anim-slide-down { animation-name: strand-slide-down; }
-.strand-anim-fast { animation-duration: 150ms; }
-.strand-anim-normal { animation-duration: 300ms; }
-.strand-anim-slow { animation-duration: 600ms; }
+@keyframes kumiki-fade { from { opacity: 0 } to { opacity: 1 } }
+@keyframes kumiki-slide-up { from { transform: translateY(8px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+@keyframes kumiki-slide-down { from { transform: translateY(-8px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+.kumiki-anim { animation-fill-mode: both; animation-timing-function: ease; animation-duration: 300ms; }
+.kumiki-anim-fade { animation-name: kumiki-fade; }
+.kumiki-anim-slide-up { animation-name: kumiki-slide-up; }
+.kumiki-anim-slide-down { animation-name: kumiki-slide-down; }
+.kumiki-anim-fast { animation-duration: 150ms; }
+.kumiki-anim-normal { animation-duration: 300ms; }
+.kumiki-anim-slow { animation-duration: 600ms; }
 `;
   const style = document.createElement("style");
-  style.id = "strand-animations";
+  style.id = "kumiki-animations";
   style.appendChild(document.createTextNode(css));
   document.head.appendChild(style);
 }
@@ -1087,9 +1087,9 @@ function applyTransition(el: HTMLElement, props?: TileProps): void {
   const t = props.transition;
   if (typeof t !== "string") return;
   ensureAnimationStyles();
-  el.classList.add("strand-anim", `strand-anim-${t}`);
+  el.classList.add("kumiki-anim", `kumiki-anim-${t}`);
   const d = props["transition-duration"];
-  if (typeof d === "string") el.classList.add(`strand-anim-${d}`);
+  if (typeof d === "string") el.classList.add(`kumiki-anim-${d}`);
 }
 
 let stateStyleSeq = 0;
@@ -1100,11 +1100,11 @@ function applyStateStyles(el: HTMLElement, props: TileProps): void {
     const sub = props[state];
     if (!sub || typeof sub !== "object" || Array.isArray(sub)) continue;
     const id = `s${++stateStyleSeq}`;
-    el.dataset.strandState = el.dataset.strandState ? `${el.dataset.strandState} ${id}` : id;
+    el.dataset.kumikiState = el.dataset.kumikiState ? `${el.dataset.kumikiState} ${id}` : id;
     const decls = stateStyleDecls(sub as Record<string, unknown>);
     if (!stateStylesEl) {
       stateStylesEl = document.createElement("style");
-      stateStylesEl.id = "strand-state-styles";
+      stateStylesEl.id = "kumiki-state-styles";
       document.head.appendChild(stateStylesEl);
     }
     const selector =
@@ -1116,9 +1116,9 @@ function applyStateStyles(el: HTMLElement, props: TileProps): void {
             ? ":active"
             : state === "disabled"
               ? ":disabled"
-              : "[data-strand-selected]";
+              : "[data-kumiki-selected]";
     stateStylesEl.appendChild(
-      document.createTextNode(`[data-strand-state~="${id}"]${selector} { ${decls} }\n`),
+      document.createTextNode(`[data-kumiki-state~="${id}"]${selector} { ${decls} }\n`),
     );
   }
 }
@@ -1159,8 +1159,8 @@ function maybeReapplyTheme(app: AppShape): void {
 }
 
 function applyThemeDefaults(app: AppShape): void {
-  // We need __strandApp set before currentTheme() works.
-  (window as unknown as { __strandApp?: AppShape }).__strandApp = app;
+  // We need __kumikiApp set before currentTheme() works.
+  (window as unknown as { __kumikiApp?: AppShape }).__kumikiApp = app;
   const theme = currentTheme();
   if (!theme) return;
   const colors = (theme.colors ?? {}) as Record<string, ThemeValue>;
@@ -1176,18 +1176,18 @@ function applyThemeDefaults(app: AppShape): void {
   // Inject CSS for primitives that need theme tokens.
   // Remove any prior injection first so re-renders (e.g. theme switching) don't
   // accumulate <style> nodes in document.head.
-  const prior = document.getElementById("strand-theme-base");
+  const prior = document.getElementById("kumiki-theme-base");
   if (prior) prior.remove();
   const css = document.createElement("style");
-  css.id = "strand-theme-base";
+  css.id = "kumiki-theme-base";
   css.appendChild(
     document.createTextNode(`
-[data-strand-tile="card"] {
+[data-kumiki-tile="card"] {
   background: ${typeof colors.surface === "string" ? colors.surface : "#fff"};
   border: 1px solid ${typeof colors.border === "string" ? colors.border : "#e0e0e0"};
   box-shadow: ${themeShadow(theme, "sm") ?? "0 1px 2px rgba(0,0,0,0.08)"};
 }
-[data-strand-tile="button"] {
+[data-kumiki-tile="button"] {
   background: ${typeof colors.surface === "string" ? colors.surface : "#fff"};
   color: ${typeof colors.fg === "string" ? colors.fg : "#1a1a1a"};
   border: 1px solid ${typeof colors.border === "string" ? colors.border : "#ddd"};
@@ -1195,8 +1195,8 @@ function applyThemeDefaults(app: AppShape): void {
   cursor: pointer;
   border-radius: ${themeRadius(theme, "md") ?? "8px"};
 }
-[data-strand-tile="button"]:hover { filter: brightness(0.97); }
-[data-strand-tile="input"], [data-strand-tile="textarea"] {
+[data-kumiki-tile="button"]:hover { filter: brightness(0.97); }
+[data-kumiki-tile="input"], [data-kumiki-tile="textarea"] {
   font: inherit;
   padding: 6px 10px;
   border: 1px solid ${typeof colors.border === "string" ? colors.border : "#ddd"};
@@ -1204,21 +1204,21 @@ function applyThemeDefaults(app: AppShape): void {
   background: ${typeof colors.surface === "string" ? colors.surface : "#fff"};
   color: ${typeof colors.fg === "string" ? colors.fg : "#1a1a1a"};
 }
-[data-strand-tile="input"]:focus, [data-strand-tile="textarea"]:focus {
+[data-kumiki-tile="input"]:focus, [data-kumiki-tile="textarea"]:focus {
   outline: 2px solid ${typeof colors.primary === "string" ? colors.primary : "#0070f3"};
   outline-offset: 1px;
 }
-[data-strand-tile="link"] {
+[data-kumiki-tile="link"] {
   color: ${typeof colors.primary === "string" ? colors.primary : "#0070f3"};
   text-decoration: none;
 }
-[data-strand-tile="link"]:hover { text-decoration: underline; }
-[data-strand-tile="heading"] {
+[data-kumiki-tile="link"]:hover { text-decoration: underline; }
+[data-kumiki-tile="heading"] {
   font-size: ${typeof sizes.xl === "string" ? sizes.xl : "28px"};
   font-weight: 700;
   margin: 0 0 8px;
 }
-[data-strand-tile="markdown"] p { margin: 0 0 12px; }
+[data-kumiki-tile="markdown"] p { margin: 0 0 12px; }
 `),
   );
   document.head.appendChild(css);
@@ -1256,8 +1256,8 @@ function resolveToken(group: string, name: string): string {
 }
 
 function currentTheme(): Theme | null {
-  const win = window as unknown as { __strandApp?: AppShape };
-  const app = win.__strandApp;
+  const win = window as unknown as { __kumikiApp?: AppShape };
+  const app = win.__kumikiApp;
   if (!app?.themes) return null;
   let name = app.themeName;
   // If `app.theme = someSlot` was used in source, app.themeName holds the slot
@@ -1442,7 +1442,7 @@ export const _stdlib = {
   /**
    * Polymorphic `.filter` dispatch — used by codegen when the receiver type
    * isn't statically known (e.g. `m.keys.filter(...)` vs `m.filter(...)`).
-   * Arrays go through Array.prototype.filter; objects (Maps in Strand) fall
+   * Arrays go through Array.prototype.filter; objects (Maps in Kumiki) fall
    * back to the (k, v) → boolean predicate of mapFilter.
    */
   filter(coll: unknown, pred: (...args: unknown[]) => boolean): unknown {

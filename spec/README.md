@@ -1,10 +1,10 @@
-# Strand Specification
+# Kumiki Specification
 
 English · [日本語](./README.ja.md)
 
-This is the **normative specification** of the Strand language and runtime. When the implementation (`packages/`) and this specification disagree, this specification is, as a rule, taken as authoritative, and which side to fix is recorded as a design decision (→ [Design Notes](../design-notes/)).
+This is the **normative specification** of the Kumiki language and runtime. When the implementation (`packages/`) and this specification disagree, this specification is, as a rule, taken as authoritative, and which side to fix is recorded as a design decision (→ [Design Notes](../design-notes/)).
 
-Tutorials and how-tos are not specification and live in [Strand Guide](../guide/). Working examples are in [Strand Examples](../examples/).
+Tutorials and how-tos are not specification and live in [Kumiki Guide](../guide/). Working examples are in [Kumiki Examples](../examples/).
 
 ## Table of Contents
 

@@ -2,7 +2,7 @@
 
 [English](./learning-cost-v4.md) · 日本語
 
-[v1](./learning-cost-v1.md) (Pomodoro)、[v2](./learning-cost-v2.md) (Kanban)、[v3](./learning-cost-v3.md) (Issue Tracker, 727 LOC) の続編。**Strand v0.1 で最大規模**の Project Management Tool で AI の実用上限を測る。
+[v1](./learning-cost-v1.md) (Pomodoro)、[v2](./learning-cost-v2.md) (Kanban)、[v3](./learning-cost-v3.md) (Issue Tracker, 727 LOC) の続編。**Kumiki v0.1 で最大規模**の Project Management Tool で AI の実用上限を測る。
 
 ## 目的
 
@@ -45,15 +45,15 @@ v4 は **Project Management Tool**（Asana / Linear 風、5 routes、20+ reducer
 ### P-Claude (1255 LOC) — typecheck で 1-write 違反
 
 P-Claude は最も網羅的に書いたが、`deleteTask` reducer で:
-```strand
+```kumiki
 tasks := tasks.remove(tid)
 tasks := tasks.filter(taskNotChildOf($2, tid))   # ← 同 path 2 回目で E0601
 ```
-これは Strand の **1-reducer-1-write 制約**（path-shape granularity, [Language Core](../spec/language.md) §1.6.4）に対する違反。`tasks := tasks.remove(tid).filter(...)` とチェーンすれば 1-write で通る。agent-loop なら自己復旧できる範囲だが、一発書きでは違反した。**仕様の意図通りの reject** であり実装バグではない。
+これは Kumiki の **1-reducer-1-write 制約**（path-shape granularity, [Language Core](../spec/language.md) §1.6.4）に対する違反。`tasks := tasks.remove(tid).filter(...)` とチェーンすれば 1-write で通る。agent-loop なら自己復旧できる範囲だが、一発書きでは違反した。**仕様の意図通りの reject** であり実装バグではない。
 
 ### P-Gemini (606 LOC) — tile に tuple 引数
 
-Gemini は最も簡潔だが、`StatusColumn((p.id, Backlog))` のように **tile に tuple リテラル引数**を渡した。Strand の tile 引数は単一値で、tuple リテラルは未サポート。仕様外の構文を持ち込んだ。spec では record 引数 `{projectId: ..., status: ...}` を使うべき（P-Codex はこの形で正しく書いた）。
+Gemini は最も簡潔だが、`StatusColumn((p.id, Backlog))` のように **tile に tuple リテラル引数**を渡した。Kumiki の tile 引数は単一値で、tuple リテラルは未サポート。仕様外の構文を持ち込んだ。spec では record 引数 `{projectId: ..., status: ...}` を使うべき（P-Codex はこの形で正しく書いた）。
 
 ## ブラウザ動作検証で発覚した仕様 ↔ 実装の乖離 (v4 で 7 件)
 
@@ -93,7 +93,7 @@ v4 でも parse/typecheck/build 通過後にブラウザで 7 件のランタイ
 
 ## 累計サマリ（v1〜v4）
 
-学習コスト検証 4 ラウンドで検出・修正した Strand 実装抜けは **累計 38 件**:
+学習コスト検証 4 ラウンドで検出・修正した Kumiki 実装抜けは **累計 38 件**:
 
 | 範囲 | 累計件数 |
 |---|---:|
@@ -114,18 +114,18 @@ v4 でも parse/typecheck/build 通過後にブラウザで 7 件のランタイ
 | **動的整合** | △ v4 で 7 件の追加抜け → 全件修正済 |
 | **言語仕様の根本的欠陥** | **なし**。検出された全件は実装抜けで埋められた |
 
-**結論**: Strand v0.1 は、1300 LOC 級の実用 SaaS 相当 SPA を AI が一発書きで動かすレベルに到達した。中規模ビジネスアプリ（プロジェクト管理 / チケット管理 / 管理画面）が AI 一発書きの射程に完全に入った。
+**結論**: Kumiki v0.1 は、1300 LOC 級の実用 SaaS 相当 SPA を AI が一発書きで動かすレベルに到達した。中規模ビジネスアプリ（プロジェクト管理 / チケット管理 / 管理画面）が AI 一発書きの射程に完全に入った。
 
 ## 再現
 
 ```bash
 node benchmarks/scripts/learning-cost-eval.mjs \
-  benchmarks/learning-cost-v4/results/P-Claude/output.strand \
-  benchmarks/learning-cost-v4/results/P-Codex/output.strand \
-  benchmarks/learning-cost-v4/results/P-Gemini/output.strand
+  benchmarks/learning-cost-v4/results/P-Claude/output.kumiki \
+  benchmarks/learning-cost-v4/results/P-Codex/output.kumiki \
+  benchmarks/learning-cost-v4/results/P-Gemini/output.kumiki
 
-pnpm --filter @strand/cli exec tsx src/strand.ts build \
-  benchmarks/learning-cost-v4/results/P-Codex/output.strand \
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build \
+  benchmarks/learning-cost-v4/results/P-Codex/output.kumiki \
   out/pm-tool
 node benchmarks/scripts/serve.mjs out/pm-tool 5193 &
 # → http://localhost:5193/

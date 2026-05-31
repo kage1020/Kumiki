@@ -123,7 +123,7 @@ export function codegen(program: Program, opts: CodegenOptions): string {
   lines.push("};");
   lines.push("");
 
-  lines.push("globalThis.__strandApp = App;");
+  lines.push("globalThis.__kumikiApp = App;");
   lines.push(`mount(App, document.getElementById("root"));`);
 
   return lines.join("\n");
@@ -1088,7 +1088,7 @@ function propsFor(
       if ((a.value as Expr).kind === "Ref") {
         const reducerName = (a.value as Expr & { name: string }).name;
         entries.push(
-          `${a.name}: (el) => globalThis.__strandApp._dispatch(${JSON.stringify(reducerName)}, el)`,
+          `${a.name}: (el) => globalThis.__kumikiApp._dispatch(${JSON.stringify(reducerName)}, el)`,
         );
       }
     }
@@ -1104,7 +1104,7 @@ function propsFor(
       if ((p.value as Expr).kind === "Ref") {
         const reducerName = (p.value as Expr as Expr & { name: string }).name;
         entries.push(
-          `${p.name}: (el) => globalThis.__strandApp._dispatch(${JSON.stringify(reducerName)}, el)`,
+          `${p.name}: (el) => globalThis.__kumikiApp._dispatch(${JSON.stringify(reducerName)}, el)`,
         );
       }
       continue;
@@ -1120,7 +1120,7 @@ function propsFor(
     );
     if (r && !entries.some((e) => e.startsWith("onClick"))) {
       entries.push(
-        `onClick: (el) => globalThis.__strandApp._dispatch(${JSON.stringify(r.name)}, el)`,
+        `onClick: (el) => globalThis.__kumikiApp._dispatch(${JSON.stringify(r.name)}, el)`,
       );
     }
   }
@@ -1132,7 +1132,7 @@ function propsFor(
     );
     if (r && !entries.some((e) => e.startsWith("onClick"))) {
       entries.push(
-        `onClick: (el) => globalThis.__strandApp._dispatch(${JSON.stringify(r.name)}, el)`,
+        `onClick: (el) => globalThis.__kumikiApp._dispatch(${JSON.stringify(r.name)}, el)`,
       );
     }
   }
@@ -1144,7 +1144,7 @@ function propsFor(
     );
     if (r)
       entries.push(
-        `onSubmit: (el) => globalThis.__strandApp._dispatch(${JSON.stringify(r.name)}, el)`,
+        `onSubmit: (el) => globalThis.__kumikiApp._dispatch(${JSON.stringify(r.name)}, el)`,
       );
   }
   // Implicit onChange for select / input / textarea when reducer subscribes to ui.change(EnclosingTile)
@@ -1155,7 +1155,7 @@ function propsFor(
     );
     if (r && !entries.some((e) => e.startsWith("onChange"))) {
       entries.push(
-        `onChange: (el) => globalThis.__strandApp._dispatch(${JSON.stringify(r.name)}, el)`,
+        `onChange: (el) => globalThis.__kumikiApp._dispatch(${JSON.stringify(r.name)}, el)`,
       );
     }
   }
@@ -1167,7 +1167,7 @@ function propsFor(
     );
     if (r && !entries.some((e) => e.startsWith("onInput"))) {
       entries.push(
-        `onInput: (el) => globalThis.__strandApp._dispatch(${JSON.stringify(r.name)}, el)`,
+        `onInput: (el) => globalThis.__kumikiApp._dispatch(${JSON.stringify(r.name)}, el)`,
       );
     }
   }
@@ -1198,7 +1198,7 @@ function addBind(ctx: EvalCtx, name: string): EvalCtx {
 // ----- helpers -----
 
 function jsName(name: string): string {
-  // Map kebab-case and Strand-special names to safe JS identifiers.
+  // Map kebab-case and Kumiki-special names to safe JS identifiers.
   return name.replace(/^\$/, "_d_").replace(/-/g, "_").replace(/\./g, "_");
 }
 

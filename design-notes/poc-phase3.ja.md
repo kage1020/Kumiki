@@ -4,7 +4,7 @@
 
 ## ゴール
 
-`examples/apps/03-blog/app.strand` を入力に `strand build` を実行すると、ブラウザで開いて以下が動作する：
+`examples/apps/03-blog/app.kumiki` を入力に `kumiki build` を実行すると、ブラウザで開いて以下が動作する：
 
 - `/` → リダイレクト → `/posts`（投稿一覧）
 - 投稿カードをクリック → `/posts/:id`（投稿詳細、Markdown 描画）
@@ -48,7 +48,7 @@ Phase 3 で **扱わない**:
 
 ### AC-Parse
 
-examples/apps/03-blog/app.strand の以下が parse 成功：
+examples/apps/03-blog/app.kumiki の以下が parse 成功：
 - `routes` 内の静的リダイレクト `"/" ->> "/posts"`
 - `error-boundary = ErrorFallback` tile 属性
 - `app.http = { base-url: ..., headers: ..., on-401: doLogout, timeout: 10s }` （values は parser が受け入れ、typecheck はゆるく許す）
@@ -56,7 +56,7 @@ examples/apps/03-blog/app.strand の以下が parse 成功：
 
 ### AC-Typecheck
 
-examples/apps/03-blog/app.strand は **errors=0** で通る。
+examples/apps/03-blog/app.kumiki は **errors=0** で通る。
 
 ### AC-Routing
 
@@ -79,7 +79,7 @@ examples/apps/03-blog/app.strand は **errors=0** で通る。
 
 ### AC-Browser
 
-`pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/03-blog/app.strand out/blog` の結果を、mock JSON を同梱した状態でブラウザで開いて、posts → detail → about → 404 が回る。
+`pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/03-blog/app.kumiki out/blog` の結果を、mock JSON を同梱した状態でブラウザで開いて、posts → detail → about → 404 が回る。
 
 ## Mock Backend 戦略
 
@@ -100,7 +100,7 @@ URL のパス末尾に拡張子なしで JSON を置けばよいよう、`benchm
 
 `app.http.base-url` は `""`（同一オリジン）にし、`/api/posts` のような相対パスを使う。
 
-examples/apps/03-blog/app.strand の `base-url: "https://api.example.com"` はビルド時にコメントアウト or 空文字に上書き、または **app.strand 修正** で対応する。
+examples/apps/03-blog/app.kumiki の `base-url: "https://api.example.com"` はビルド時にコメントアウト or 空文字に上書き、または **app.kumiki 修正** で対応する。
 
 ## 実装順序
 

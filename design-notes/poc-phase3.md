@@ -4,7 +4,7 @@ English · [日本語](./poc-phase3.ja.md)
 
 ## Goal
 
-Running `strand build` with `examples/apps/03-blog/app.strand` as input, opening the result in the browser makes the following work:
+Running `kumiki build` with `examples/apps/03-blog/app.kumiki` as input, opening the result in the browser makes the following work:
 
 - `/` → redirect → `/posts` (the post list)
 - Clicking a post card → `/posts/:id` (post detail, Markdown rendering)
@@ -48,7 +48,7 @@ In addition to the language + runtime implemented in Phase 2, add **routing** an
 
 ### AC-Parse
 
-The following in examples/apps/03-blog/app.strand parse successfully:
+The following in examples/apps/03-blog/app.kumiki parse successfully:
 - The static redirect `"/" ->> "/posts"` inside `routes`
 - The `error-boundary = ErrorFallback` tile attribute
 - `app.http = { base-url: ..., headers: ..., on-401: doLogout, timeout: 10s }` (the parser accepts the values, and typecheck permits them loosely)
@@ -56,7 +56,7 @@ The following in examples/apps/03-blog/app.strand parse successfully:
 
 ### AC-Typecheck
 
-examples/apps/03-blog/app.strand passes with **errors=0**.
+examples/apps/03-blog/app.kumiki passes with **errors=0**.
 
 ### AC-Routing
 
@@ -79,7 +79,7 @@ examples/apps/03-blog/app.strand passes with **errors=0**.
 
 ### AC-Browser
 
-Opening the result of `pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/03-blog/app.strand out/blog` in the browser, with the mock JSON bundled, posts → detail → about → 404 cycles.
+Opening the result of `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/03-blog/app.kumiki out/blog` in the browser, with the mock JSON bundled, posts → detail → about → 404 cycles.
 
 ## Mock Backend Strategy
 
@@ -100,7 +100,7 @@ Extend `benchmarks/scripts/serve.mjs` so that placing JSON without an extension 
 
 Set `app.http.base-url` to `""` (same origin) and use relative paths such as `/api/posts`.
 
-The `base-url: "https://api.example.com"` in examples/apps/03-blog/app.strand is handled by commenting it out or overwriting it with an empty string at build time, or by **editing app.strand**.
+The `base-url: "https://api.example.com"` in examples/apps/03-blog/app.kumiki is handled by commenting it out or overwriting it with an empty string at build time, or by **editing app.kumiki**.
 
 ## Implementation Order
 

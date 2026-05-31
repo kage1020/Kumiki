@@ -16,7 +16,7 @@ React is a human-centered optimum. Hooks / Context / JSX are idioms that feel na
 
 These are "writable when the AI writes them," but become sharply harder "**when the AI fixes them or touches them in parallel**." When the cause of a bug lies outside the program (execution history, dependency arrays, stale closures), the AI cannot reason about it without cramming the entire history into the context window.
 
-Strand eliminates this friction structurally.
+Kumiki eliminates this friction structurally.
 
 ## Design Requirements
 
@@ -64,13 +64,13 @@ Critically comparing the four made one thing clear: **the surface syntax differe
 
 The only remaining point of contention was **the physical form of the source representation**.
 
-## Strand's Position
+## Kumiki's Position
 
-Strand is a hybrid of the 4 proposals. It takes the strong parts of each and covers the weak parts with another proposal.
+Kumiki is a hybrid of the 4 proposals. It takes the strong parts of each and covers the weak parts with another proposal.
 
 | Adopted | Origin |
 |---|---|
-| Forced 7-layer separation (type / slot / effect / reducer / tile / fn / app) | Pyramid + Strand extension |
+| Forced 7-layer separation (type / slot / effect / reducer / tile / fn / app) | Pyramid + Kumiki extension |
 | Capability-bearing effect descriptor | IR+Actor / Pyramid |
 | episode log + replay | Loom |
 | Content-addressable definition store | IR+Actor / Nexus |
@@ -78,11 +78,11 @@ Strand is a hybrid of the 4 proposals. It takes the strong parts of each and cov
 | Parallel editing via CRDT op | Nexus |
 | Local nesting allowed (S-expression-like only inside tiles) | IR+Actor |
 | Graph compiler (statically checks referential integrity) | Nexus |
-| `--ai-fix` mode (error → auto-repair loop) | Strand new |
+| `--ai-fix` mode (error → auto-repair loop) | Kumiki new |
 
-### How Strand Avoids Each Proposal's Weakness
+### How Kumiki Avoids Each Proposal's Weakness
 
-| Weakness | Origin | Avoidance in Strand |
+| Weakness | Origin | Avoidance in Kumiki |
 |---|---|---|
 | S-expression parenthesis hell | IR+Actor | Nesting allowed only inside tiles, otherwise one declaration per line |
 | Effect type propagation hell | IR+Actor | Effects are descriptors; propagation is only the capability set |
@@ -113,7 +113,7 @@ Strand is a hybrid of the 4 proposals. It takes the strong parts of each and cov
 
 ## Non-Goals
 
-Strand does not aim for the following.
+Kumiki does not aim for the following.
 
 - **Incremental migration of existing React code**: Zero compatibility is fine. New apps only
 - **From-scratch development by humans**: Humans can write it, but it is not comfortable
@@ -124,4 +124,4 @@ Strand does not aim for the following.
 ## What to Read Next
 
 - Overall view of the language → [Language Core](../spec/language.md)
-- Want to see an example right away → [examples/apps/01-counter/app.strand](https://github.com/kage1020/Strand/blob/main/examples/apps/01-counter/app.strand)
+- Want to see an example right away → [examples/apps/01-counter/app.kumiki](https://github.com/kage1020/Kumiki/blob/main/examples/apps/01-counter/app.kumiki)

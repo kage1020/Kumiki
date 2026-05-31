@@ -1,8 +1,8 @@
-// strand fix — propose auto-patches for repairable typecheck errors.
+// kumiki fix — propose auto-patches for repairable typecheck errors.
 
 import { readFileSync, writeFileSync } from "node:fs";
-import type { StrandError } from "@strand/compiler";
-import { check, lex, parse } from "@strand/compiler";
+import type { KumikiError } from "@kumiki/compiler";
+import { check, lex, parse } from "@kumiki/compiler";
 import { listDefs, load, type Store } from "./store.ts";
 
 export type AutoPatch = {
@@ -50,7 +50,7 @@ function suggestName(store: Store, missing: string): string | null {
   return null;
 }
 
-export function planFixes(store: Store, errors: StrandError[]): AutoPatch[] {
+export function planFixes(store: Store, errors: KumikiError[]): AutoPatch[] {
   const patches: AutoPatch[] = [];
   for (const err of errors) {
     if (

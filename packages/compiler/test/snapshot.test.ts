@@ -1,12 +1,12 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { compile, lex, parse } from "@strand/compiler";
+import { compile, lex, parse } from "@kumiki/compiler";
 import { describe, expect, it } from "vitest";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const COUNTER = resolve(here, "../../../examples/apps/01-counter/app.strand");
-const TODOMVC = resolve(here, "../../../examples/apps/02-todomvc/app.strand");
+const COUNTER = resolve(here, "../../../examples/apps/01-counter/app.kumiki");
+const TODOMVC = resolve(here, "../../../examples/apps/02-todomvc/app.kumiki");
 
 const STRIP_RX = /\s+/g;
 const norm = (s: string): string => s.replace(STRIP_RX, " ").trim();
@@ -41,7 +41,7 @@ describe("compile output snapshots", () => {
     expect(result.js).toContain('"count": { value: 0, refine:');
     expect(result.js).toContain('selector: { tile: "IncBtn" }');
     expect(result.js).toContain('event: { kind: "ui", ev: "click" }');
-    expect(result.js).toContain('__strandApp._dispatch("inc"');
+    expect(result.js).toContain('__kumikiApp._dispatch("inc"');
     expect(result.js).toContain('_next["count"]');
   });
 

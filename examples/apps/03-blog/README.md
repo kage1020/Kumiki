@@ -15,7 +15,7 @@ An SPA with routing and asynchronous data fetching. It handles list → detail n
 ## Run
 
 ```sh
-pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/03-blog/app.strand ./out
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/03-blog/app.kumiki ./out
 ```
 
 Related specs: [routing](../../../spec/routing.md) / [http](../../../spec/http.md) / [lifecycle](../../../spec/lifecycle.md)

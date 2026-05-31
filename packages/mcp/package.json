@@ -1,11 +1,11 @@
 {
-  "name": "@strand/mcp",
+  "name": "@kumiki/mcp",
   "version": "0.1.0",
   "type": "module",
-  "description": "Strand MCP server — exposes the compiler (check/build/list/view/add/replace/remove/fix) and spec search as MCP tools.",
+  "description": "Kumiki MCP server — exposes the compiler (check/build/list/view/add/replace/remove/fix) and spec search as MCP tools.",
   "license": "Apache-2.0",
   "bin": {
-    "strand-mcp": "./src/server.ts"
+    "kumiki-mcp": "./src/server.ts"
   },
   "exports": {
     ".": {
@@ -25,8 +25,8 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@strand/cli": "workspace:*",
-    "@strand/compiler": "workspace:*",
+    "@kumiki/cli": "workspace:*",
+    "@kumiki/compiler": "workspace:*",
     "zod": "^4.4.3"
   },
   "devDependencies": {

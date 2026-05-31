@@ -1,8 +1,8 @@
-# Strand Reference Implementation — Phase 1
+# Kumiki Reference Implementation — Phase 1
 
 [English](./reference-phase1-status.md) · 日本語
 
-Phase 1 PoC: 01-counter.strand を入力に **lexer → parser → typecheck → codegen → runtime** が直列で動き、ブラウザ上で Counter SPA が動作する。
+Phase 1 PoC: 01-counter.kumiki を入力に **lexer → parser → typecheck → codegen → runtime** が直列で動き、ブラウザ上で Counter SPA が動作する。
 
 ## ステータス
 
@@ -34,7 +34,7 @@ packages/
 │       └── index.ts           mount / DOM 描画 / dispatch
 └── cli/
     └── src/
-        └── strand.ts          strand build コマンド
+        └── kumiki.ts          kumiki build コマンド
 ```
 
 ## 使い方
@@ -51,7 +51,7 @@ pnpm lint
 ### Counter のビルド
 
 ```bash
-pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand out/counter
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki out/counter
 # → out/counter/ に index.html, app.js, runtime.js が出る
 ```
 
@@ -89,6 +89,6 @@ Phase 1 で意図的に小さくした点:
 |---|---|
 | signal graph 不採用、毎クリック全描画 | DOM diff なしの素朴実装で動作優先 |
 | IR を介さず直接 JS 出力 | Phase 1 で十分動く、Phase 2 で IR を挟む |
-| `strand build` のみ（dev / check は別途） | コア体験に集中 |
+| `kumiki build` のみ（dev / check は別途） | コア体験に集中 |
 | Vitest jsdom 上で手書き AppShape で runtime をテスト | codegen→runtime の結合は CLI smoke と手動で |
 | `new Function` を使わない | セキュリティ警告に従い、tmp ファイル/dynamic import も避けて分離テストに統一 |

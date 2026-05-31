@@ -22,7 +22,7 @@ All interaction with the outside world is done via **effects**. This section des
 
 A high-level effect corresponding to each method is provided by the standard library:
 
-```strand
+```kumiki
 effect http-get cap=http.get
                 in={
                   url: Url,
@@ -48,7 +48,7 @@ effect http-post cap=http.post
 
 ### 6.1.3 The HttpBody Type
 
-```strand
+```kumiki
 type HttpBody = Json(JsonValue)
               | Form(Map(Text, Text))
               | Multipart(Map(Text, FormValue))
@@ -59,7 +59,7 @@ type HttpBody = Json(JsonValue)
 
 ### 6.1.4 The Decoder Type
 
-```strand
+```kumiki
 type Decoder = Json(TypeRef)        ; decode JSON into a type
              | Text                  ; keep as a string
              | Bytes                 ; keep as a byte sequence
@@ -75,7 +75,7 @@ All HTTP effects automatically apply the following:
 - `Accept: application/json` (when the Decoder is Json)
 - `Content-Type: application/json` (when the HttpBody is Json)
 - `Content-Type: multipart/form-data` (when Multipart)
-- `User-Agent: Strand/0.1`
+- `User-Agent: Kumiki/0.1`
 
 User-specified headers take precedence.
 
@@ -85,7 +85,7 @@ User-specified headers take precedence.
 
 ### 6.2.1 GET
 
-```strand
+```kumiki
 type UserId = nominal Text where uuid
 type User   = {id: UserId, name: Text, email: Email}
 
@@ -104,9 +104,9 @@ reducer fetchUser
         emit loadUser($el.userId)
 ```
 
-At implementation time, the Strand compiler expands `loadUser` into the following:
+At implementation time, the Kumiki compiler expands `loadUser` into the following:
 
-```strand
+```kumiki
 emit http-get({
     url:     apiBase + "/users/" + $1.show,
     headers: {},
@@ -119,7 +119,7 @@ emit http-get({
 
 ### 6.2.2 POST
 
-```strand
+```kumiki
 effect createTodo cap=http.post
                   in={text: Text}
                   out=Result(Todo, HttpError)
@@ -145,7 +145,7 @@ reducer added
 
 In `app.http` you can declare headers that are automatically applied to all HTTP effects:
 
-```strand
+```kumiki
 app App
     caps   = [http.get, http.post, storage.read]
     routes = {"/" -> Home, "/404" -> NotFound}
@@ -170,7 +170,7 @@ app App
 
 ### 6.3.2 Global Handling of 401
 
-```strand
+```kumiki
 reducer handleUnauthorized
     on=app.http-401
     do= session := None
@@ -185,7 +185,7 @@ reducer handleUnauthorized
 
 It is automatically canceled by `policy=latest` or `policy=latest-per-key(...)`. Manual cancellation is:
 
-```strand
+```kumiki
 effect cancel cap=http.cancel in=EffectId out=Unit
 
 reducer cancelSearch
@@ -199,7 +199,7 @@ reducer cancelSearch
 
 ## 6.5 Retry
 
-```strand
+```kumiki
 effect loadCritical cap=http.get
                     in=Text
                     out=Result(Text, HttpError)
@@ -220,7 +220,7 @@ Retries only target **5xx and connection errors**. 4xx is not retried (by specif
 
 When you want to write URL templates or path parameters, the user declares a wrapper effect:
 
-```strand
+```kumiki
 slot apiBase : Url = "https://api.example.com"
 
 effect loadUser cap=http.get
@@ -251,7 +251,7 @@ effect loadUser cap=http.get
 
 ### 6.7.2 Standard effect (localStorage)
 
-```strand
+```kumiki
 effect storage-read   cap=storage.read
                       in={key: Text, decode: Decoder}
                       out=Result(Option(Decoded), Text)
@@ -271,7 +271,7 @@ effect storage-clear  cap=storage.write
 
 ### 6.7.3 Example
 
-```strand
+```kumiki
 slot todos : Map(TodoId, Todo) = {}
 
 effect saveTodos cap=storage.write
@@ -304,7 +304,7 @@ reducer onChange
 
 `session-*` has the same shape. `indexed-*` is the same except that the key specification becomes `{store: Text, key: Text}`.
 
-```strand
+```kumiki
 effect indexed-read cap=indexed.read
                     in={store: Text, key: Text, decode: Decoder}
                     out=Result(Option(Decoded), Text)
@@ -320,7 +320,7 @@ effect indexed-query cap=indexed.read
 
 The IndexedDB `store` is declared via `app.indexed-db`:
 
-```strand
+```kumiki
 app App
     ...
     indexed-db = {
@@ -339,14 +339,14 @@ app App
 
 ### 6.8.1 Load on Startup
 
-```strand
+```kumiki
 reducer boot on=app.start do= emit loadAll()
 reducer loaded on=loadAll.ok($data, _) do= state := $data
 ```
 
 ### 6.8.2 Save Changes with debounce
 
-```strand
+```kumiki
 effect save cap=storage.write
             in=Map(TodoId, Todo)
             out=Result(Unit, Text)
@@ -360,7 +360,7 @@ reducer afterChange
 
 ### 6.8.3 Optimistic Update + Server Sync
 
-```strand
+```kumiki
 reducer addOptimistic
     on=ui.submit(NewTodoForm)
     do= let id = TodoId.fresh()
@@ -391,7 +391,7 @@ Defaults for all HTTP effects:
 | `retry` | `none` |
 | `Accept` | `application/json` |
 | `Content-Type` (with Json body) | `application/json` |
-| `User-Agent` | `Strand/0.1` |
+| `User-Agent` | `Kumiki/0.1` |
 | `credentials` | `same-origin` |
 
 Defaults for storage effects:
@@ -408,13 +408,13 @@ Defaults for storage effects:
 
 ### 6.10.1 CSP / CORS
 
-Since the Strand runtime uses standard fetch, CORS behavior is the same as the browser's fetch. CSP is configured on the server side (Strand is not involved).
+Since the Kumiki runtime uses standard fetch, CORS behavior is the same as the browser's fetch. CSP is configured on the server side (Kumiki is not involved).
 
 ### 6.10.2 Storing Tokens
 
-Storing an access token in `localStorage` is an XSS vulnerability risk. As Strand documentation, we recommend **HTTP-only cookies + `credentials: "include"`**.
+Storing an access token in `localStorage` is an XSS vulnerability risk. As Kumiki documentation, we recommend **HTTP-only cookies + `credentials: "include"`**.
 
-```strand
+```kumiki
 app App
     ...
     http = {
@@ -427,7 +427,7 @@ app App
 
 slots **are included** in the episode log. When placing a password or the like in a slot, specify `volatile=true`:
 
-```strand
+```kumiki
 slot password : Text = ""
     volatile = true        ; not written to the episode log, cleared on reload too
 ```

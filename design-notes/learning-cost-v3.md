@@ -56,11 +56,11 @@ I-Codex wrote up to 1058 LOC beyond the spec scope (over-generation of defensive
 
 ### I-Gemini (501 LOC) — parse Failure
 
-It brought in the OCaml/Haskell-derived `let x = y in z` expression syntax, which the Strand parser cannot parse. Gemini was able to write a structurally correct design (separation of types/fns/effects/tiles, 4-route integration), but other-language knowledge mixed in syntactically.
+It brought in the OCaml/Haskell-derived `let x = y in z` expression syntax, which the Kumiki parser cannot parse. Gemini was able to write a structurally correct design (separation of types/fns/effects/tiles, 4-route integration), but other-language knowledge mixed in syntactically.
 
 ## Specification ↔ Implementation Divergences Revealed by Browser Operation Verification (19 in v3)
 
-In the process of running I-Claude with `strand build` + static serve + Chrome, initially **numerous runtime errors occurred in the browser after build**. All were mismatches / coverage gaps between Strand's specification docs and implementation, so we fixed them.
+In the process of running I-Claude with `kumiki build` + static serve + Chrome, initially **numerous runtime errors occurred in the browser after build**. All were mismatches / coverage gaps between Kumiki's specification docs and implementation, so we fixed them.
 
 ### Parser Extensions
 
@@ -91,7 +91,7 @@ In the process of running I-Claude with `strand build` + static serve + Chrome, 
 |---|---|---|
 | 25 | have `mapEntries` return a `[[k, v], ...]` tuple array | consistency with the destructure lambda |
 | 26 | bind path handler for input/textarea/select (`_setPath` via path) | `bind=draft.assignee` |
-| 27 | full path identification for focus restoration (`data-strand-bind="draft.assignee"`) | the problem where input focus is stolen by title |
+| 27 | full path identification for focus restoration (`data-kumiki-bind="draft.assignee"`) | the problem where input focus is stolen by title |
 | 28 | **implicit onChange dispatch** for select (`ui.change(SelectTile)` reducer) | I-Claude `on=ui.change(StatusSelect)` |
 | 29 | dynamic theme: resolve `app.theme = slotName` via `_live[slotName]` | I-Claude `theme = themeName` |
 | 30 | re-run `applyThemeDefaults` at the start of `render()` | DOM reflection on theme switch |
@@ -103,14 +103,14 @@ In the process of running I-Claude with `strand build` + static serve + Chrome, 
 The Issue Tracker is on the scale of **727 LOC, 9 reducers, 4 routes, multiple forms**, and Claude succeeded in one-shot writing without training data, working in the browser. This means:
 
 - The domain of medium-scale business SPAs (internal tools / admin screens) has **entered the scope of AI one-shot writing**
-- The 19 fixes revealed by browser actual-operation verification are **all Strand implementation gaps**, not fundamental defects of the language specification
-- The fixed Strand has now reached a shape where equivalent tasks work in one shot going forward
+- The 19 fixes revealed by browser actual-operation verification are **all Kumiki implementation gaps**, not fundamental defects of the language specification
+- The fixed Kumiki has now reached a shape where equivalent tasks work in one shot going forward
 
 ### "Passing parse/typecheck/build ≠ working"
 
 In v3, I-Claude's code that passed parse/typecheck/build in one shot produced **a large number of runtime errors** on its first run in the browser. This is a dimension that did not surface in v1/v2:
 
-- In v1/v2 the apps were small, and only the paths Strand's implementation happened to cover were exercised
+- In v1/v2 the apps were small, and only the paths Kumiki's implementation happened to cover were exercised
 - For the first time in v3, **features written in the specification docs but unsupported in the implementation**—such as the nested path of `bind=draft.field` / dynamic theme / select's onChange dispatch / `.get-or`'s Option dispatch—all became necessary at once
 
 → "The LLM can write it" and "it works on real devices" are separate verification stages. **Operation verification tests the language specification's coverage for the first time in v3.**
@@ -125,7 +125,7 @@ In v3, I-Claude's code that passed parse/typecheck/build in one shot produced **
 
 ## Cumulative Summary (v1 + v2 + v3)
 
-The Strand specification gaps detected and fixed across 3 rounds of learning cost verification total **30**:
+The Kumiki specification gaps detected and fixed across 3 rounds of learning cost verification total **30**:
 
 | Scope | Count |
 |---|---:|
@@ -146,7 +146,7 @@ After fixing all, maintained 71 tests pass + full operation of the 3 apps Pomodo
 | **By model** | ✓ Claude full operation / △ Codex through typecheck / △ Gemini through parse |
 | **Fundamental defect of the language specification** | **none**. All detected cases were filled in as implementation gaps |
 
-**Conclusion**: Strand v0.1 reached a level where the AI gets a medium-scale (~700 LOC) practical SPA working in one-shot writing.
+**Conclusion**: Kumiki v0.1 reached a level where the AI gets a medium-scale (~700 LOC) practical SPA working in one-shot writing.
 
 ## Reproduction
 
@@ -156,13 +156,13 @@ After fixing all, maintained 71 tests pass + full operation of the 3 apps Pomodo
 
 # Eval (static)
 node benchmarks/scripts/learning-cost-eval.mjs \
-  benchmarks/learning-cost-v3/results/I-Claude/output.strand \
-  benchmarks/learning-cost-v3/results/I-Codex/output.strand \
-  benchmarks/learning-cost-v3/results/I-Gemini/output.strand
+  benchmarks/learning-cost-v3/results/I-Claude/output.kumiki \
+  benchmarks/learning-cost-v3/results/I-Codex/output.kumiki \
+  benchmarks/learning-cost-v3/results/I-Gemini/output.kumiki
 
 # Browser operation verification
-pnpm --filter @strand/cli exec tsx src/strand.ts build \
-  benchmarks/learning-cost-v3/results/I-Claude/output.strand \
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build \
+  benchmarks/learning-cost-v3/results/I-Claude/output.kumiki \
   out/issue-tracker
 node benchmarks/scripts/serve.mjs out/issue-tracker 5192 &
 # → open http://localhost:5192/ in the browser

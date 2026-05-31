@@ -210,12 +210,12 @@ interface WebMcp {
 <template>
   <div class="sp">
     <div class="sp-bar">
-      <select v-model="selected" aria-label="例を選ぶ">
-        <option value="">例を選ぶ…</option>
+      <select v-model="selected" aria-label="Choose an example">
+        <option value="">Choose an example…</option>
         <option v-for="e in examples" :key="e.name" :value="e.name">{{ e.name }}</option>
       </select>
       <span class="sp-status" :class="ok ? 'ok' : 'err'">
-        {{ ok ? "✓ コンパイル成功" : diagnostics.length ? "✗ 診断あり" : "…" }}
+        {{ ok ? "✓ Compiled" : diagnostics.length ? "✗ Diagnostics" : "…" }}
       </span>
     </div>
     <div class="sp-grid">

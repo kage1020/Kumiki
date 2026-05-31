@@ -1,87 +1,89 @@
-# PoC Phase 3 — Blog SPA が動く実装の仕様
+# PoC Phase 3 — Specification of a Working Blog SPA Implementation
 
-## 13.1 ゴール
+English · [日本語](./poc-phase3.ja.md)
 
-`docs/examples/03-blog-spa.strand` を入力に `strand build` を実行すると、ブラウザで開いて以下が動作する：
+## 13.1 Goal
 
-- `/` → リダイレクト → `/posts`（投稿一覧）
-- 投稿カードをクリック → `/posts/:id`（投稿詳細、Markdown 描画）
-- `/about` で About ページ
-- 未知のパスは `/404`
-- 戻る/進むボタンも history に追従
-- `link` 要素はフルリロードしない
-- 「Edit」リンクは（auth フェイクで）`/login` にリダイレクト
-- HTTP 取得はモックバックエンド（静的 JSON）から
+Running `strand build` with `docs/examples/03-blog-spa.strand` as input, opening the result in the browser makes the following work:
 
-Phase 2 で実装した language + runtime に加えて、**ルーティング** と **HTTP** を入れる。
+- `/` → redirect → `/posts` (the post list)
+- Clicking a post card → `/posts/:id` (post detail, Markdown rendering)
+- `/about` shows the About page
+- Unknown paths go to `/404`
+- Back/forward buttons follow history too
+- The `link` element does not do a full reload
+- The "Edit" link redirects to `/login` (with a fake auth)
+- HTTP fetches come from a mock backend (static JSON)
 
-## 13.2 サポート範囲（Phase 3 追加分）
+In addition to the language + runtime implemented in Phase 2, add **routing** and **HTTP**.
 
-| カバー | 詳細 |
+## 13.2 Support Scope (Phase 3 additions)
+
+| Covered | Details |
 |---|---|
-| `route` slot | runtime が `{path, pattern, params, query, hash}` を自動管理 |
-| ルートマッチング | `/posts/:id` 等のパラメータ抽出、`/404` フォールバック、静的リダイレクト `->>` |
-| `link(to=...)` 要素 | `href=path` で `<a>` を出し、クリックで navigate effect を発火 |
+| `route` slot | The runtime automatically manages `{path, pattern, params, query, hash}` |
+| Route matching | Parameter extraction such as `/posts/:id`, the `/404` fallback, static redirect `->>` |
+| `link(to=...)` element | Emits an `<a>` with `href=path` and fires a navigate effect on click |
 | `navigate` effect | `nav.push` / `nav.replace` / `nav.back` capability |
-| `route.enter(pattern)` reducer | ルート進入時 |
-| `route.leave(pattern)` reducer | ルート離脱時 |
-| `error-boundary` tile 属性 | parse + 受け入れ（Phase 3 では runtime 動作は最小限） |
-| `app.http` 設定 | base-url, headers (slot 参照可), on-401 |
-| `http.get` / `http.post` / `http.put` / `http.delete` | fetch() で実装、`map-request` で URL/body 構築、`Decoder.Json` で型 decode |
-| `app.http-401` lifecycle | 401 を受信したときの reducer |
-| 標準 effect: `toast`, `navigate`, `navigate-replace`, `navigate-back` | 自動登録 |
-| 標準 tile: `link`, `markdown` | 追加 |
+| `route.enter(pattern)` reducer | On route entry |
+| `route.leave(pattern)` reducer | On route exit |
+| `error-boundary` tile attribute | parse + acceptance (runtime behavior is minimal in Phase 3) |
+| `app.http` configuration | base-url, headers (slot references allowed), on-401 |
+| `http.get` / `http.post` / `http.put` / `http.delete` | Implemented with fetch(), builds URL/body via `map-request`, decodes types via `Decoder.Json` |
+| `app.http-401` lifecycle | A reducer for when a 401 is received |
+| Standard effects: `toast`, `navigate`, `navigate-replace`, `navigate-back` | Auto-registered |
+| Standard tiles: `link`, `markdown` | Added |
 
-Phase 3 で **扱わない**:
+**Not handled** in Phase 3:
 - SSR / Edge
-- Theme の完全反映
+- Full theme reflection
 - i18n
-- A11y 検査
+- A11y checks
 - WebSocket / SSE
 - IndexedDB
-- Optimistic update の高度な機構（楽観的状態保持・ロールバック）
-- 認証フロー全体（login form の submit 後は mock 401 で停止する想定）
+- Advanced optimistic-update machinery (optimistic state retention / rollback)
+- The entire authentication flow (after submitting the login form, it stops at a mock 401)
 
-## 13.3 受け入れ基準（AC）
+## 13.3 Acceptance Criteria (AC)
 
 ### AC-Parse
 
-03-blog-spa.strand の以下が parse 成功：
-- `routes` 内の静的リダイレクト `"/" ->> "/posts"`
-- `error-boundary = ErrorFallback` tile 属性
-- `app.http = { base-url: ..., headers: ..., on-401: doLogout, timeout: 10s }` （values は parser が受け入れ、typecheck はゆるく許す）
-- `app.meta = {...}` （同上）
+The following in 03-blog-spa.strand parse successfully:
+- The static redirect `"/" ->> "/posts"` inside `routes`
+- The `error-boundary = ErrorFallback` tile attribute
+- `app.http = { base-url: ..., headers: ..., on-401: doLogout, timeout: 10s }` (the parser accepts the values, and typecheck permits them loosely)
+- `app.meta = {...}` (same as above)
 
 ### AC-Typecheck
 
-03-blog-spa.strand は **errors=0** で通る。
+03-blog-spa.strand passes with **errors=0**.
 
 ### AC-Routing
 
-- 初期表示で `/` にアクセス → リダイレクトされて `/posts` の PostList が描画
-- `/about` に link でアクセス → About 表示
-- `/posts/:id` の `:id` が `$route.params["id"]` で取れる
-- `route.enter("/posts/:id/edit")` reducer が当該ルートで発火（テスト用に slot で記録）
-- 戻る/進むボタンも反応（jsdom では `history.back()` を擬似）
+- The initial display accesses `/` → is redirected and the `/posts` PostList renders
+- Accessing `/about` via a link → About is shown
+- The `:id` of `/posts/:id` can be obtained via `$route.params["id"]`
+- The `route.enter("/posts/:id/edit")` reducer fires on that route (recorded in a slot for testing)
+- Back/forward buttons also respond (in jsdom, `history.back()` is simulated)
 
 ### AC-HTTP
 
-- 初期化 (`app.start`) で `loadSession()` と `fetchIndex()` が emit され、それぞれ storage / http に届く
-- mock backend の `/api/posts` を fetch → `Loaded([id1, id2, ...])` が postIndex に入る
-- 各 post の `/api/posts/:id` を fetch → `Loaded(Post)` が posts[id] に入る
-- 401 を返す URL に当たると `doLogout` reducer が呼ばれる
+- On initialization (`app.start`), `loadSession()` and `fetchIndex()` are emitted and reach storage / http respectively
+- Fetching the mock backend's `/api/posts` → `Loaded([id1, id2, ...])` goes into postIndex
+- Fetching each post's `/api/posts/:id` → `Loaded(Post)` goes into posts[id]
+- Hitting a URL that returns 401 calls the `doLogout` reducer
 
 ### AC-E2E
 
-- `test/blog.e2e.test.ts`: fetch を mock したうえで上記 routing + HTTP のフローを jsdom で検証
+- `test/blog.e2e.test.ts`: with fetch mocked, verify the above routing + HTTP flow in jsdom
 
 ### AC-Browser
 
-`pnpm strand build ../docs/examples/03-blog-spa.strand ../examples-build/blog` の結果を、mock JSON を同梱した状態でブラウザで開いて、posts → detail → about → 404 が回る。
+Opening the result of `pnpm strand build ../docs/examples/03-blog-spa.strand ../examples-build/blog` in the browser, with the mock JSON bundled, posts → detail → about → 404 cycles.
 
-## 13.4 Mock Backend 戦略
+## 13.4 Mock Backend Strategy
 
-実 backend は立てない。代わりに `examples-build/blog/api/` に静的 JSON を置き、現在の `scripts/serve.mjs` がそのまま配信する。
+We do not stand up a real backend. Instead, place static JSON under `examples-build/blog/api/` and have the current `scripts/serve.mjs` serve it as-is.
 
 ```
 examples-build/blog/
@@ -89,45 +91,45 @@ examples-build/blog/
 ├── app.js
 ├── runtime.js
 └── api/
-    ├── posts                  ← /api/posts (一覧、List<PostId> を返す)
-    ├── posts/<id>             ← /api/posts/:id (Post を返す)
-    └── auth/login             ← /api/auth/login (401 を返す)
+    ├── posts                  ← /api/posts (the list, returns List<PostId>)
+    ├── posts/<id>             ← /api/posts/:id (returns a Post)
+    └── auth/login             ← /api/auth/login (returns 401)
 ```
 
-URL のパス末尾に拡張子なしで JSON を置けばよいよう、`serve.mjs` を拡張する。
+Extend `serve.mjs` so that placing JSON without an extension at the end of the URL path is enough.
 
-`app.http.base-url` は `""`（同一オリジン）にし、`/api/posts` のような相対パスを使う。
+Set `app.http.base-url` to `""` (same origin) and use relative paths such as `/api/posts`.
 
-03-blog-spa.strand の `base-url: "https://api.example.com"` はビルド時にコメントアウト or 空文字に上書き、または **app.strand 修正** で対応する。
+The `base-url: "https://api.example.com"` in 03-blog-spa.strand is handled by commenting it out or overwriting it with an empty string at build time, or by **editing app.strand**.
 
-## 13.5 実装順序
+## 13.5 Implementation Order
 
-| step | 内容 | 検証 |
+| step | Content | Validation |
 |---|---|---|
-| 1 | Parser/Typecheck: 追加 app field と tile 属性 | parser tests pass |
-| 2 | Codegen: routing と http 用の glue | snapshot test |
+| 1 | Parser/Typecheck: additional app fields and tile attributes | parser tests pass |
+| 2 | Codegen: glue for routing and http | snapshot test |
 | 3 | Runtime: history + route matching + route slot | router unit test |
 | 4 | Runtime: http effect dispatcher | http unit test |
 | 5 | Runtime: link / markdown / toast / spinner | runtime test |
-| 6 | Mock backend (静的 JSON) | serve.mjs 拡張 |
+| 6 | Mock backend (static JSON) | serve.mjs extension |
 | 7 | Blog SPA build + E2E | jsdom fetch mock |
-| 8 | 手動ブラウザ確認 | スクリーンショット |
+| 8 | Manual browser check | Screenshots |
 
-## 13.6 設計上の判断
+## 13.6 Design Decisions
 
-| 判断 | 理由 |
+| Decision | Reason |
 |---|---|
-| http は全部 fetch() ベース | Phase 2 で polyfill 入れる必要なし、jsdom も対応 |
-| route slot は runtime が自動管理 | アプリ側は読むだけ |
-| link は `<a>` 出力 + preventDefault | a11y と中ボタン対応のため |
-| error-boundary は受け入れだけ | runtime での panic 捕捉は v0.2 で詳細化 |
-| markdown は最小実装 (1 段落 = 1 改行、リンク変換なし) | 完全実装はライブラリ依存になる |
-| mock は静的 JSON | サーバ起動を増やさない |
-| Decoder は実は無視 (常に JSON parse) | 仕様より緩い |
+| http is entirely fetch()-based | No need to add a polyfill in Phase 2, and jsdom supports it |
+| The route slot is automatically managed by the runtime | The app side only reads it |
+| link is `<a>` output + preventDefault | For a11y and middle-button support |
+| error-boundary is acceptance only | Runtime panic capture is detailed in v0.2 |
+| markdown is a minimal implementation (1 paragraph = 1 newline, no link conversion) | A full implementation would depend on a library |
+| The mock is static JSON | Avoid adding another server to start |
+| The Decoder is actually ignored (always JSON parse) | Looser than the spec |
 
-## 13.7 完了の定義
+## 13.7 Definition of Done
 
-- AC すべて pass
-- Blog SPA のビルドが errors=0
-- jsdom E2E (一覧→詳細→404→戻る) が通る
-- ブラウザで手動確認 OK
+- All AC pass
+- The Blog SPA build has errors=0
+- The jsdom E2E (list → detail → 404 → back) passes
+- Manual browser check is OK

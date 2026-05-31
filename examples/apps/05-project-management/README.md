@@ -1,20 +1,22 @@
 # 05 — Project Management
 
-最大規模のリファレンスアプリ（~1255 行）。入れ子データ・カンバン・テーマ切替まで、実アプリで必要になる要素を一通り含む。
+English · [日本語](./README.ja.md)
 
-## 学べること
+The largest reference app (~1255 lines). It covers a full range of elements that real apps need: nested data, kanban, and theme switching.
 
-- プロジェクト / タスク / コメントの入れ子データモデル（`Map` の多段構成）
-- カンバンボードとステータス遷移（`nextStatus`）
-- 親子タスク（`parentTaskId: Option<TaskId>`）と削除時のカスケード
-- タグ・コメントの追加と除去
-- パス形状粒度の 1-write 規則に沿った reducer（`tasks[id].status` と `tasks[id].updatedAt` は共存可）
-- 動的テーマ切替（`app.theme = slotName`）
+## What you'll learn
 
-## 実行
+- A nested data model of projects / tasks / comments (multi-level `Map` composition)
+- A kanban board and status transitions (`nextStatus`)
+- Parent-child tasks (`parentTaskId: Option<TaskId>`) and cascading on delete
+- Adding and removing tags and comments
+- Reducers that follow the path-shape-granularity 1-write rule (`tasks[id].status` and `tasks[id].updatedAt` can coexist)
+- Dynamic theme switching (`app.theme = slotName`)
+
+## Run
 
 ```sh
 pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/05-project-management/app.strand ./out
 ```
 
-関連仕様: [language](../../../spec/language.md) / [stdlib](../../../spec/stdlib.md) / [style](../../../spec/style.md) / [errors](../../../spec/errors.md)
+Related specs: [language](../../../spec/language.md) / [stdlib](../../../spec/stdlib.md) / [style](../../../spec/style.md) / [errors](../../../spec/errors.md)

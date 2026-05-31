@@ -1,19 +1,21 @@
 # 03 — Blog SPA
 
-ルーティングと非同期データ取得が入った SPA。一覧 → 詳細の遷移と読み込み状態を扱う。
+English · [日本語](./README.ja.md)
 
-## 学べること
+An SPA with routing and asynchronous data fetching. It handles list → detail navigation and loading states.
 
-- `app.routes` によるパスマッチとパラメータ（`/posts/:id`）
-- `route.enter` での fetch トリガと `/404` フォールバック
-- HTTP `effect` と `latest` 系ポリシー
-- 読み込み中・エラーの境界（サスペンス）
-- `link` によるクライアントサイド遷移
+## What you'll learn
 
-## 実行
+- Path matching and parameters with `app.routes` (`/posts/:id`)
+- Triggering fetch in `route.enter` and the `/404` fallback
+- HTTP `effect` and `latest`-style policies
+- Loading and error boundaries (suspense)
+- Client-side navigation with `link`
+
+## Run
 
 ```sh
 pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/03-blog/app.strand ./out
 ```
 
-関連仕様: [routing](../../../spec/routing.md) / [http](../../../spec/http.md) / [lifecycle](../../../spec/lifecycle.md)
+Related specs: [routing](../../../spec/routing.md) / [http](../../../spec/http.md) / [lifecycle](../../../spec/lifecycle.md)

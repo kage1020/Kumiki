@@ -1,118 +1,120 @@
-# エラーコード仕様
+# Error Code Specification
 
-Strand のコンパイラ（`@strand/compiler`）が報告する診断は、**パースエラー**と**型検査エラー**の 2 系統に分かれる。本書は両者を正規（normative）に列挙する。実装側でコードを追加・変更した場合は、本書も同時に更新しなければならない。
+English · [日本語](./errors.ja.md)
 
-## エラーの形
+The diagnostics reported by the Strand compiler (`@strand/compiler`) split into two families: **parse errors** and **type-check errors**. This document enumerates both normatively. If a code is added or changed on the implementation side, this document must be updated at the same time.
 
-型検査エラーは `StrandError` として表現される：
+## The Form of an Error
+
+A type-check error is represented as a `StrandError`:
 
 ```ts
 type StrandError = {
-  code: string;   // "E0103" のような安定識別子
-  kind: string;   // "undef-slot" のような機械可読な分類
-  message: string; // 人間向けメッセージ（対象名を含む）
+  code: string;   // a stable identifier such as "E0103"
+  kind: string;   // a machine-readable classification such as "undef-slot"
+  message: string; // a human-facing message (includes the target name)
   pos: Pos;        // { line, col }
 };
 ```
 
-`code` は永続的な契約であり、一度割り当てたら意味を変えない。`kind` は同一 `code` 配下の細分類で、診断ロジックの分岐に使う。
+`code` is a permanent contract; once assigned, its meaning does not change. `kind` is a sub-classification under the same `code`, used to branch diagnostic logic.
 
-パースエラーは `ParseError`（`message` + `pos`）として `throw` される。パース段は最初のエラーで停止するため、コードは付与されない。
+A parse error is `throw`n as a `ParseError` (`message` + `pos`). Because the parse stage stops at the first error, no code is assigned.
 
-## コード体系
+## The Code System
 
-| 帯 | 領域 |
+| Band | Domain |
 |---|---|
-| `E00xx` | アプリ構造（ルーティングの必須要件など） |
-| `E01xx` | 名前解決（未定義の参照） |
-| `E02xx` | 型の不一致 |
-| `E03xx` | ケイパビリティと純粋性 |
-| `E06xx` | reducer の書き込み規則 |
-| `E07xx` | アクセシビリティ（a11y） |
-| `E08xx` | ランタイムハザード（コンパイルは通るが実行で壊れる書き方） |
+| `E00xx` | App structure (such as mandatory routing requirements) |
+| `E01xx` | Name resolution (undefined references) |
+| `E02xx` | Type mismatch |
+| `E03xx` | Capabilities and purity |
+| `E06xx` | reducer write rules |
+| `E07xx` | Accessibility (a11y) |
+| `E08xx` | Runtime hazards (code that compiles but breaks at runtime) |
 
-## E00xx — 構造
+## E00xx — Structure
 
 ### E0001 `missing-404`
 
-`app.routes` を宣言したアプリは、`/404` パターンのルートを必ず含めなければならない。未マッチのパスはここへフォールバックする。
+An app that declares `app.routes` must include a route for the `/404` pattern. Unmatched paths fall back here.
 
 > `app.routes must include a "/404" entry`
 
-**修正**：`route "/404" -> NotFound` のような 404 用 tile へのルートを追加する。詳細は [./routing.md](./routing.md)。
+**Fix**: Add a route to a 404 tile, such as `route "/404" -> NotFound`. See [./routing.md](./routing.md) for details.
 
-## E01xx — 名前解決
+## E01xx — Name Resolution
 
 ### E0102 `undef-reducer`
 
-イベントハンドラ引数 / prop が、存在しない reducer 名を指している。
+An event handler argument / prop refers to a reducer name that does not exist.
 
 > `Reference to undefined reducer "<name>"`
 
-**修正**：reducer 名の綴りを確認する。`strand fix` が近い名前を提案できる（→ [./ai-edit.md](./ai-edit.md)）。
+**Fix**: Check the spelling of the reducer name. `strand fix` can suggest a close name (→ [./ai-edit.md](./ai-edit.md)).
 
 ### E0103 `undef-ref` / `undef-slot`
 
-- `undef-ref`：式中で未定義の名前を参照した。
+- `undef-ref`: An undefined name was referenced in an expression.
   > `Reference to undefined name "<name>"`
-- `undef-slot`：reducer 本体で未定義の slot へ代入した。
+- `undef-slot`: An assignment was made to an undefined slot in a reducer body.
   > `Assignment to undefined slot "<name>"`
 
-**修正**：参照先の slot / 束縛が宣言済みか確認する。
+**Fix**: Confirm that the referenced slot / binding is declared.
 
 ### E0104 `undef-effect`
 
-`emit` の対象が未定義の effect を指している。
+The target of an `emit` refers to an undefined effect.
 
 > `Reference to undefined effect "<name>"`
 
 ### E0105 `undef-tile`
 
-tile 参照、またはルート定義のターゲットが未定義の tile を指している。
+A tile reference, or the target of a route definition, refers to an undefined tile.
 
 > `Reference to undefined tile "<name>"`
 > `Route "<path>" targets undefined tile "<name>"`
 
-## E02xx — 型
+## E02xx — Types
 
 ### E0201 `type-mismatch`
 
-イベントハンドラの引数 / prop が reducer 名でなければならないのに、別種の値だった。
+An event handler argument / prop must be a reducer name, but was a different kind of value.
 
 > `Event handler arg "<name>" must be a reducer name`
 > `Event handler prop "<name>" must be a reducer name`
 
-## E03xx — ケイパビリティと純粋性
+## E03xx — Capabilities and Purity
 
 ### E0301 `missing-capability`
 
-effect が要求するケイパビリティが `app.caps` で宣言されていない。
+A capability required by an effect is not declared in `app.caps`.
 
 > `Effect "<effect>" requires capability "<cap>" which is not declared in app.caps`
 
-**修正**：`app.caps` に必要なケイパビリティを追加する。能力モデルの詳細は [./lifecycle.md](./lifecycle.md)。
+**Fix**: Add the required capability to `app.caps`. For details on the capability model, see [./lifecycle.md](./lifecycle.md).
 
 ### E0305 `fn-impurity`
 
-`fn`（純粋関数）が slot を読み取っている。`fn` は引数のみに依存しなければならない。
+A `fn` (pure function) is reading a slot. A `fn` must depend only on its arguments.
 
 > `fn "<name>" must not read slot "<name>"`
 
-**修正**：必要な slot 値を引数として渡す。
+**Fix**: Pass the required slot value as an argument.
 
-## E06xx — reducer の書き込み規則
+## E06xx — reducer Write Rules
 
 ### E0601 `duplicate-write`
 
-同一 reducer 内で、同じ slot パス形状（lvalue shape）へ複数回書き込んでいる。1 reducer 1 書き込み（パス形状粒度）の規則に反する。
+Within the same reducer, the same slot path shape (lvalue shape) is written more than once. This violates the one-write-per-reducer rule (at path-shape granularity).
 
 > `Slot path "<shape>" is written more than once in this reducer`
 
-**補足**：粒度は**パス形状**である。`issues[id].status` と `issues[id].updatedAt` は別形状とみなされ共存できるが、`count` への二重代入は禁止される。理由は [../design-notes/rationale.md](../design-notes/rationale.md)。
+**Note**: The granularity is **path shape**. `issues[id].status` and `issues[id].updatedAt` are considered different shapes and can coexist, but double assignment to `count` is forbidden. For the rationale, see [../design-notes/rationale.md](../design-notes/rationale.md).
 
-## E07xx — アクセシビリティ（a11y）
+## E07xx — Accessibility (a11y)
 
-a11y 検査は `check(program, { strictA11y: true })` で有効化される。
+a11y checking is enabled via `check(program, { strictA11y: true })`.
 
 ### E0701 `a11y-button`
 
@@ -126,18 +128,18 @@ a11y 検査は `check(program, { strictA11y: true })` で有効化される。
 
 > `link must have inner text or aria-label`
 
-**修正**：可視テキストか、`aria-label` / `alt` を付与する。フォーム全般の指針は [./forms.md](./forms.md)。
+**Fix**: Provide visible text, or an `aria-label` / `alt`. For general guidance on forms, see [./forms.md](./forms.md).
 
-## E08xx — ランタイムハザード
+## E08xx — Runtime Hazards
 
-型は通るが実行時に壊れる「書き方」を、`check` の段階で静的に捕まえるための帯。検証の3層モデルは [./testing.md](./testing.md) §8.10 を参照。
+A band for statically catching, at the `check` stage, "code" that passes type checking but breaks at runtime. For the three-layer verification model, see [./testing.md](./testing.md) §8.10.
 
 ### E0801 `unimplemented-method`
 
-`obj.method(...)` 形式のメソッド呼び出しが、ランタイム／コード生成の実装するメソッド集合に存在しない。綴り間違い（`.fitler`）や、仕様には載っていても未実装のメソッド、別の型のメソッドの誤用（`Option` に `.to-result` など）で起こる。
+A method call of the form `obj.method(...)` does not exist in the set of methods implemented by the runtime / code generation. This occurs from a misspelling (`.fitler`), a method that appears in the specification but is unimplemented, or misuse of a method from a different type (such as `.to-result` on `Option`).
 
 > `Method ".<name>" is not implemented by the runtime`
 
-**補足**：実装されているメソッド集合は `@strand/compiler` の `KNOWN_METHODS`（コード生成の `methodCallJs` と同期）が唯一の正。引数なしメソッドを `()` 付きで呼んだ場合もこの帯で捕捉される。標準ライブラリのメソッド一覧は [./stdlib.md](./stdlib.md)。
+**Note**: The set of implemented methods is solely authoritative in `@strand/compiler`'s `KNOWN_METHODS` (kept in sync with code generation's `methodCallJs`). Calling a no-argument method with `()` is also caught by this band. For the list of standard library methods, see [./stdlib.md](./stdlib.md).
 
-**修正**：正しいメソッド名に直すか、その操作を `match` / `fold` など実装済みの手段で書き換える。未実装の仕様メソッドが必要なら、`packages/` に実装して `examples/` に動く例を足す。
+**Fix**: Correct it to the right method name, or rewrite the operation using implemented means such as `match` / `fold`. If you need an unimplemented specification method, implement it in `packages/` and add a working example in `examples/`.

@@ -1,19 +1,21 @@
 # 02 — TodoMVC
 
-定番の TodoMVC。リスト操作と永続化が入り、実用アプリの骨格になる。
+English · [日本語](./README.ja.md)
 
-## 学べること
+The classic TodoMVC. It adds list operations and persistence, forming the skeleton of a practical app.
 
-- `List` の追加・削除・更新と `.filter` / `.map`
-- 入力欄の `bind` による双方向結合
-- フィルタ状態（All / Active / Done）の切り替え
-- `effect` + localStorage による永続化（`saveTodos` の debounce）
-- ライフサイクル `app.start` での復元
+## What you'll learn
 
-## 実行
+- Adding, removing, and updating a `List`, plus `.filter` / `.map`
+- Two-way binding of input fields with `bind`
+- Switching filter state (All / Active / Done)
+- Persistence with `effect` + localStorage (debouncing `saveTodos`)
+- Restoring state in the `app.start` lifecycle
+
+## Run
 
 ```sh
 pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/02-todomvc/app.strand ./out
 ```
 
-関連仕様: [language](../../../spec/language.md) / [forms](../../../spec/forms.md) / [http](../../../spec/http.md)
+Related specs: [language](../../../spec/language.md) / [forms](../../../spec/forms.md) / [http](../../../spec/http.md)

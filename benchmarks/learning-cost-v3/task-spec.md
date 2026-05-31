@@ -1,11 +1,13 @@
-# Issue Tracker — Strand 学習コスト測定タスク v3
+# Issue Tracker — Strand Learning-Cost Measurement Task v3
 
-大規模 SPA (500+ LOC 想定) で LLM がスケール時にも Strand を正確に書けるかを測る。
-Pomodoro (90 LOC) / Kanban (200 LOC) より複雑な構造、複数 routes、フィルタリング、永続化を含む。
+English · [日本語](./task-spec.ja.md)
 
-## 機能要件
+A large SPA (an estimated 500+ LOC) that measures whether an LLM can write Strand accurately even at scale.
+It involves a more complex structure than Pomodoro (90 LOC) / Kanban (200 LOC), multiple routes, filtering, and persistence.
 
-GitHub Issues 風の Issue Tracker SPA:
+## Feature requirements
+
+A GitHub Issues-style Issue Tracker SPA:
 
 ### Types
 
@@ -21,73 +23,73 @@ GitHub Issues 風の Issue Tracker SPA:
 - `issues : Map(IssueId, Issue) = {}`
 - `comments : Map(Text, Comment) = {}` (commentId → Comment)
 - `filter : FilterState = {status: None, priority: None, search: ""}`
-- `currentUser : Text = "me"` (簡易、認証なし)
-- `draft : {title: Text, body: Text, priority: Priority, assignee: Text, tags: Text} = {...初期空値}` (新規 issue フォーム)
+- `currentUser : Text = "me"` (simple, no authentication)
+- `draft : {title: Text, body: Text, priority: Priority, assignee: Text, tags: Text} = {...initial empty values}` (new-issue form)
 - `commentDraft : Text = ""`
 
 ### Routes
 
-- `/` → IssueListPage (フィルタ + Issue 一覧)
-- `/issues/:id` → IssueDetailPage (詳細 + コメント)
-- `/new` → NewIssuePage (新規作成フォーム)
-- `/settings` → SettingsPage (theme 切替程度)
+- `/` → IssueListPage (filter + issue list)
+- `/issues/:id` → IssueDetailPage (detail + comments)
+- `/new` → NewIssuePage (creation form)
+- `/settings` → SettingsPage (theme switching, roughly)
 - `/404` → NotFound
 
 ### Reducers
 
-- `createIssue`: form 送信 → 新 Issue を生成、`issues` に追加、navigate("/issues/:newId")
-- `updateStatus`: 詳細画面の status ドロップダウンで変更
-- `updatePriority`: 同上
-- `addTag`, `removeTag`: タグ追加/削除
-- `addComment`: コメント追加
-- `deleteComment`: コメント削除
-- `deleteIssue`: Issue 削除（コメントも cascade 削除）→ navigate("/")
-- `setFilterStatus`, `setFilterPriority`, `setSearch`: フィルタ更新
-- `clearFilter`: フィルタリセット
-- `loadFromStorage`: app.start で localStorage から復元
+- `createIssue`: form submit → create a new Issue, add it to `issues`, navigate("/issues/:newId")
+- `updateStatus`: change via the status dropdown on the detail screen
+- `updatePriority`: same as above
+- `addTag`, `removeTag`: add/remove tags
+- `addComment`: add a comment
+- `deleteComment`: delete a comment
+- `deleteIssue`: delete the Issue (cascade-delete comments too) → navigate("/")
+- `setFilterStatus`, `setFilterPriority`, `setSearch`: update the filter
+- `clearFilter`: reset the filter
+- `loadFromStorage`: restore from localStorage on app.start
 
 ### Effects
 
 - `saveIssues` (storage.write, debounce 300ms)
 - `saveComments` (storage.write, debounce 300ms)
 - `loadIssues`, `loadComments` (storage.read, once)
-- `navigate` 利用
+- Use of `navigate`
 
 ### Pure fns
 
-- `filteredIssues(issues, filter) : List(IssueId)` — issue を filter で絞り、updatedAt 降順
-- `commentsForIssue(comments, issueId) : List(Text)` — issueId に紐づくコメント
-- `statusLabel`, `priorityLabel`, `priorityColor` 等の表示用関数
+- `filteredIssues(issues, filter) : List(IssueId)` — narrow issues by the filter, descending by updatedAt
+- `commentsForIssue(comments, issueId) : List(Text)` — comments linked to issueId
+- Display functions such as `statusLabel`, `priorityLabel`, `priorityColor`
 - `matchesFilter(issue, filter) : Bool`
 
 ### UI
 
-各 page の中身：
-- **IssueListPage**: header（タイトル + "New Issue" ボタン）、FilterBar (status select / priority select / search input / clear ボタン)、Issue カードリスト（title, status, priority, assignee, tags, createdAt）。空状態は "No issues" メッセージ
-- **IssueDetailPage**: 戻るボタン、title、status/priority/assignee の編集ドロップダウン、body 表示、tags 表示 + 追加 input、createdAt/updatedAt 表示、削除ボタン、コメントセクション (一覧 + 新規コメント入力)
-- **NewIssuePage**: title input、body textarea、priority select、assignee input、tags input、submit / cancel ボタン
-- **SettingsPage**: ダーク/ライトテーマ切替
+The contents of each page:
+- **IssueListPage**: header (title + "New Issue" button), FilterBar (status select / priority select / search input / clear button), an Issue card list (title, status, priority, assignee, tags, createdAt). The empty state is a "No issues" message
+- **IssueDetailPage**: back button, title, edit dropdowns for status/priority/assignee, body display, tags display + add input, createdAt/updatedAt display, delete button, comment section (list + new-comment input)
+- **NewIssuePage**: title input, body textarea, priority select, assignee input, tags input, submit / cancel buttons
+- **SettingsPage**: dark/light theme switching
 
 ### Theme
 
-最低限の色 / spacing / typography トークンを定義。
+Define a minimal set of color / spacing / typography tokens.
 
-### 永続化
+### Persistence
 
-`issues` と `comments` を localStorage に保存・復元。
+Save and restore `issues` and `comments` in localStorage.
 
-## 制約
+## Constraints
 
-- 出力は 1 つの `.strand` ファイル
-- TypeScript / JSX / React syntax を一切使わない
-- 副作用は effect で表現
-- `app` 宣言の `caps` に必要な capability を含める
+- The output is a single `.strand` file
+- Do not use any TypeScript / JSX / React syntax
+- Express side effects with effects
+- Include the necessary capabilities in the `app` declaration's `caps`
 
-## 出力
+## Output
 
-指定された path に `.strand` ファイルとして書き出すこと。**ファイル末尾に余計な XML/markdown fence を残さない**。
+Write it out as a `.strand` file at the specified path. **Do not leave any stray XML/markdown fence at the end of the file.**
 
-## 評価
+## Evaluation
 
-`reference/scripts/learning-cost-eval.mjs` で parse / typecheck / build を採点。
-さらにベスト版は `strand build` + ブラウザでの動作確認まで。
+Score parse / typecheck / build with `reference/scripts/learning-cost-eval.mjs`.
+The best version also goes through `strand build` + a browser smoke test.

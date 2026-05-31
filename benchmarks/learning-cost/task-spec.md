@@ -1,42 +1,44 @@
-# Pomodoro Timer — Strand 学習コスト測定タスク
+# Pomodoro Timer — Strand Learning-Cost Measurement Task
 
-このタスクは、Strand 仕様だけを context に持つ LLM がどこまで正確に
-Strand コードを書けるかを測るためのもの。
+English · [日本語](./task-spec.ja.md)
 
-## 機能要件
+This task measures how accurately an LLM with only the Strand spec in its context
+can write Strand code.
 
-Pomodoro タイマー SPA：
+## Feature requirements
 
-1. **2 モード**: `Work`（25分 = 1500秒）と `Break`（5分 = 300秒）
-2. **slot `remaining`**: 残り秒数 (整数, 0..1500)
-3. **slot `mode`**: 現在のモード（variant `Work | Break`）
-4. **slot `running`**: タイマーが動いているか (Bool)
+A Pomodoro timer SPA:
+
+1. **Two modes**: `Work` (25 min = 1500 sec) and `Break` (5 min = 300 sec)
+2. **slot `remaining`**: remaining seconds (integer, 0..1500)
+3. **slot `mode`**: the current mode (variant `Work | Break`)
+4. **slot `running`**: whether the timer is running (Bool)
 5. **UI**:
-   - 現在のモード表示（"Work" または "Break"）
-   - 残り時間表示（秒で表示、後で mm:ss にできれば望ましいが必須ではない）
-   - `Start` ボタン（停止中なら開始）
-   - `Pause` ボタン（動作中なら停止）
-   - `Reset` ボタン（現在のモードを最大時間にリセット、停止状態に戻す）
-6. **動作**:
-   - 動作中は 1 秒ごとに `remaining` が 1 減る
-   - `remaining` が 0 に達したらモードを切替（Work → Break、Break → Work）し、新モードの最大時間にリセットして引き続き動作
-7. **`app` 宣言**: routes = `{"/" -> App, "/404" -> App}`, caps = `["timer"]`（または同等）
+   - Current mode display ("Work" or "Break")
+   - Remaining-time display (shown in seconds; rendering as mm:ss later is desirable but not required)
+   - `Start` button (starts if stopped)
+   - `Pause` button (stops if running)
+   - `Reset` button (resets the current mode to its maximum time and returns to the stopped state)
+6. **Behavior**:
+   - While running, `remaining` decreases by 1 every second
+   - When `remaining` reaches 0, switch modes (Work → Break, Break → Work), reset to the new mode's maximum time, and keep running
+7. **`app` declaration**: routes = `{"/" -> App, "/404" -> App}`, caps = `["timer"]` (or equivalent)
 
-## 制約
+## Constraints
 
-- 出力ファイルは 1 つの `.strand` ファイル
-- TypeScript / JavaScript / React の syntax を混ぜない
-- 直接 `setInterval` を呼ばず、`effect timer` を使う
-- 全部書き終わったら指定された出力パスに `.strand` ファイルとして書き出すこと
+- The output is a single `.strand` file
+- Do not mix in TypeScript / JavaScript / React syntax
+- Do not call `setInterval` directly; use `effect timer`
+- Once everything is written, write it out as a `.strand` file at the specified output path
 
-## 評価
+## Evaluation
 
-出力された `.strand` を以下で評価する：
+The output `.strand` is evaluated as follows:
 
-| 段階 | 判定 |
+| Stage | Criterion |
 |---|---|
-| Parse | `lexer + parser` が例外を投げないか |
-| Typecheck | `strand check` が 0 errors を返すか |
-| Build | `strand build` が `app.js` を生成できるか |
+| Parse | Does `lexer + parser` not throw? |
+| Typecheck | Does `strand check` return 0 errors? |
+| Build | Can `strand build` generate `app.js`? |
 
-LOC・トークン数も記録する。
+LOC and token count are also recorded.

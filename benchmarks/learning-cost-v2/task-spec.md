@@ -1,44 +1,46 @@
-# Kanban Board — Strand 学習コスト測定タスク v2
+# Kanban Board — Strand Learning-Cost Measurement Task v2
 
-中規模 SPA で LLM がどこまで正確に Strand を書けるかを測る。Pomodoro より複雑（150〜250 LOC 想定）。
+English · [日本語](./task-spec.ja.md)
 
-## 機能要件
+A mid-sized SPA that measures how accurately an LLM can write Strand. More complex than Pomodoro (an estimated 150–250 LOC).
 
-3 列の Kanban Board SPA:
+## Feature requirements
 
-1. **3 列**: `Todo` / `Doing` / `Done`
+A three-column Kanban board SPA:
+
+1. **Three columns**: `Todo` / `Doing` / `Done`
 2. **type Column = Todo | Doing | Done**
 3. **type Card**: `{id: CardId, title: Text, column: Column, createdAt: Time}`
 4. **slot cards**: `Map(CardId, Card) = {}`
-5. **slot draft**: `Text = ""`（新規カードの入力欄）
+5. **slot draft**: `Text = ""` (input field for a new card)
 6. **UI**:
-   - 上部: input + Add ボタン（draft が空でなければ enabled、draft の card を Todo 列に追加）
-   - 3 つの列 (Todo / Doing / Done) を横に並べる
-   - 各列のヘッダー: 列名 + 件数（例: "Todo (3)"）
-   - 各列内の card: title + 矢印ボタン (← →) + 削除ボタン (✕)
-   - ← で前の列へ、→ で次の列へ移動（端は無効）
-7. **動作**:
-   - addCard: draft が non-empty → 新しい card を Todo 列に追加、draft をクリア
-   - moveLeft / moveRight: 指定 card を隣の列に移動
-   - deleteCard: 指定 card を削除
-8. **永続化**: cards を localStorage に保存・復元
-9. **theme**: 適度なスタイリング（gap / pad / color）
+   - Top: input + Add button (enabled when draft is non-empty; adds the draft card to the Todo column)
+   - Lay out the three columns (Todo / Doing / Done) side by side
+   - Each column header: column name + count (e.g., "Todo (3)")
+   - Card within each column: title + arrow buttons (← →) + delete button (✕)
+   - ← moves to the previous column, → to the next column (disabled at the ends)
+7. **Behavior**:
+   - addCard: draft is non-empty → add a new card to the Todo column, clear draft
+   - moveLeft / moveRight: move the given card to the adjacent column
+   - deleteCard: delete the given card
+8. **Persistence**: save and restore cards in localStorage
+9. **theme**: reasonable styling (gap / pad / color)
 
-## 制約
+## Constraints
 
-- 出力は 1 つの `.strand` ファイル
-- TypeScript / JSX を混ぜない
-- 副作用は effect で表現
-- `app` 宣言で routes/caps を明示
+- The output is a single `.strand` file
+- Do not mix in TypeScript / JSX
+- Express side effects with effects
+- Specify routes/caps explicitly in the `app` declaration
 
-## 出力
+## Output
 
-指定された path に `.strand` ファイルとして書き出すこと。
+Write it out as a `.strand` file at the specified path.
 
-## 評価
+## Evaluation
 
-`reference/scripts/learning-cost-eval.mjs` で：
-- parse 通過？
-- typecheck 通過？
-- build 通過？
-- LOC, トークン数記録
+With `reference/scripts/learning-cost-eval.mjs`:
+- Does it pass parse?
+- Does it pass typecheck?
+- Does it pass build?
+- Record LOC and token count

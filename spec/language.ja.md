@@ -1,0 +1,745 @@
+# 言語コア仕様
+
+[English](./language.md) · 日本語
+
+## 1.1 プログラムの全体構造
+
+Strand プログラムは **7 種類の定義の集合**である。物理的なファイル境界は存在せず、各定義は次の 4 つ組として content-addressable graph に格納される：
+
+```
+(layer, name, body, content-hash)
+```
+
+テキスト表現は graph からの projection であり、必要なときに `strand view` で取り出せる（→ [./ai-edit.md](./ai-edit.md)）。
+
+```ebnf
+program     ::= definition*
+definition  ::= type-def | slot-def | effect-def | reducer-def | tile-def | fn-def | app-def
+```
+
+定義は順不同で前方参照可能。コンパイラがトポロジカルソートを行う。
+
+### 1.1.1 レイヤ一覧
+
+| レイヤ | 役割 | 純粋性 |
+|---|---|---|
+| `type` | 型・スキーマ | 純粋 |
+| `slot` | 名前付きグローバル状態 | 純粋初期値 |
+| `effect` | 副作用を表す純粋なレコード値 | 純粋（実行は別） |
+| `reducer` | message → slot 変更 + effect emit | 純粋（slot 集合上で） |
+| `tile` | slot → UI ツリーの純粋投影 | 純粋 |
+| `fn` | 補助の純粋関数 | 純粋 |
+| `app` | アプリのエントリ | 宣言 |
+
+---
+
+## 1.2 字句
+
+```ebnf
+identifier  ::= [a-zA-Z][a-zA-Z0-9_-]*           ; 最大 32 文字
+qname       ::= identifier ('.' identifier)*     ; ドット区切り完全名
+literal     ::= number | string | bool | unit
+number      ::= int | float
+int         ::= '-'? [0-9]+
+float       ::= '-'? [0-9]+ '.' [0-9]+
+string      ::= '"' (escape | non-quote-char)* '"'
+escape      ::= '\\' ('n' | 't' | 'r' | '"' | '\\' | 'u{' hex+ '}')
+bool        ::= 'true' | 'false'
+unit        ::= '()'
+comment     ::= '#' until-eol                    ; 1 行コメントのみ
+```
+
+### 1.2.1 演算子
+
+```
+:=  =  ==  !=  <  >  <=  >=
++  -  *  /  %  ->
+&&  ||  !            ; bool 演算子
+&                    ; `&&` の alias（他言語からの移植容易性のため）
+|                    ; 型 union / match arm 区切り（bool OR ではない — `||` を使うこと）
+(  )  {  }  [  ]  ,  ;  :  .  #
+```
+
+**Bool 演算子の注意**:
+- 短絡 AND: `&&`（推奨）または `&`（alias、内部的に同一）
+- 短絡 OR : `||`（推奨）または `|`（alias、ただし match arm との衝突を避けるヒューリスティック付き）
+- `|` を bool OR として書く場合、後続トークンが「**`Variant`/`_` + `->`**」の組み合わせ（つまり match arm 開始）なら parser は arm separator として優先する。それ以外の expression が続く場合は bool OR として解釈する。安全策として迷ったら `||` を使うこと
+
+### 1.2.2 予約語
+
+```
+type  slot  effect  reducer  tile  fn  app
+nominal  where  when  for  in  let  if  then  else  match  with
+on  do  emit  cap  out  policy  retry
+true  false
+fresh  self  now  null
+```
+
+`null` は予約されているが**プログラム中で使用禁止**（型エラー）。
+
+### 1.2.3 設計判断
+
+- **インデント非依存**: 行頭の空白は無視される
+- **改行が文区切り**: `do=` 内のみ `;` で複数文
+- **識別子は 32 文字以内**
+- **複数行コメント禁止**
+- **マクロ禁止**
+
+---
+
+## 1.3 型レイヤ (`type`)
+
+### 1.3.1 構文
+
+```ebnf
+type-def    ::= 'type' identifier ('(' type-param (',' type-param)* ')')? '=' type-expr
+type-param  ::= identifier
+type-expr   ::= primitive
+              | nominal-type
+              | record-type
+              | union-type
+              | generic-type
+              | refinement-type
+              | identifier
+              | type-app
+
+primitive   ::= 'Text' | 'Int' | 'Float' | 'Bool' | 'Unit' | 'Bytes' | 'Time'
+nominal-type ::= 'nominal' type-expr
+record-type ::= '{' field (',' field)* '}'
+field       ::= identifier ':' type-expr
+union-type  ::= variant ('|' variant)+
+variant     ::= identifier ( '(' type-expr (',' type-expr)* ')' )?
+generic-type ::= identifier '(' type-expr (',' type-expr)* ')'
+type-app    ::= identifier '(' type-expr (',' type-expr)* ')'
+refinement-type ::= type-expr 'where' pred-expr
+pred-expr   ::= identifier ('(' literal (',' literal)* ')')?
+```
+
+### 1.3.2 ビルトイン汎化型
+
+```
+Map(K, V)
+Set(T)
+List(T)
+Option(T)         ; None | Some(T)
+Result(T, E)      ; Ok(T) | Err(E)
+Tuple(T1, ..., Tn)
+```
+
+### 1.3.3 登録済み refinement 述語
+
+```
+nonempty
+len-eq(N)         len-lt(N)         len-gt(N)
+between(A, B)
+positive          negative
+email             url               uuid
+regex("pattern")
+one-of(v1, v2, ...)
+```
+
+任意 Boolean 述語は禁止。理由：AI が証明を書く必要が生じるとデバッグループが壊れる。
+
+### 1.3.4 例
+
+```strand
+type UserId    = nominal Text where len-eq(36)
+type Email     = nominal Text where email
+type Url       = nominal Text where url
+type Percent   = nominal Float where between(0.0, 100.0)
+type User      = {id: UserId, name: Text where nonempty, email: Email}
+type HttpError = {status: Int where between(400, 599), message: Text}
+type LoadResult(T) = Idle | Loading | Loaded(T) | Failed(HttpError)
+```
+
+### 1.3.5 型の一意化
+
+構造的に同一の型は同一 content-hash を持つ。`nominal` のみが新 hash を生む。
+
+---
+
+## 1.4 ストアレイヤ (`slot`)
+
+### 1.4.1 構文
+
+```ebnf
+slot-def    ::= 'slot' identifier ':' type-expr modifier* ('=' init-expr)?
+modifier    ::= 'transient' | 'volatile'
+init-expr   ::= literal | record-literal | collection-literal | builtin-call
+```
+
+| modifier | 意味 |
+|---|---|
+| (なし) | ホットリロード時に維持・永続化対象 |
+| `transient` | ホットリロード時に破棄 |
+| `volatile` | episode log に書かれない、ホットリロード時に破棄 |
+
+### 1.4.2 不変条件
+
+1. **全 slot がグローバル**
+2. 書き換えは **reducer の `do=` からのみ**
+3. 初期値は **純粋式のみ**（effect 実行不可）
+4. **派生 slot は禁止**（派生計算は `fn` レイヤを使う）
+
+### 1.4.3 例
+
+```strand
+slot todos       : Map(TodoId, Todo)              = {}
+slot filter      : Filter                         = All
+slot draft       : Text where len-lt(280)         = ""
+slot session     : Option(SessionId)              = None
+slot password    : Text                volatile   = ""
+slot toast       : Option(Toast)       transient  = None
+```
+
+---
+
+## 1.5 副作用レイヤ (`effect`)
+
+### 1.5.1 構文
+
+```ebnf
+effect-def  ::= 'effect' identifier
+                'cap' '=' capability-name
+                'in'  '=' type-expr
+                'out' '=' type-expr
+                ('policy'      '=' policy-expr)?
+                ('retry'       '=' retry-expr)?
+                ('map-request' '=' map-expr)?
+
+capability-name ::= identifier ('.' identifier)+
+policy-expr     ::= 'latest' | 'latest-per-key' '(' expr ')' | 'queue'
+                  | 'debounce' '(' duration ')' | 'throttle' '(' duration ')'
+                  | 'once'
+retry-expr      ::= 'none' | 'linear' '(' int ',' duration ')'
+                  | 'exponential' '(' int ',' duration ',' float ')'
+duration        ::= int 'ms' | int 's' | int 'm'
+map-expr        ::= record-literal       ; 高レベル effect → 低レベル形式への変換
+```
+
+### 1.5.2 意味
+
+- effect は **値**（純粋なレコード）
+- reducer は `emit name(args)` で放出
+- 実行は **runtime の effect dispatcher**
+- 実行前に **capability check**（未宣言なら**コンパイル時エラー**）
+- 結果は `effect-name.ok($value, $key)` または `effect-name.err($error, $key)` として reducer に届く
+
+### 1.5.3 例
+
+```strand
+effect loadUser  cap=http.get
+                 in=UserId
+                 out=Result(User, HttpError)
+                 policy=latest-per-key($1)
+                 retry=exponential(3, 200ms, 2.0)
+
+effect persist   cap=storage.write
+                 in=Map(TodoId, Todo)
+                 out=Result(Unit, Text)
+                 policy=debounce(300ms)
+                 map-request={key: "todos", value: $1}
+```
+
+---
+
+## 1.6 リデューサレイヤ (`reducer`)
+
+### 1.6.1 構文
+
+```ebnf
+reducer-def ::= 'reducer' identifier
+                'on' '=' event-pattern
+                'do' '=' do-block
+
+event-pattern ::= ui-event | effect-event | timer-event | lifecycle-event | route-event
+ui-event      ::= 'ui' '.' ui-kind '(' selector ')'
+ui-kind       ::= 'click' | 'submit' | 'change' | 'input' | 'focus' | 'blur' | 'key' | 'hover'
+selector      ::= tile-ref | 'self'
+tile-ref      ::= identifier ('#' identifier)?    ; TileName または TileName#id
+effect-event  ::= identifier '.' ('ok' | 'err') '(' bind (',' bind)* ')'
+timer-event   ::= 'timer' '(' duration ')'   ; intervalMs ごとに当該 reducer を発火
+lifecycle-event ::= 'app.start' | 'app.stop' | 'app.error'
+                  | 'app.visible' | 'app.hidden' | 'app.online' | 'app.offline'
+                  | 'app.http-401' | 'app.http-403' | 'app.http-5xx'
+                  | 'tile.mount' '(' identifier ')'
+                  | 'tile.unmount' '(' identifier ')'
+route-event   ::= 'route.enter' '(' string ')'
+                | 'route.leave' '(' string ')'
+                | 'route.error' '(' string ')'
+bind          ::= '$' identifier
+
+do-block      ::= statement-list
+statement-list ::= statement ((';' | newline) statement)*
+statement     ::= assign | emit | let-stmt | if-stmt | match-stmt | for-stmt | block
+assign        ::= lvalue ':=' expr
+emit          ::= 'emit' identifier '(' (expr (',' expr)*)? ')'
+let-stmt      ::= 'let' identifier '=' expr
+if-stmt       ::= 'if' expr 'then' stmt-body ('else' stmt-body)?
+match-stmt    ::= 'match' expr 'with' ('|' pattern '->' stmt-body)+
+for-stmt      ::= 'for' identifier 'in' expr stmt-body
+block         ::= '{' statement-list '}'
+stmt-body     ::= block | statement-list   ; 改行ベース。`else` / `|` / `}` で停止
+lvalue        ::= path
+path          ::= identifier
+                | path '.' identifier        ; field path（Option/Result は自動展開）
+                | path '[' expr ']'          ; index/key path
+```
+
+**`stmt-body` の形**:
+- 単一文: `if cond then x := 1 else x := 2`
+- 多文 (block): `if cond then { x := 1; y := 2 } else x := 3`
+- 多文 (改行): `else` / `|` / `}` / EOF に到達するまで改行/`;` 区切りで連続
+
+つまり 1 行レイアウトと block レイアウトを混在して書けます。改行ベースで書く場合は、後続文が次のキーワード（`else` 等）で止まる位置に来るよう改行を入れるだけで OK。
+
+### 1.6.2 セレクタ
+
+セレクタは **`TileName`** または **`TileName#id`** のみ（CSS 属性セレクタは廃止）。
+
+```strand
+reducer add     on=ui.click(AddBtn)         do= ...
+reducer toggle  on=ui.click(TodoRow)        do= ...
+reducer submit  on=ui.submit(LoginForm#new) do= ...
+reducer login   on=ui.submit(form#login)    do= ... ; ❌ 'form' は組み込み要素、tile 名ではない
+```
+
+組み込み要素（`button`, `input`, `form` 等）にイベントを直接バインドするには、**ラッパ tile を作る**：
+
+```strand
+tile LoginForm = form(...) {id: "main"}
+
+reducer doLogin
+    on=ui.submit(LoginForm)         ; tile 名で参照
+    do= emit login({...})
+```
+
+または `tile-ref#id` で識別する場合は、tile が複数表示されるケース：
+
+```strand
+tile NewForm = form(...) {id: "new"}
+
+reducer add on=ui.submit(NewForm) do= ...
+```
+
+`NewForm#some-instance` は v0.2 でリスト中の特定インスタンスを指す用途に予約。
+
+### 1.6.3 lvalue の意味論
+
+lvalue は **path** であり、ネストしたフィールドや Option の中身を直接書き換えられる。コンパイラが immutable update に展開する。
+
+```strand
+; これらの reducer 文は:
+todos[id].done := true
+editor.title := "New"
+editor.get.body := "Body"        ; Option 経由（コンパイラが Option.map に展開）
+
+; 内部的にこう展開される:
+todos := todos.update(id, $1.copy(done=true))
+editor := editor.copy(title="New")
+editor := editor.map($1.copy(body="Body"))
+```
+
+**`.get` 経由は安全**: Option が `None` のときの代入は no-op（panic しない）。明示的に panic させたい場合は `editor := Some(editor.get.copy(body="Body"))` と書く。
+
+**`.copy(field=value, ...)`**: record の immutable update を行うショートカット。method 呼び出しに見えるが、内部的には named-arg を集めて `recordCopy(rec, {field: value, ...})` に展開される。複数 field を 1 度に更新できる：
+
+```strand
+editor := editor.copy(title="New", body="Body", updatedAt=now)
+issue.copy(status=Done, priority=High)
+```
+
+### 1.6.4 不変条件
+
+1. **純粋関数**: 入力 = (slot 集合, event payload)、出力 = (新 slot 値, emit 集合)
+2. **effect の直接実行は不可**。`emit` で放出のみ
+3. **同一 event にマッチした複数 reducer は定義順で実行**
+4. **同じ lvalue path に対する書き込みは 1 reducer 内で 1 回まで** (path-shape granularity, E0601)
+   - 重複判定は path の **形** で行う。`issues[k].status` と `issues[k].updatedAt` は別 path → 共存可
+   - 同じ shape を 2 回書くのは違反: `x := 1; x := 2` ✗
+   - `if/match` の **排他分岐内では各分岐ごとに独立にカウント**。同じ shape を then と else の両方で書いても OK（実行時はどちらか一方しか走らない）
+   - 例:
+     - `issues[iid].status := s; issues[iid].updatedAt := now` ✓ (異なる field path)
+     - `if cond then x := 1 else x := 2` ✓ (排他分岐)
+     - `x := 1; x := 2` ✗ (同 path シーケンシャル)
+     - `if cond then x := 1 else x := 2; x := 3` ✗ (排他分岐合算後にさらに同 path)
+   - 同じ shape でも index 値が違う (`m[k1]` と `m[k2]`) のは静的判定不能なため 1 write として扱う（厳しい側）。複数 key を更新したい場合は `for` ループを使う
+5. **`fn` 呼び出しは可能**（純粋なので安全）
+
+### 1.6.5 positional binding
+
+| 構文 | 意味 |
+|---|---|
+| `$1`, `$2`, ... | `effect-event` の bind 順、`fn` 内では引数順 |
+| `$el` | イベント発火元 tile の `{...}` props |
+| `$event` | イベントペイロード |
+| `$route` | route.enter/leave 時の Route |
+| `$now` | 現在時刻 |
+
+### 1.6.6 例
+
+```strand
+reducer addTodo
+    on=ui.submit(NewTodoForm)
+    do= let id = TodoId.fresh()
+        todos[id] := {id, text=draft, done=false, createdAt=now}
+        draft := ""
+        emit persist(todos)
+
+reducer toggle
+    on=ui.click(TodoRow)
+    do= todos[$el.todoId].done := not todos[$el.todoId].done
+        emit persist(todos)
+
+reducer loaded
+    on=loadUser.ok($user, $id)
+    do= users[$id] := Loaded($user)
+
+reducer editTitle
+    on=ui.input(TitleInput)
+    do= editor.get.title := $event.value
+```
+
+---
+
+## 1.7 ビューレイヤ (`tile`)
+
+### 1.7.1 構文
+
+```ebnf
+tile-def     ::= 'tile' identifier
+                 ('in' '=' type-expr)?
+                 ('sub-routes' '=' route-map)?
+                 ('error-boundary' '=' identifier)?
+                 ('scroll-restoration' '=' bool)?
+                 '=' tile-expr
+
+tile-expr    ::= tile-call
+               | match-expr
+               | control-flow
+
+tile-call    ::= identifier '(' (tile-arg (',' tile-arg)*)? ')' ('{' prop (',' prop)* '}')?
+tile-arg     ::= (identifier '=')? expr
+prop         ::= identifier ':' expr
+
+control-flow ::= when-expr | for-expr | if-expr
+when-expr    ::= 'when' '(' expr ',' tile-expr ')'
+for-expr     ::= 'for' identifier 'in' expr tile-expr
+if-expr      ::= 'if' expr 'then' tile-expr 'else' tile-expr
+
+match-expr   ::= 'match' expr 'with' match-arm+
+match-arm    ::= '|' pattern '->' tile-expr
+pattern      ::= identifier
+               | identifier '(' bind (',' bind)* ')'
+               | '_'
+```
+
+**`when(cond, tile)` のセマンティクス**:
+- `cond` が真 → `tile` をレンダリング
+- `cond` が偽 → **当該子要素を tree から省略**（兄弟への影響なし）
+- 親 tile が `column(A, when(c, B), C)` の場合、`c=false` なら `[A, C]` がレンダリングされる
+- ランタイムは null/undefined 子を skip するため、`when` で「空欄」を生む安全な手段
+
+**`match` の値文脈 vs tile 文脈**:
+- `text/heading/markdown/label/link/image/icon` builtin の **位置引数内** での `match` は値式（`MatchExpr`）として扱われる。各 arm は値（Text, Int, etc.）を返す
+- それ以外の tile 引数内（`column`, `row`, `card` 等）の `match` は tile 式（`TileMatch`）として扱われる。各 arm は tile を返す
+- 例: `text(match m with | A -> "a" | B -> "b")` ← 値 match
+- 例: `column(match xs with | Loaded(ys) -> ... | None -> spinner())` ← tile match
+
+### 1.7.2 不変条件
+
+1. **純粋関数**: 入力 = (slot 集合, in 引数)、出力 = UI ツリー
+2. slot 書き込み不可
+3. effect emit 不可
+4. **直接再帰禁止**。相互再帰は型レベルで深さ証明できるときのみ
+5. `for` のイテレート対象は `Map.keys`, `Set.to-list`, `List` のみ
+6. tile プロパティ `{...}` の値式中で **slot を読むのは可**（イベントハンドラ引数の固定キャプチャ用途）
+7. **`fn` 呼び出し可**
+
+### 1.7.3 イベントハンドラ props
+
+イベントハンドラは **reducer 名を渡す**：
+
+```strand
+button(text="Save", onClick=saveTodo) {todoId: $1}
+```
+
+`onClick=saveTodo` で reducer `saveTodo` がクリック時に呼ばれる。`{todoId: $1}` は `$el.todoId` として reducer に届く。
+
+### 1.7.4 例
+
+```strand
+tile TodoRow  in=TodoId
+              = row(
+                  check(value=todos[$1].done, onClick=toggle) {todoId: $1},
+                  text(todos[$1].text) {strike: todos[$1].done},
+                  button(text="x", onClick=remove) {todoId: $1})
+
+tile TodoList = column(
+                  for id in todos.keys
+                    when(matchFilter(todos[id], filter),
+                      TodoRow(id) {key: id.show}))
+
+tile App      = page(
+                  heading("Todos"),
+                  NewTodoForm,
+                  TodoList,
+                  text(itemsLeft.show + " items left"))
+```
+
+---
+
+## 1.8 関数レイヤ (`fn`)
+
+### 1.8.1 目的
+
+純粋な補助計算を名前付きで再利用する。tile / reducer / 他 fn から呼べる。
+
+### 1.8.2 構文
+
+```ebnf
+fn-def      ::= 'fn' identifier
+                '(' (fn-param (',' fn-param)*)? ')'
+                ('->' type-expr)?               ; 戻り値型（省略時は推論）
+                '=' expr
+
+fn-param    ::= identifier ':' type-expr
+```
+
+### 1.8.3 不変条件
+
+1. **純粋関数**: 入力 = 引数のみ、出力 = 値のみ
+2. **slot 読み書き禁止**（`fn` 引数を経由して受け取る）
+3. **effect emit 禁止**
+4. **lvalue 不可**（代入なし）
+5. **他の fn の呼び出しは可**、**直接再帰は禁止**、相互再帰は型レベルで深さ証明できるときのみ
+
+### 1.8.4 例
+
+```strand
+fn matchFilter(t: Todo, f: Filter) -> Bool
+   = match f with
+       | All     -> true
+       | Active  -> not t.done
+       | Done    -> t.done
+
+fn itemsLeft(ts: Map(TodoId, Todo)) -> Int
+   = ts.filter(not $2.done).size
+
+fn visiblePosts(posts: Map(PostId, LoadResult(Post)), tag: Option(Text)) -> List(PostId)
+   = posts.entries
+          .filter(matchPostTag($2, tag))
+          .sort-by(loadedAt($2))
+          .map($1)
+
+fn matchPostTag(lr: LoadResult(Post), tag: Option(Text)) -> Bool
+   = match (lr, tag) with
+       | (Loaded(p), Some(t)) -> p.tags.find($1 == t).is-some
+       | (Loaded(_), None)    -> true
+       | _                    -> false
+```
+
+### 1.8.5 tile / reducer からの呼び出し
+
+```strand
+tile TodoList = column(
+                  for id in todos.keys
+                    when(matchFilter(todos[id], filter), TodoRow(id)))
+
+tile Counter  = text("Left: " + itemsLeft(todos).show)
+
+reducer normalize
+    on=ui.click(NormalizeBtn)
+    do= todos := normalizeAll(todos)
+
+fn normalizeAll(ts: Map(TodoId, Todo)) -> Map(TodoId, Todo)
+   = ts.map($2.copy(text=$2.text.trim))
+```
+
+### 1.8.6 部分適用と高階関数
+
+ラムダがないため、高階関数渡しは「fn 名」または「式断片」を使う：
+
+```strand
+items.map(double)         ; 登録済み fn 名
+items.map($1 * 2)         ; 式断片（$1 は要素）
+items.filter(matchFilter($1, filter))  ; fn 呼び出しを式断片に埋め込む
+```
+
+部分適用は **明示的に書く**（カリー化なし）：
+
+```strand
+fn isActiveOnly(t: Todo) -> Bool = matchFilter(t, Active)
+items.filter(isActiveOnly)
+```
+
+---
+
+## 1.9 式言語
+
+reducer の `do=` 右辺、tile の中、fn の本体で使う共通式。
+
+```ebnf
+expr        ::= literal
+              | qname                          ; slot, let-binding, fn-arg, builtin 参照
+              | expr '.' identifier            ; field access
+              | expr '[' expr ']'              ; index
+              | expr binop expr
+              | unop expr
+              | 'if' expr 'then' expr 'else' expr
+              | 'match' expr 'with' match-arm+
+              | 'let' identifier '=' expr 'in' expr
+              | call
+              | record-lit
+              | collection-lit
+              | '(' expr ')'
+
+call        ::= qname '(' (expr (',' expr)*)? ')'
+record-lit  ::= '{' (field-init (',' field-init)*)? '}'
+field-init  ::= identifier '=' expr | identifier
+collection-lit ::= '[' (expr (',' expr)*)? ']'
+                 | '{' (entry (',' entry)*)? '}'
+entry       ::= expr ':' expr
+
+match-arm   ::= '|' pattern '->' expr
+pattern     ::= identifier
+              | identifier '(' bind (',' bind)* ')'
+              | '(' pattern (',' pattern)* ')'        ; tuple
+              | '_'
+
+binop       ::= '+' | '-' | '*' | '/' | '%'
+              | '==' | '!=' | '<' | '>' | '<=' | '>='
+              | '&' | '|'
+unop        ::= '-' | '!'
+```
+
+### 1.9.1 禁止事項
+
+- **ラムダ式禁止**
+- **`try/catch` 禁止**
+- **`null` / `undefined` 禁止**
+- **`while` ループ禁止**
+- **代入式禁止**（`:=` は statement、式中で使えない）
+
+### 1.9.2 高階関数の代わり
+
+```strand
+items.map($1 * 2)                          ; 式断片
+items.map(formatPrice)                     ; fn 名
+items.filter(matchFilter($1, filter))      ; fn 呼び出し
+items.fold(0, $1 + $2.price)               ; ($1: acc, $2: elem)
+```
+
+### 1.9.3 短絡評価
+
+`&` と `|` は短絡評価。
+
+---
+
+## 1.10 名前空間と参照解決
+
+- **フラットなグローバル名前空間**
+- レイヤごとに別名前空間
+- 参照は **名前で書き**、CRDT graph 保存時に content-hash に解決
+- リネーム = 新名で別 hash を作り参照を更新する CRDT op
+
+→ [./ai-edit.md](./ai-edit.md)
+
+---
+
+## 1.11 content-hash 計算
+
+```
+hash(def) = blake3(
+    canonical(def.body)
+  ⊕ hash(direct-dependency-1)
+  ⊕ hash(direct-dependency-2)
+  ⊕ ...
+)
+```
+
+---
+
+## 1.12 アプリエントリ (`app`)
+
+```ebnf
+app-def    ::= 'app' identifier
+               'caps'   '=' '[' (capability-name (',' capability-name)*)? ']'
+               'routes' '=' route-map
+               ('init'  '=' '[' emit-list ']')?
+               ('theme' '=' identifier)?
+               ('http'  '=' http-config)?
+               ('meta'  '=' meta-config)?
+               ('indexed-db' '=' idb-config)?
+               ('analytics'  '=' analytics-config)?
+
+route-map  ::= '{' route-entry (',' route-entry)* '}'
+route-entry ::= string '->' identifier        ; tile 名へ
+              | string '->>' string           ; 静的リダイレクト
+emit-list  ::= effect-call (',' effect-call)*
+```
+
+→ [./routing.md](./routing.md), [./http.md](./http.md)
+
+```strand
+app TodoApp
+    caps   = [storage.read, storage.write, http.get]
+    routes = {"/" -> TodoList, "/todo/:id" -> TodoDetail, "/404" -> NotFound}
+    init   = [loadTodos()]
+    theme  = DefaultTheme
+```
+
+---
+
+## 1.13 反例
+
+```strand
+# ❌ ローカル状態
+tile Foo = let x = 0 in button(text=x.show)   # tile 内で代入は不可（let で式束縛は可、slot 代わりにはならない）
+
+# ❌ effect の直接呼び出し
+reducer r on=ui.click(B) do= http.get("/")   # emit 必須
+
+# ❌ ラムダ
+button(onClick=(() -> count + 1))            # 不可、reducer 名のみ
+
+# ❌ null
+type User = {name: Text | null}              # Option(Text) を使う
+
+# ❌ 任意述語
+type Even = Int where ($1 % 2 == 0)          # 登録済み述語のみ
+
+# ❌ fn 内で slot 読む
+fn current() = todos                          # fn 引数で受け取れ
+
+# ❌ CSS 属性セレクタ
+reducer r on=ui.change(input[type=file]) do= ...   # tile 名で書け
+```
+
+---
+
+## 1.14 完全例: Counter
+
+```strand
+type N      = nominal Int where between(0, 999)
+slot count  : N    = 0
+
+reducer inc   on=ui.click(IncBtn)   do= count := count + 1
+reducer dec   on=ui.click(DecBtn)   do= count := count - 1
+reducer reset on=ui.click(ResetBtn) do= count := 0
+
+tile IncBtn   = button(text="+")
+tile DecBtn   = button(text="-")
+tile ResetBtn = button(text="reset")
+
+tile App = column(
+             heading("Count: " + count.show),
+             row(DecBtn, ResetBtn, IncBtn) {gap: "sm"})
+
+app Counter
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []
+```
+
+→ [./stdlib.md](./stdlib.md), [./routing.md](./routing.md), [examples/01-counter.strand](./examples/01-counter.strand)

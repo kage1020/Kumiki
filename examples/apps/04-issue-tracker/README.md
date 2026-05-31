@@ -1,20 +1,22 @@
 # 04 — Issue Tracker
 
-CRUD を中心とした中規模アプリ（~726 行）。`Map` 主体のデータモデルと `Option` バリアントの分岐が学べる。
+English · [日本語](./README.ja.md)
 
-## 学べること
+A mid-sized, CRUD-centric app (~726 lines). You'll learn a `Map`-based data model and branching on `Option` variants.
 
-- `Map` をストアとした作成・更新・削除（`.copy(field=value)` による不変更新）
-- `Option` / ユーザー定義バリアントの `match` 分岐（`Some(Backlog)` 等の入れ子ペイロード）
-- フォーム入力とフォーカス保持
-- `select` / プルダウンによるステータス・優先度変更
-- 期日（`Time`）の設定と表示
-- タグの付与・除去
+## What you'll learn
 
-## 実行
+- Create, update, and delete with a `Map` as the store (immutable updates via `.copy(field=value)`)
+- `match` branching on `Option` / user-defined variants (nested payloads such as `Some(Backlog)`)
+- Form input and focus retention
+- Changing status and priority via `select` / dropdowns
+- Setting and displaying due dates (`Time`)
+- Adding and removing tags
+
+## Run
 
 ```sh
 pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/04-issue-tracker/app.strand ./out
 ```
 
-関連仕様: [language](../../../spec/language.md) / [stdlib](../../../spec/stdlib.md) / [forms](../../../spec/forms.md)
+Related specs: [language](../../../spec/language.md) / [stdlib](../../../spec/stdlib.md) / [forms](../../../spec/forms.md)

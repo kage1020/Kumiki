@@ -1,18 +1,20 @@
-# ベンチマーク — Strand vs React (TodoMVC)
+# Benchmark — Strand vs React (TodoMVC)
 
-Strand が "AI フレンドリー" を名乗るからには、**実コストの実測**が必要。同じ機能の TodoMVC を Strand と React で実装し、トークン数 / 行数 / 編集影響範囲を測った。
+English · [日本語](./benchmark.ja.md)
 
-## 15.1 環境
+For Strand to call itself "AI-friendly," **actual cost measurements** are needed. We implemented the same TodoMVC feature set in both Strand and React and measured token count / line count / edit impact scope.
 
-| 項目 | 値 |
+## 15.1 Environment
+
+| Item | Value |
 |---|---|
-| Strand ソース | `docs/examples/02-todomvc.strand` |
-| React ソース | `benchmarks/todomvc-react/src/App.tsx` |
-| 機能セット | 追加 / 完了トグル / 削除 / Filter (All/Active/Done) / Clear completed / localStorage 永続化 / theme tokens |
-| 計測スクリプト | `reference/scripts/measure.mjs`, `reference/scripts/measure-scenarios.mjs` |
-| トークナイザ | `gpt-tokenizer` の `cl100k_base` (GPT-4) と `o200k_base` (GPT-4o) |
+| Strand source | `docs/examples/02-todomvc.strand` |
+| React source | `benchmarks/todomvc-react/src/App.tsx` |
+| Feature set | add / toggle done / delete / Filter (All/Active/Done) / Clear completed / localStorage persistence / theme tokens |
+| Measurement scripts | `reference/scripts/measure.mjs`, `reference/scripts/measure-scenarios.mjs` |
+| Tokenizers | `cl100k_base` (GPT-4) and `o200k_base` (GPT-4o) from `gpt-tokenizer` |
 
-## 15.2 ファイルサイズ比較
+## 15.2 File Size Comparison
 
 ```
 label                    files  chars  loc-total  loc-code  cl100k  o200k
@@ -21,28 +23,28 @@ strand (todomvc.strand)  1      4710   163        116       1358    1362
 react  (App.tsx)         1      7357   279        236       1883    1923
 ```
 
-### 比率 (React / Strand)
+### Ratios (React / Strand)
 
-| 指標 | 比率 | 解釈 |
+| Metric | Ratio | Interpretation |
 |---|---|---|
-| 文字数 | **1.56x** | React のソースは Strand の 1.56 倍長い |
-| LOC (空行/コメント除外) | **2.03x** | React の中身は 2 倍 |
-| GPT-4 トークン (cl100k_base) | **1.39x** | Strand の方が **39% トークン節約** |
-| GPT-4o トークン (o200k_base) | **1.41x** | 同 41% 節約 |
+| Characters | **1.56x** | The React source is 1.56x longer than Strand |
+| LOC (excluding blank/comment lines) | **2.03x** | React's body is 2x |
+| GPT-4 tokens (cl100k_base) | **1.39x** | Strand **saves 39% tokens** |
+| GPT-4o tokens (o200k_base) | **1.41x** | 41% saved likewise |
 
-### 主な差分要因
+### Main Sources of Difference
 
-| 差分源 | 影響 |
+| Source of difference | Impact |
 |---|---|
-| Strand には `useState` / `useEffect` / コールバック束ねの宣言句がない | reducer/effect/slot を直接書くだけ |
-| Strand は JSX `<div style={...}>` のような明示属性なし | tile prop の短縮形 (`{bg: "primary"}`) |
-| Strand は TypeScript の `Record<TodoId, Todo>` のような generic 型注釈がいらない箇所がある | スキーマが宣言される箇所が 1 つ |
-| Strand の `match` 式 / `for ... when` ループ | React では `Object.entries(...).filter(...).map(...)` の連鎖 |
-| Strand の theme は宣言だけ。React は inline style 散在 | React 側で `theme.colors.primary` の参照を約 10 箇所書く |
+| Strand has no declarative clauses like `useState` / `useEffect` / callback binding | Just write reducer/effect/slot directly |
+| Strand has no explicit attributes like JSX `<div style={...}>` | Shorthand tile props (`{bg: "primary"}`) |
+| Strand has places where generic type annotations like TypeScript's `Record<TodoId, Todo>` are unnecessary | The schema is declared in a single place |
+| Strand's `match` expression / `for ... when` loop | In React, a chain of `Object.entries(...).filter(...).map(...)` |
+| Strand's theme is declaration-only; React scatters inline styles | React side writes about 10 references to `theme.colors.primary` |
 
-## 15.3 編集影響範囲シナリオ（4 種）
+## 15.3 Edit Impact Scope Scenarios (4 kinds)
 
-4 つの典型的な変更を両実装に手で適用し、ベースからの diff の追加/削除/文字/トークンを集計した。
+We manually applied 4 typical changes to both implementations and tallied the additions/deletions/characters/tokens of the diff from the base.
 
 ```
 Per-scenario patch sizes (lines / chars / tokens)
@@ -69,65 +71,65 @@ React / Strand ratios (totals)
   o200k  : 1.14x
 ```
 
-### シナリオごとの解釈
+### Interpretation per Scenario
 
-| Scenario | Strand 文字数 | React 文字数 | 勝ち | コメント |
+| Scenario | Strand chars | React chars | Winner | Comment |
 |---|---:|---:|---|---|
-| 01: Todo に `priority` field 追加 | 568 | 483 | React (-15%) | sort 関数を multi-line にする React の表現が小さい |
-| 02: validation 強化（trim + max 100） | 432 | 322 | React (-25%) | Strand は if-then-else block を `{ ... ; ... ; ... }` で書くと冗長 |
-| 03: Filter に `Archived` variant + Todo `archived` field 追加 | 1540 | 1475 | 拮抗 | 機能追加（新ボタン・新 reducer）は同程度 |
-| 04: ダークモード切替（Theme 2 種 + slot + reducer + UI） | 1315 | 2153 | **Strand (-39%)** | runtime に theme 機構があるので Strand 側は宣言だけで済む |
+| 01: Add `priority` field to Todo | 568 | 483 | React (-15%) | React's expression of a multi-line sort function is smaller |
+| 02: Stronger validation (trim + max 100) | 432 | 322 | React (-25%) | Strand is verbose when writing an if-then-else block as `{ ... ; ... ; ... }` |
+| 03: Add `Archived` variant to Filter + `archived` field to Todo | 1540 | 1475 | Even | Feature additions (new button, new reducer) are about the same |
+| 04: Dark mode toggle (2 themes + slot + reducer + UI) | 1315 | 2153 | **Strand (-39%)** | Since the runtime has a theme mechanism, the Strand side needs only declarations |
 
-### 大規模ほど Strand 有利
+### The Larger the Scale, the More Strand Wins
 
-- **小さな型変更 / バリデーション追加**: React の方が patch が短い（runtime ヘルパや変数名のオーバーヘッドがない）
-- **新 variant / 新フィールド**: 拮抗（影響箇所の数で決まる）
-- **横断的機能（ダークモード、a11y、エラー境界）**: Strand が圧倒。React は全コンポーネントに `theme` prop を drilling する必要があるが、Strand は theme 切替 slot 1 つ追加で完結
+- **Small type changes / validation additions**: React's patch is shorter (no runtime-helper or variable-name overhead)
+- **New variant / new field**: Even (decided by the number of impacted spots)
+- **Cross-cutting features (dark mode, a11y, error boundary)**: Strand dominates. React must drill a `theme` prop into every component, whereas Strand is complete by adding a single theme-switch slot
 
-これは Strand の主張「**runtime にビルトイン機能を持つので、ユーザー側コードは薄くなる**」を裏付けた。横断的変更ほど差が広がる。
+This backs up Strand's claim that "**because the runtime holds built-in features, user-side code becomes thin**." The more cross-cutting the change, the wider the gap.
 
-### 影響箇所の数（type システム横断）
+### Number of Impacted Spots (across the type system)
 
-| Scenario | Strand 箇所 | React 箇所 |
+| Scenario | Strand spots | React spots |
 |---|---:|---:|
 | 01-priority | 4 | 4 |
 | 02-validation | 2 (addTodo, slot) | 2 (addTodo, JSX maxLength) |
 | 03-archived | 7 (type, fn matchFilter, fn itemsLeft, FilterBar, TodoRow, addTodo, archive reducer) | 7 (type, matchFilter, itemsLeft, addTodo, TodoRow component, archive handler, render) |
-| 04-dark-theme | 4 (新 theme 2 種, themeName slot, toggleTheme reducer, ThemeBtn) | 11 (新 theme 2 種, ThemeName/Theme 型, themeName state, theme 選択, toggle handler, ThemeBtn JSX, theme prop drilling × 5 箇所以上) |
+| 04-dark-theme | 4 (2 new themes, themeName slot, toggleTheme reducer, ThemeBtn) | 11 (2 new themes, ThemeName/Theme types, themeName state, theme selection, toggle handler, ThemeBtn JSX, theme prop drilling × 5+ spots) |
 
-03 までは箇所の数は同じだが、**04 だけ大きく違う**：React は theme を prop で全コンポーネントに渡す必要がある。
+Up through 03 the number of spots is the same, but **only 04 differs greatly**: React must pass the theme to every component via props.
 
-## 15.4 トークン効率の本質
+## 15.4 The Essence of Token Efficiency
 
-| シナリオ | Strand 有利 | React 有利 |
+| Scenario | Strand favored | React favored |
 |---|---|---|
-| 新規プロジェクトをゼロから書く | ◯ (1.39〜1.56x 少ない) | |
-| 既存プロジェクトに 1 フィールド追加 | (行は少ない) | △ (トークンは 14〜25% 少ない) |
-| 既存プロジェクトに variant + 関連変更 | 拮抗 | 拮抗 |
-| 横断的機能（theme/a11y/error-boundary） | ◎ (chars 39% 少ない) | |
-| 4 シナリオの合計 | ◯ (chars 13% / token 12% 少ない) | |
-| エージェント並列開発 (CRDT op) | 未計測 | 未計測 |
+| Writing a new project from scratch | ◯ (1.39–1.56x fewer) | |
+| Adding 1 field to an existing project | (fewer lines) | △ (14–25% fewer tokens) |
+| Adding a variant + related changes to an existing project | Even | Even |
+| Cross-cutting features (theme/a11y/error-boundary) | ◎ (39% fewer chars) | |
+| Total of the 4 scenarios | ◯ (13% fewer chars / 12% fewer tokens) | |
+| Parallel agent development (CRDT op) | Not measured | Not measured |
 
-### 結論
+### Conclusion
 
-- **新規生成（フル）**: Strand が 30〜40% 安い
-- **小さな修正パッチ**: React の方が 15〜25% 安いことがある
-- **横断的修正**: Strand が 40% 程度安い（runtime にビルトイン機構があるため）
-- **合計**: 4 シナリオの patch を合算すると、Strand は React の 87% の文字数 / 87% のトークン数
+- **New generation (full)**: Strand is 30–40% cheaper
+- **Small fix patches**: React can be 15–25% cheaper
+- **Cross-cutting fixes**: Strand is roughly 40% cheaper (thanks to the runtime's built-in mechanisms)
+- **Total**: Summing the patches across the 4 scenarios, Strand is 87% of React's character count / 87% of its token count
 
-## 15.4-bis Strand 編集 op の効率
+## 15.4-bis Efficiency of Strand Edit Ops
 
-仕様 16（AI 編集 API）で実装した `strand add / replace / remove` を使うと、
-**「変更を受ける def の本体だけ」を送れば修正が完了する**。同じ 4 シナリオ
-について、3 つの「修正の伝え方」を比較した：
+Using `strand add / replace / remove` implemented in Specification 16 (AI editing API),
+**a fix is completed by sending only "the body of the def being changed."** For the same 4 scenarios,
+we compared 3 "ways of conveying a fix":
 
-| 形式 | AI が出力するもの | 長所 | 短所 |
+| Format | What the AI outputs | Pros | Cons |
 |---|---|---|---|
-| **full file** | 修正後のファイル全体 | AI には自然 | 変更しない 80% の def も毎回出力 |
-| **patch (unified diff)** | `+` / `-` 行の diff | 最も小さい | AI が diff を正確に書くのは難しい |
-| **op stream** | `add/replace/remove` の列 | AI に自然 + 自動 validation + op-log | patch より少し長い |
+| **full file** | The entire fixed file | Natural for the AI | Outputs even the 80% of defs that don't change, every time |
+| **patch (unified diff)** | A diff of `+` / `-` lines | Smallest | Hard for the AI to write a diff accurately |
+| **op stream** | A sequence of `add/replace/remove` | Natural for the AI + automatic validation + op-log | Slightly longer than a patch |
 
-### 実測値
+### Measured Values
 
 ```
 scenario                  #ops  full ch  full tk  patch ch  patch tk    op ch    op tk
@@ -140,56 +142,56 @@ scenario                  #ops  full ch  full tk  patch ch  patch tk    op ch   
 TOTAL                       29    20,269    5,888    3,855    1,130    5,195    1,543
 ```
 
-### 圧縮率（小さいほど良い）
+### Compression Ratio (smaller is better)
 
-| 比較 | 文字 | トークン |
+| Comparison | Chars | Tokens |
 |---|---|---|
-| **op vs full-file** | 25.6% | **26.2%** (74% 削減) |
-| op vs patch | 135% | 137% (op の方が冗長) |
+| **op vs full-file** | 25.6% | **26.2%** (74% reduction) |
+| op vs patch | 135% | 137% (op is more verbose) |
 
-### 解釈
+### Interpretation
 
-- **AI が「修正後の全体コード」を吐く既定スタイル**（多くの coding agent のデフォルト）と比較すると、Strand の op stream は **74% トークン節約**できる
-- **AI が unified diff を完全に正しく吐ける**なら patch のほうが短いが、現実の coding agent は diff 形式を時々破る。op stream は「修正後の def 本体」を渡すだけで `add/replace/remove` セマンティクスが付くので、フォーマットエラーが起きにくい
-- 加えて op stream は **validate-then-rollback** によって、parse error / typecheck error が出るパッチは自動で reject される（patch には無い性質）
+- Compared to the **default style where the AI emits "the entire fixed code"** (the default of many coding agents), Strand's op stream can **save 74% of tokens**
+- If the **AI can emit a unified diff perfectly correctly**, the patch is shorter, but real-world coding agents occasionally break the diff format. The op stream just passes "the fixed def body" and carries `add/replace/remove` semantics, so format errors are less likely
+- In addition, the op stream uses **validate-then-rollback** so patches that produce a parse error / typecheck error are automatically rejected (a property the patch lacks)
 
-### つまり実プロダクション AI ループでは
+### In Other Words, in a Real Production AI Loop
 
-1. **AI に修正タスクを指示**
-2. **AI が「修正後の def を `add/replace` 形式で出力」**（Markdown ブロックで）
-3. **CLI が op stream として読み込み、各 op を順次適用**
-4. **どこかで validation 失敗 → 該当 op だけ reject、エージェントにエラーを返す**
+1. **Instruct the AI with a fix task**
+2. **The AI outputs "the fixed def in `add/replace` form"** (in a Markdown block)
+3. **The CLI reads it as an op stream and applies each op in sequence**
+4. **Validation fails somewhere → reject only that op and return the error to the agent**
 
-このループの「2 → 3」の AI コストが、フルファイル方式の **約 1/4**。
-これが AI 編集 API の経済的メリット。
+The AI cost of "2 → 3" in this loop is **about 1/4** of the full-file approach.
+This is the economic benefit of the AI editing API.
 
-## 15.5 計測の制約
+## 15.5 Measurement Constraints
 
-- 比較は **同一機能だけ**。React の `useMemo` / `useCallback` / Suspense などの本気の最適化を入れると LOC は増えるが、Strand 側も signal-graph 最適化を入れていない（Phase 1 PoC レベル）
-- React 側は **エラー境界 / theme 自動適用 / a11y チェック** を実装していない（Strand ランタイムには入っているが、React 版に同等を入れたら +50 行程度のはず）
-- トークナイザの種類で差が出る (`cl100k_base` vs `o200k_base`)。両方とも 1.4 倍前後
-- **編集影響範囲のシナリオは 1 件のみ**（priority field）。validation 追加 / variant 追加など他パターンは Phase 5 で
+- The comparison covers **the same feature set only**. Adding serious optimizations like React's `useMemo` / `useCallback` / Suspense would increase LOC, but the Strand side has likewise not added signal-graph optimization (Phase 1 PoC level)
+- The React side does **not** implement an **error boundary / automatic theme application / a11y checks** (they are in the Strand runtime; adding equivalents to the React version should be around +50 lines)
+- Differences appear depending on the tokenizer (`cl100k_base` vs `o200k_base`). Both are around 1.4x
+- **There is only one edit-impact-scope scenario** (the priority field). Other patterns such as adding validation / adding a variant are deferred to Phase 5
 
-## 15.6 注意事項（読み手向け）
+## 15.6 Notes (for the reader)
 
-- **これは "Strand が React より優れている" の証拠ではない**。Strand は人間が読まない前提で表現を圧縮しているので、ただトークンが少ないだけ
-- React は人間の認知に合わせた構文を持つので、人間メンテ向けには Strand より優秀
-- "AI コーディングコストの観点では 1.4 倍違う" という事実が分かれば十分
+- **This is not evidence that "Strand is superior to React."** Strand compresses its expression on the premise that humans won't read it, so it merely has fewer tokens
+- React has syntax tuned to human cognition, so for human maintenance it is superior to Strand
+- It is enough to understand the fact that "from the perspective of AI coding cost, there is a 1.4x difference"
 
-## 15.7 再現
+## 15.7 Reproduction
 
 ```bash
 cd reference
-node scripts/measure.mjs                       # フルファイルの比較
-node scripts/measure-scenarios.mjs             # 4 シナリオの patch 比較
-pnpm exec tsx scripts/measure-ops.mjs          # 同 4 シナリオの op stream コスト
+node scripts/measure.mjs                       # full-file comparison
+node scripts/measure-scenarios.mjs             # patch comparison across the 4 scenarios
+pnpm exec tsx scripts/measure-ops.mjs          # op stream cost for the same 4 scenarios
 ```
 
-## 15.8 数字（直書き、後で再生成する用）
+## 15.8 Numbers (written directly, for later regeneration)
 
-最終計測: 2026-05-29
+Last measured: 2026-05-29
 
-### フルファイル
+### Full file
 | | Strand | React | React/Strand |
 |---|---|---|---|
 | chars | 4,710 | 7,357 | 1.56x |
@@ -197,7 +199,7 @@ pnpm exec tsx scripts/measure-ops.mjs          # 同 4 シナリオの op stream
 | cl100k | 1,358 | 1,883 | 1.39x |
 | o200k | 1,362 | 1,923 | 1.41x |
 
-### Patch 合計（4 シナリオ）
+### Patch total (4 scenarios)
 | | Strand | React | React/Strand |
 |---|---|---|---|
 | +lines | 55 | 87 | 1.58x |
@@ -206,18 +208,18 @@ pnpm exec tsx scripts/measure-ops.mjs          # 同 4 シナリオの op stream
 | cl100k | 1,130 | 1,293 | 1.14x |
 | o200k | 1,145 | 1,301 | 1.14x |
 
-### シナリオ別 chars (React/Strand 比)
-- 01-add-priority: 0.85x (React 短い)
-- 02-strict-validation: 0.75x (React 短い)
-- 03-add-archived: 0.96x (拮抗)
-- 04-dark-theme: 1.64x (Strand 短い)
+### Per-scenario chars (React/Strand ratio)
+- 01-add-priority: 0.85x (React shorter)
+- 02-strict-validation: 0.75x (React shorter)
+- 03-add-archived: 0.96x (even)
+- 04-dark-theme: 1.64x (Strand shorter)
 
-### Strand 編集の "伝達コスト" 比較
+### Comparison of Strand Edit "Delivery Cost"
 
-| 形式 | 全 4 scenarios 合計 chars | 同 GPT-4 tokens |
+| Format | Total chars across all 4 scenarios | Same in GPT-4 tokens |
 |---|---:|---:|
-| full file (AI が変更後コード全体を吐く) | 20,269 | 5,888 |
+| full file (AI emits the entire changed code) | 20,269 | 5,888 |
 | patch (unified diff) | 3,855 | 1,130 |
 | **op stream (strand add/replace/remove)** | 5,195 | **1,543** |
 
-op stream はフルファイル方式の **26.2%** = **74% トークン節約**。
+The op stream is **26.2%** of the full-file approach = **74% token savings**.

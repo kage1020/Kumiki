@@ -1,33 +1,35 @@
-# 最初のアプリ — Counter
+# Your First App — Counter
 
-7 レイヤを順に足しながら、動く Counter を組み立てる。完成形は [../examples/apps/01-counter/app.strand](../examples/apps/01-counter/app.strand)。
+English · [日本語](./your-first-app.ja.md)
 
-## 1. 状態を宣言する（slot）
+Build a working Counter by adding the 7 layers one at a time. The finished version is [../examples/apps/01-counter/app.strand](../examples/apps/01-counter/app.strand).
+
+## 1. Declare State (slot)
 
 ```strand
 slot count : Int = 0
 ```
 
-`slot` はミュータブルな状態。型と初期値を持つ。
+A `slot` is mutable state. It has a type and an initial value.
 
-## 2. 更新を書く（reducer）
+## 2. Write Updates (reducer)
 
 ```strand
 reducer inc on=ui.click(IncBtn) do= count := count + 1
 ```
 
-`on=` がイベント（ここでは tile `IncBtn` のクリック）、`do=` が状態更新。`:=` が代入。
+`on=` is the event (here, a click on the tile `IncBtn`), and `do=` is the state update. `:=` is assignment.
 
-## 3. UI を組む（tile）
+## 3. Assemble the UI (tile)
 
 ```strand
 tile IncBtn = button(text="+1", onClick=inc)
 tile App    = column(heading("Count: " + count.show), IncBtn)
 ```
 
-`tile` は UI 部品。`onClick=inc` でクリックを reducer に結ぶ。`count.show` で数値を文字列化。
+A `tile` is a UI component. `onClick=inc` binds the click to the reducer. `count.show` stringifies the number.
 
-## 4. まとめる（app）
+## 4. Tie It Together (app)
 
 ```strand
 app Counter
@@ -36,19 +38,19 @@ app Counter
     init   = []
 ```
 
-`routes` には必ず `/404` を含める（無いと [E0001](../spec/errors.md#e0001-missing-404)）。
+`routes` must always include `/404` (otherwise [E0001](../spec/errors.md#e0001-missing-404)).
 
-## 5. 検査して動かす
+## 5. Check and Run
 
 ```sh
 pnpm --filter @strand/cli exec tsx src/strand.ts check counter.strand
 pnpm --filter @strand/cli exec tsx src/strand.ts build counter.strand ./out
 ```
 
-## 発展
+## Going Further
 
-- 値の範囲を縛りたい → nominal 型 + refinement（[../examples/features/02-nominal-type.strand](../examples/features/02-nominal-type.strand)）
-- 入力欄と双方向結合 → `bind`（[../examples/features/13-text-input-bind.strand](../examples/features/13-text-input-bind.strand)）
-- 一覧を描く → `for ... in`（[../examples/features/07-list.strand](../examples/features/07-list.strand)）
+- Constrain a value's range → nominal type + refinement ([../examples/features/02-nominal-type.strand](../examples/features/02-nominal-type.strand))
+- Two-way binding with an input field → `bind` ([../examples/features/13-text-input-bind.strand](../examples/features/13-text-input-bind.strand))
+- Render a list → `for ... in` ([../examples/features/07-list.strand](../examples/features/07-list.strand))
 
-考え方の全体像は [thinking-in-strand.md](./thinking-in-strand.md) へ。
+For the big picture of how to think about it, head to [thinking-in-strand.md](./thinking-in-strand.md).

@@ -1,18 +1,20 @@
 # 01 — Counter
 
-Strand の最小アプリ。これだけで「状態・更新・描画」の 1 サイクルが揃う。
+English · [日本語](./README.ja.md)
 
-## 学べること
+The smallest Strand app. With this alone, you get one full cycle of "state, update, render."
 
-- `slot` で状態を宣言する
-- `reducer` で `on=`（イベント）→ `do=`（状態更新）を書く
-- `tile` で UI を組み、`button` のクリックを reducer に結ぶ
-- `app` ですべてを束ねる
+## What you'll learn
 
-## 実行
+- Declaring state with `slot`
+- Writing `on=` (event) → `do=` (state update) in a `reducer`
+- Building UI with `tile` and wiring a `button` click to a reducer
+- Tying everything together with `app`
+
+## Run
 
 ```sh
 pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand ./out
 ```
 
-関連仕様: [language](../../../spec/language.md)
+Related specs: [language](../../../spec/language.md)

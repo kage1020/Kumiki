@@ -1,44 +1,46 @@
-# 標準ライブラリ
+# Standard Library
 
-Strand の標準ライブラリは「**最小完備**」を目標に設計されている。同じ目的の関数を複数提供しない（AI の選択を曖昧にしないため）。
+English · [日本語](./stdlib.ja.md)
+
+Strand's standard library is designed with the goal of being "**minimal and complete**". It does not provide multiple functions for the same purpose (so as not to make the AI's choice ambiguous).
 
 ---
 
-## 2.1 ビルトイン型
+## 2.1 Built-in Types
 
-### 2.1.1 プリミティブ
+### 2.1.1 Primitives
 
-| 型 | 表現 | リテラル例 |
+| Type | Representation | Literal example |
 |---|---|---|
-| `Text` | UTF-8 文字列 | `"hello"` |
-| `Int` | 64bit 整数 | `42`, `-7` |
-| `Float` | 64bit 浮動小数 | `3.14`, `-0.5` |
-| `Bool` | 真偽値 | `true`, `false` |
-| `Unit` | 単一値 | `()` |
-| `Bytes` | バイト列 | リテラルなし、`Bytes.from-text()` で生成 |
-| `Time` | UNIX ナノ秒 | リテラルなし、`now` または `Time.parse()` |
+| `Text` | UTF-8 string | `"hello"` |
+| `Int` | 64-bit integer | `42`, `-7` |
+| `Float` | 64-bit floating point | `3.14`, `-0.5` |
+| `Bool` | boolean | `true`, `false` |
+| `Unit` | single value | `()` |
+| `Bytes` | byte sequence | no literal; created with `Bytes.from-text()` |
+| `Time` | UNIX nanoseconds | no literal; `now` or `Time.parse()` |
 
-### 2.1.2 汎化型
+### 2.1.2 Generic Types
 
-| 型 | 用途 |
+| Type | Use |
 |---|---|
-| `Map(K, V)` | キーは Eq、値は任意 |
-| `Set(T)` | T は Eq |
-| `List(T)` | 順序あり、インデックスアクセス可 |
-| `Option(T)` | `None` または `Some(T)` |
-| `Result(T, E)` | `Ok(T)` または `Err(E)` |
-| `Tuple(T1, ..., Tn)` | 固定長 |
+| `Map(K, V)` | keys are Eq, values are arbitrary |
+| `Set(T)` | T is Eq |
+| `List(T)` | ordered, index-accessible |
+| `Option(T)` | `None` or `Some(T)` |
+| `Result(T, E)` | `Ok(T)` or `Err(E)` |
+| `Tuple(T1, ..., Tn)` | fixed length |
 
-### 2.1.3 ドメイン型（標準提供）
+### 2.1.3 Domain Types (provided by the standard library)
 
-| 型 | 定義 |
+| Type | Definition |
 |---|---|
 | `HttpStatus` | `nominal Int where between(100, 599)` |
 | `HttpError` | `{status: HttpStatus, message: Text, body: Option(Text)}` |
 | `Url` | `nominal Text where url` |
 | `Email` | `nominal Text where email` |
 | `Uuid` | `nominal Text where uuid` |
-| `Duration` | `nominal Int` (ナノ秒) |
+| `Duration` | `nominal Int` (nanoseconds) |
 | `Route` | `{path: Text, params: Map(Text, Text), query: Map(Text, Text)}` |
 | `FormData` | `Map(Text, FormValue)` |
 | `FormValue` | `TextV(Text) \| NumberV(Float) \| BoolV(Bool) \| FileV(File)` |
@@ -46,46 +48,46 @@ Strand の標準ライブラリは「**最小完備**」を目標に設計され
 
 ---
 
-## 2.2 コレクションメソッド
+## 2.2 Collection Methods
 
 ### 2.2.1 Map(K, V)
 
 ```
 keys                        : List(K)
 values                      : List(V)
-entries                     : List(Tuple(K, V))  ; 実装上 [[k, v], ...] の配列
+entries                     : List(Tuple(K, V))  ; an array of [[k, v], ...] in the implementation
 size                        : Int
 is-empty                    : Bool
 has(k)                      : Bool
 get(k)                      : Option(V)
 get-or(k, default)          : V
-insert(k, v)                : Map(K, V)        ; 純粋。新 Map を返す
+insert(k, v)                : Map(K, V)        ; pure. Returns a new Map
 remove(k)                   : Map(K, V)
-update(k, expr)             : Map(K, V)        ; expr の中で $1 が現在値
+update(k, expr)             : Map(K, V)        ; within expr, $1 is the current value
 merge(other)                : Map(K, V)
-filter(pred)                : Map(K, V)        ; pred の中で $1=key, $2=value
-map(expr)                   : Map(K, V')       ; expr の中で $1=key, $2=value
+filter(pred)                : Map(K, V)        ; within pred, $1=key, $2=value
+map(expr)                   : Map(K, V')       ; within expr, $1=key, $2=value
 ```
 
-`.entries` は `List(Tuple(K, V))` として **2 要素配列の列**を返す。後続の `map` / `sort-by` / `filter` lambda はランタイム destructure により `$1=key, $2=value` で扱える：
+`.entries` returns a **sequence of 2-element arrays** as `List(Tuple(K, V))`. A subsequent `map` / `sort-by` / `filter` lambda can handle them as `$1=key, $2=value` via runtime destructuring:
 
 ```strand
 fn sortedByCreatedAt(m: Map(Id, Item)) -> List(Id)
    = m.entries.sort-by($2.createdAt).map($1)
 ```
 
-`get-or` は **Option 用にも使える** polymorphic method:
+`get-or` is a polymorphic method that **can also be used for Option**:
 
 ```strand
-m.get-or(k, default)         ; Map: 値がなければ default
-opt.get-or(default)          ; Option: None なら default、Some(v) なら v
+m.get-or(k, default)         ; Map: default if there is no value
+opt.get-or(default)          ; Option: default if None, v if Some(v)
 ```
 
-`.filter` は **List と Map の両方に対して使え**、ランタイムが受信側の型を見て自動振り分けする (polymorphic dispatch)：
-- 受信側が List → 各要素について `pred($1)` を評価、`true` の要素だけ残す
-- 受信側が Map  → 各エントリについて `pred($1, $2)` (key, value) を評価、`true` のエントリだけ残す
+`.filter` **can be used on both List and Map**, and the runtime dispatches automatically by looking at the receiver's type (polymorphic dispatch):
+- Receiver is List → evaluate `pred($1)` for each element, keep only elements that are `true`
+- Receiver is Map  → evaluate `pred($1, $2)` (key, value) for each entry, keep only entries that are `true`
 
-例えば `m.keys.filter(...)` のようにチェーンしたとき、`m.keys` は `List(K)` を返すため `filter` は List のシグネチャで動く。混在チェーンを書いても型に応じた挙動になる。
+For example, when you chain like `m.keys.filter(...)`, `m.keys` returns `List(K)`, so `filter` runs with the List signature. Even if you write a mixed chain, the behavior follows the type.
 
 ### 2.2.2 Set(T)
 
@@ -115,38 +117,38 @@ prepend(x)                  : List(T)
 concat(other)               : List(T)
 slice(start, end)           : List(T)
 reverse                     : List(T)
-sort                        : List(T)          ; T は Ord
+sort                        : List(T)          ; T is Ord
 sort-by(expr)               : List(T)
 unique                      : List(T)
 map(expr)                   : List(T')
 filter(pred)                : List(T)
 contains(x)                 : Bool
 find(pred)                  : Option(T)
-fold(init, expr)            : Acc              ; expr の中で $1=acc, $2=elem
-join(sep)                   : Text             ; T が Text
+fold(init, expr)            : Acc              ; within expr, $1=acc, $2=elem
+join(sep)                   : Text             ; T is Text
 chunk(n)                    : List(List(T))
 zip(other)                  : List(Tuple(T, U))
 ```
 
-**括弧なしショートカット**: 引数なしメソッド（`is-empty` / `length` / `reverse` / `sort` / `unique` / `head` / `tail` / `last`）は **`()` を省略して field のように書ける**：
+**Parenthesis-free shortcut**: argument-less methods (`is-empty` / `length` / `reverse` / `sort` / `unique` / `head` / `tail` / `last`) **can omit `()` and be written like a field**:
 
 ```strand
 slot todos : List(Todo) = []
-fn count() -> Int = todos.length              ; 括弧なし OK
-fn empty?() -> Bool = todos.is-empty          ; 同上
-fn norm() -> List(Todo) = todos.reverse       ; 同上
+fn count() -> Int = todos.length              ; parenthesis-free OK
+fn empty?() -> Bool = todos.is-empty          ; same as above
+fn norm() -> List(Todo) = todos.reverse       ; same as above
 ```
 
-**`map` / `filter` / `sort-by` の lambda 引数**:
-- List 要素には `$1` を、`.entries` 後の `[k, v]` ペアには `$1=key, $2=value` を束縛します（ランタイムが自動 destructure）
-- 例: `m.entries.sort-by($2.createdAt).map($1)` で `$1=key`, `$2=value`
+**The lambda arguments of `map` / `filter` / `sort-by`**:
+- For a List element, `$1` is bound; for the `[k, v]` pair after `.entries`, `$1=key, $2=value` are bound (the runtime destructures automatically)
+- Example: `m.entries.sort-by($2.createdAt).map($1)` with `$1=key`, `$2=value`
 
 ### 2.2.4 Option(T)
 
 ```
 is-some                     : Bool
 is-none                     : Bool
-get                         : T               ; None なら panic（reducer 内のみ許可）
+get                         : T               ; panics if None (allowed only inside a reducer)
 get-or(default)             : T
 map(expr)                   : Option(T')
 flat-map(expr)              : Option(T')
@@ -160,8 +162,8 @@ to-list                     : List(T)
 ```
 is-ok                       : Bool
 is-err                      : Bool
-get                         : T               ; Err なら panic
-get-err                     : E               ; Ok なら panic
+get                         : T               ; panics if Err
+get-err                     : E               ; panics if Ok
 get-or(default)             : T
 map(expr)                   : Result(T', E)
 map-err(expr)               : Result(T, E')
@@ -192,10 +194,10 @@ parse-float                 : Option(Float)
 
 ```
 abs, neg, min(b), max(b), clamp(lo, hi)
-show, to-float (Int), to-int (Float, 切り捨て)
+show, to-float (Int), to-int (Float, truncated)
 ```
 
-`x.show` は **全型共通**の文字列化メソッド。Int / Float / Bool / variant / nominal すべて `.show : Text` を返す。Strand には `to-text` という名前は存在しない。
+`x.show` is the **common-to-all-types** stringification method. Int / Float / Bool / variant / nominal all return `.show : Text`. Strand has no name called `to-text`.
 
 ### 2.2.8 Time
 
@@ -213,13 +215,13 @@ format(pattern)             : Text            ; "yyyy-MM-dd HH:mm"
 ```
 Duration.ms(n)              : Duration
 Duration.s(n)               : Duration
-Duration.m(n)               : Duration   ; min と書いても可
+Duration.m(n)               : Duration   ; min is also valid
 Duration.h(n)               : Duration
-Duration.d(n)               : Duration   ; days と書いても可
+Duration.d(n)               : Duration   ; days is also valid
 to-ms                       : Int
 ```
 
-Time / Duration はランタイム上では **raw ミリ秒数**として表現される。`time.plus(Duration.h(72))` のような演算は単なる ms 加算に展開される。
+Time / Duration are represented at runtime as a **raw number of milliseconds**. An operation like `time.plus(Duration.h(72))` is expanded into a simple ms addition.
 
 ```strand
 fn isSoon(due: Time) -> Bool = due < now.plus(Duration.h(72))
@@ -228,198 +230,198 @@ fn elapsed(start: Time) -> Duration = now.diff(start)
 
 ---
 
-## 2.3 tile プリミティブ要素
+## 2.3 Tile Primitive Elements
 
-Strand の組み込みタイル。**意味タグ**であり HTML タグの直訳ではない。
+Strand's built-in tiles. They are **semantic tags** and are not literal translations of HTML tags.
 
-### 2.3.1 構造要素
+### 2.3.1 Structural Elements
 
-| 要素 | 役割 | 主な props |
+| Element | Role | Main props |
 |---|---|---|
-| `page` | アプリのルート画面 | `title`, `class` |
-| `region` | 名前付きセクション | `aria-label`, `class` |
-| `row` | 水平レイアウト | `gap`, `align`, `justify` |
-| `column` | 垂直レイアウト | `gap`, `align`, `justify` |
-| `stack` | 重ね配置 | `align` |
-| `grid` | グリッド | `cols`, `gap` |
-| `box` | 汎用コンテナ | `class`, `style` |
-| `card` | カード | `class` |
-| `panel` | パネル | `class` |
-| `divider` | 区切り | `orientation` |
-| `scroll` | スクロールコンテナ | `direction`, `max-height` |
+| `page` | the app's root screen | `title`, `class` |
+| `region` | a named section | `aria-label`, `class` |
+| `row` | horizontal layout | `gap`, `align`, `justify` |
+| `column` | vertical layout | `gap`, `align`, `justify` |
+| `stack` | overlapping placement | `align` |
+| `grid` | grid | `cols`, `gap` |
+| `box` | generic container | `class`, `style` |
+| `card` | card | `class` |
+| `panel` | panel | `class` |
+| `divider` | divider | `orientation` |
+| `scroll` | scroll container | `direction`, `max-height` |
 
-### 2.3.2 テキスト要素
+### 2.3.2 Text Elements
 
-| 要素 | 役割 | 主な props |
+| Element | Role | Main props |
 |---|---|---|
-| `text` | テキスト表示 | `strike`, `bold`, `italic`, `size`, `color` |
-| `heading` | 見出し | `level` (1-6) |
-| `link` | リンク | `to`, `external` |
-| `code` | コード | `lang` |
-| `markdown` | Markdown 描画 | （内容は引数） |
+| `text` | text display | `strike`, `bold`, `italic`, `size`, `color` |
+| `heading` | heading | `level` (1-6) |
+| `link` | link | `to`, `external` |
+| `code` | code | `lang` |
+| `markdown` | Markdown rendering | (content is the argument) |
 
-### 2.3.3 メディア要素
+### 2.3.3 Media Elements
 
-| 要素 | 役割 | 主な props |
+| Element | Role | Main props |
 |---|---|---|
-| `image` | 画像 | `src`, `alt`, `width`, `height`, `loading` |
-| `icon` | アイコン | `name`, `size` |
-| `video` | 動画 | `src`, `controls`, `autoplay` |
+| `image` | image | `src`, `alt`, `width`, `height`, `loading` |
+| `icon` | icon | `name`, `size` |
+| `video` | video | `src`, `controls`, `autoplay` |
 
-### 2.3.4 入力要素
+### 2.3.4 Input Elements
 
-| 要素 | 役割 | 主な props |
+| Element | Role | Main props |
 |---|---|---|
-| `button` | ボタン | `text`, `onClick`, `variant`, `disabled`, `loading` |
-| `input` | テキスト入力 | `bind`, `placeholder`, `type` (text/email/password/...), `disabled` |
-| `textarea` | 複数行入力 | `bind`, `rows`, `placeholder` |
-| `check` | チェックボックス | `value`, `onClick`, `label` |
-| `radio` | ラジオボタン | `name`, `value`, `selected`, `onClick` |
-| `select` | セレクト | `bind`, `options` (List of `{label, value}`), `placeholder` |
-| `slider` | スライダー | `bind`, `min`, `max`, `step` |
-| `switch` | トグル | `value`, `onClick` |
+| `button` | button | `text`, `onClick`, `variant`, `disabled`, `loading` |
+| `input` | text input | `bind`, `placeholder`, `type` (text/email/password/...), `disabled` |
+| `textarea` | multi-line input | `bind`, `rows`, `placeholder` |
+| `check` | checkbox | `value`, `onClick`, `label` |
+| `radio` | radio button | `name`, `value`, `selected`, `onClick` |
+| `select` | select | `bind`, `options` (List of `{label, value}`), `placeholder` |
+| `slider` | slider | `bind`, `min`, `max`, `step` |
+| `switch` | toggle | `value`, `onClick` |
 
-### 2.3.5 フォーム
+### 2.3.5 Forms
 
-| 要素 | 役割 | 主な props |
+| Element | Role | Main props |
 |---|---|---|
-| `form` | フォーム（form をラップする tile に `ui.submit(WrapperTile)` で届く） | `id`, `auto-complete`, `novalidate` |
-| `label` | ラベル | `for` |
-| `fieldset` | フィールド集合 | `legend` |
-| `error` | バリデーションエラー表示 | `field` |
+| `form` | form (delivered to the tile wrapping the form via `ui.submit(WrapperTile)`) | `id`, `auto-complete`, `novalidate` |
+| `label` | label | `for` |
+| `fieldset` | field set | `legend` |
+| `error` | validation error display | `field` |
 
-### 2.3.6 リスト・表
+### 2.3.6 Lists / Tables
 
-| 要素 | 役割 | 主な props |
+| Element | Role | Main props |
 |---|---|---|
-| `list` | リスト | `ordered` |
-| `list-item` | リスト項目 | |
-| `table` | 表 | |
-| `table-head` | 表ヘッダ | |
-| `table-body` | 表本体 | |
-| `table-row` | 表行 | |
-| `table-cell` | 表セル | `colspan`, `rowspan` |
+| `list` | list | `ordered` |
+| `list-item` | list item | |
+| `table` | table | |
+| `table-head` | table header | |
+| `table-body` | table body | |
+| `table-row` | table row | |
+| `table-cell` | table cell | `colspan`, `rowspan` |
 
-### 2.3.7 オーバーレイ
+### 2.3.7 Overlays
 
-| 要素 | 役割 | 主な props |
+| Element | Role | Main props |
 |---|---|---|
-| `modal` | モーダル | `open`, `onClose`, `title` |
-| `drawer` | ドロワー | `open`, `onClose`, `side` |
-| `tooltip` | ツールチップ | `text`, `placement` |
-| `popover` | ポップオーバー | `open`, `onClose`, `placement` |
-| `toast` | トースト通知 | `kind` (info/success/warn/error), `text` |
+| `modal` | modal | `open`, `onClose`, `title` |
+| `drawer` | drawer | `open`, `onClose`, `side` |
+| `tooltip` | tooltip | `text`, `placement` |
+| `popover` | popover | `open`, `onClose`, `placement` |
+| `toast` | toast notification | `kind` (info/success/warn/error), `text` |
 
-### 2.3.8 フィードバック
+### 2.3.8 Feedback
 
-| 要素 | 役割 | 主な props |
+| Element | Role | Main props |
 |---|---|---|
-| `spinner` | スピナー | `size` |
-| `progress` | プログレスバー | `value`, `max` |
-| `skeleton` | スケルトン | `kind` (text/box/circle) |
+| `spinner` | spinner | `size` |
+| `progress` | progress bar | `value`, `max` |
+| `skeleton` | skeleton | `kind` (text/box/circle) |
 
-### 2.3.9 制御要素
+### 2.3.9 Control Elements
 
-| 要素 | 役割 |
+| Element | Role |
 |---|---|
-| `when(cond, tile)` | cond が true なら tile を表示 |
-| `if cond then tA else tB` | 条件分岐 |
-| `for x in coll tile` | 反復 |
-| `route-outlet` | ネストルートの出力位置 |
-| `link(to=...)` | ルート遷移リンク |
+| `when(cond, tile)` | display tile if cond is true |
+| `if cond then tA else tB` | conditional branch |
+| `for x in coll tile` | iteration |
+| `route-outlet` | output position for nested routes |
+| `link(to=...)` | route navigation link |
 
-### 2.3.10 props の共通仕様
+### 2.3.10 Common Specification of props
 
-すべての tile は次の共通 props を受ける（ビルトイン）：
+Every tile accepts the following common props (built-in):
 
-| prop | 型 | 意味 |
+| prop | Type | Meaning |
 |---|---|---|
-| `class` | `Text` | スタイルクラス名 |
-| `style` | `Map(Text, Text)` | インラインスタイル（最小限の使用を推奨） |
-| `aria` | `Map(Text, Text)` | ARIA 属性 |
-| `key` | `Text` | for 内で要素を一意に識別 |
-| `test-id` | `Text` | テスト用 ID |
+| `class` | `Text` | style class name |
+| `style` | `Map(Text, Text)` | inline style (minimal use recommended) |
+| `aria` | `Map(Text, Text)` | ARIA attributes |
+| `key` | `Text` | uniquely identifies an element within a for |
+| `test-id` | `Text` | ID for testing |
 
 ---
 
-## 2.4 ビルトイン関数
+## 2.4 Built-in Functions
 
-### 2.4.1 ID 生成
-
-```
-TypeName.fresh()           : T            ; nominal 型の新 ID（UUIDv7）
-```
-
-### 2.4.2 時刻
+### 2.4.1 ID Generation
 
 ```
-now                        : Time          ; 現在時刻
+TypeName.fresh()           : T            ; a new ID for a nominal type (UUIDv7)
 ```
 
-### 2.4.3 型変換
+### 2.4.2 Time
 
 ```
-TypeName.parse(text)       : Option(T)    ; nominal 型の文字列パース
-TypeName.show(value)       : Text         ; 値の文字列表現
+now                        : Time          ; the current time
 ```
 
-### 2.4.4 数学
+### 2.4.3 Type Conversion
+
+```
+TypeName.parse(text)       : Option(T)    ; string parsing of a nominal type
+TypeName.show(value)       : Text         ; the string representation of a value
+```
+
+### 2.4.4 Math
 
 ```
 math.abs, math.min, math.max, math.clamp
 math.floor, math.ceil, math.round
 math.sqrt, math.pow, math.log, math.exp
-math.random                : Float        ; reducer 内のみ呼び出し可（effect 扱い）
+math.random                : Float        ; callable only inside a reducer (treated as an effect)
 ```
 
-### 2.4.5 文字列フォーマット
+### 2.4.5 String Formatting
 
 ```
 fmt(template, ...args)     : Text         ; "Hello {0}, you have {1}"
 ```
 
-`+` で `Text` と他型を結合した場合、自動で `show` 相当が呼ばれる。
+When you concatenate `Text` with another type using `+`, the equivalent of `show` is called automatically.
 
-### 2.4.6 デバッグ補助
+### 2.4.6 Debugging Aids
 
 ```
-trace(label, value)        : T            ; episode log にラベル付きで記録、値はそのまま返す
-panic(message)             : never        ; プログラムを停止（reducer 内のみ）
+trace(label, value)        : T            ; records to the episode log with a label, returns the value as is
+panic(message)             : never        ; stops the program (inside a reducer only)
 ```
 
 ---
 
-## 2.5 標準 capability
+## 2.5 Standard Capabilities
 
-`app.caps` で宣言できる capability の標準セット：
+The standard set of capabilities that can be declared in `app.caps`:
 
-| capability | 用途 |
+| capability | Use |
 |---|---|
-| `http.get`, `http.post`, `http.put`, `http.patch`, `http.delete` | HTTP リクエスト |
+| `http.get`, `http.post`, `http.put`, `http.patch`, `http.delete` | HTTP requests |
 | `storage.read`, `storage.write` | localStorage |
 | `session.read`, `session.write` | sessionStorage |
 | `indexed.read`, `indexed.write` | IndexedDB |
-| `nav.push`, `nav.replace`, `nav.back` | ルート遷移 |
-| `clipboard.read`, `clipboard.write` | クリップボード |
-| `notification.show` | デスクトップ通知 |
-| `analytics.send` | 計測イベント送信 |
-| `log.write` | ログ出力 |
-| `crypto.random`, `crypto.hash` | 暗号 |
-| `media.camera`, `media.microphone` | メディアデバイス |
-| `geo.read` | 位置情報 |
+| `nav.push`, `nav.replace`, `nav.back` | route navigation |
+| `clipboard.read`, `clipboard.write` | clipboard |
+| `notification.show` | desktop notifications |
+| `analytics.send` | sending measurement events |
+| `log.write` | log output |
+| `crypto.random`, `crypto.hash` | cryptography |
+| `media.camera`, `media.microphone` | media devices |
+| `geo.read` | location information |
 | `socket.connect`, `socket.send` | WebSocket |
 
-未列挙の capability を `app.caps` に書くとコンパイルエラー。新規 capability の登録は v0.2 で plugin 経由を予定。
+Writing an unlisted capability in `app.caps` is a compile error. Registration of new capabilities is planned via a plugin in v0.2.
 
 ---
 
-## 2.6 標準 effect
+## 2.6 Standard Effects
 
-各 capability に対応する標準 effect。`app.caps` に capability があれば自動で使える。
+The standard effect corresponding to each capability. If the capability is in `app.caps`, it is automatically usable.
 
-→ 詳細仕様は [./http.md](./http.md)。
+→ For the detailed specification, see [./http.md](./http.md).
 
-### 2.6.1 ナビゲーション
+### 2.6.1 Navigation
 
 ```strand
 effect navigate    cap=nav.push     in={path: Text, params: Map(Text, Text)}  out=Unit
@@ -427,13 +429,13 @@ effect navigate-replace cap=nav.replace in={path: Text, params: Map(Text, Text)}
 effect navigate-back   cap=nav.back  in=Unit  out=Unit
 ```
 
-### 2.6.2 トースト
+### 2.6.2 Toast
 
 ```strand
 effect toast       cap=notification.show  in={kind: Text, text: Text}  out=Unit
 ```
 
-### 2.6.3 ログ
+### 2.6.3 Log
 
 ```strand
 effect log         cap=log.write    in={level: Text, message: Text, data: Map(Text, Text)}  out=Unit
@@ -441,9 +443,9 @@ effect log         cap=log.write    in={level: Text, message: Text, data: Map(Te
 
 ---
 
-## 2.7 数値・通貨など、よく欲しがる型は意図的に未提供
+## 2.7 Frequently Wanted Types Such as Numeric/Currency Are Intentionally Not Provided
 
-`Money`, `Percent`, `Decimal` などはアプリ側で `nominal` を使って定義する。Strand は意見を持たない。
+Types such as `Money`, `Percent`, and `Decimal` are defined on the application side using `nominal`. Strand is unopinionated.
 
 ```strand
 type Cents = nominal Int where positive

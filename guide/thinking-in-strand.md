@@ -1,42 +1,44 @@
-# Strand の考え方
+# Thinking in Strand
 
-## 7 レイヤ＝役割の分離
+English · [日本語](./thinking-in-strand.ja.md)
 
-Strand のアプリは 7 種類の定義の集合。ファイル境界やモジュールはなく、各定義は名前で参照し合う。
+## 7 Layers = Separation of Roles
 
-| layer | 一言で | React で言うと |
+A Strand app is a collection of 7 kinds of definitions. There are no file boundaries or modules; each definition refers to others by name.
+
+| layer | In a word | React equivalent |
 |---|---|---|
-| `type` | ドメインの形 | TypeScript の型 |
-| `slot` | 状態 | `useState` |
-| `effect` | 外界との副作用 | `useEffect` + fetch ラッパ |
-| `reducer` | イベント → 状態更新 | イベントハンドラ + setState |
-| `tile` | UI 部品 | コンポーネント（JSX） |
-| `fn` | 純粋関数 | ただの関数（ただし state を読めない） |
-| `app` | 根（caps/routes/init/theme） | ルートの設定 + ルーター |
+| `type` | Shape of the domain | TypeScript types |
+| `slot` | State | `useState` |
+| `effect` | Side effects on the outside world | `useEffect` + a fetch wrapper |
+| `reducer` | Event → state update | Event handler + setState |
+| `tile` | UI component | Component (JSX) |
+| `fn` | Pure function | Just a function (but cannot read state) |
+| `app` | Root (caps/routes/init/theme) | Root configuration + router |
 
-## 暗黙を排す
+## Eliminate the Implicit
 
-Strand には Hooks の呼び出し順序ルールも、依存配列も、Context の暗黙スコープもない。
+Strand has no rules about the order of Hook calls, no dependency arrays, and no implicit scoping via Context.
 
-- **状態は `slot`** に集約され、`reducer` の `:=` でのみ変わる。どこで何が書き換わるかが文面で追える。
-- **副作用は `effect`** に閉じ、必要な **capability** を `app.caps` で明示する。宣言にない能力を使うと [E0301](../spec/errors.md#e0301-missing-capability)。
-- **`fn` は純粋**。slot を読めない（[E0305](../spec/errors.md#e0305-fn-impurity)）。テストしやすく、AI も推論しやすい。
+- **State lives in `slot`**, consolidated and changed only via `:=` in a `reducer`. You can trace, in the text, where and what gets rewritten.
+- **Side effects are confined to `effect`**, and the required **capability** is declared explicitly in `app.caps`. Using a capability not in the declaration triggers [E0301](../spec/errors.md#e0301-missing-capability).
+- **`fn` is pure**. It cannot read a slot ([E0305](../spec/errors.md#e0305-fn-impurity)). This makes it easy to test, and easy for AI to reason about.
 
-## 1 reducer 1 書き込み（パス形状粒度）
+## One Write per Reducer (Path-Shape Granularity)
 
-1 つの reducer 内で同じ **パス形状**へ複数回書くと [E0601](../spec/errors.md#e06xx--reducer-の書き込み規則)。これは「更新が 1 箇所に集約される」ことを保証し、部分編集を安全にする。
+Writing to the same **path shape** multiple times within a single reducer triggers [E0601](../spec/errors.md#e06xx--reducer-write-rules). This guarantees that "updates are consolidated in one place," making partial edits safe.
 
 ```strand
-# NG: tasks への二重書き込み
+# NG: double write to tasks
 tasks := tasks.remove(id)
 tasks := tasks.filter(pred)
 
-# OK: チェーンで 1 回に
+# OK: a single chained call
 tasks := tasks.remove(id).filter(pred)
 ```
 
-`tasks[id].status` と `tasks[id].updatedAt` は別形状なので共存できる。
+`tasks[id].status` and `tasks[id].updatedAt` are different shapes, so they can coexist.
 
-## AI が部分編集しやすい設計
+## A Design Easy for AI to Partially Edit
 
-各定義が独立し参照が明示的なので、`@strand/cli` / `@strand/mcp` は **定義単位**で list / view / add / replace / remove / rename / fix できる。これが「AI が並列に触れる」狙いの中核。詳しくは [../spec/ai-edit.md](../spec/ai-edit.md)。
+Because each definition is independent and references are explicit, `@strand/cli` / `@strand/mcp` can list / view / add / replace / remove / rename / fix at the **per-definition** level. This is the core of the goal that "AI can work in parallel." For details, see [../spec/ai-edit.md](../spec/ai-edit.md).

@@ -1,120 +1,122 @@
-# 学習コストベンチマーク v4 — 800-1500 LOC 大規模タスク + 全機能ブラウザ動作
+# Learning Cost Benchmark v4 — 800-1500 LOC Large-Scale Task + Full-Feature Browser Operation
 
-`17` (Pomodoro)、`18` (Kanban)、`19` (Issue Tracker 727 LOC) の続編。**Strand v0.1 で最大規模**の Project Management Tool で AI の実用上限を測る。
+English · [日本語](./learning-cost-v4.ja.md)
 
-## 20.1 目的
+A sequel to `17` (Pomodoro), `18` (Kanban), and `19` (Issue Tracker 727 LOC). We measure the AI's practical upper limit with **the largest-scale** Project Management Tool in Strand v0.1.
 
-v3 で Issue Tracker (727 LOC) の一発書き + ブラウザ全機能動作を達成。残る問い:
+## 20.1 Purpose
 
-1. **1000+ LOC の壁**: さらに大規模で LLM の hallucination / 構造破綻が起きるか？
-2. **深い階層**: Projects → Tasks → SubTasks → Comments の 4 階層、複数 view (List/Board)、複数 form を統合できるか？
-3. **複合機能**: Board view (status 別カラム) / フィルタ / due date / theme を全部入りで一発動作するか？
+In v3 we achieved one-shot writing of the Issue Tracker (727 LOC) + full-feature browser operation. Remaining questions:
 
-v4 は **Project Management Tool**（Asana / Linear 風、5 routes、20+ reducers、List/Board 切替、サブタスク、due date）で検証。
+1. **The 1000+ LOC wall**: at even larger scale, does LLM hallucination / structural breakdown occur?
+2. **Deep hierarchy**: can the 4-level hierarchy of Projects → Tasks → SubTasks → Comments, multiple views (List/Board), and multiple forms be integrated?
+3. **Composite features**: do Board view (per-status columns) / filters / due date / theme all work together in one shot?
 
-## 20.2 タスク
+v4 verifies with a **Project Management Tool** (Asana / Linear-like, 5 routes, 20+ reducers, List/Board switching, subtasks, due date).
+
+## 20.2 Task
 
 `benchmarks/learning-cost-v4/task-spec.md` — PM Tool SPA:
 - 5 routes (`/`, `/projects/:id`, `/projects/:id/tasks/:taskId`, `/projects/:id/new-task`, `/settings`)
-- 20+ reducers (Project CRUD / Task CRUD / status・priority・assignee・dueDate 編集 / tag / comment / filter / view 切替 / theme)
-- List view ⇄ Board view (4 status カラム)
-- Projects → Tasks (parentTaskId でサブタスク) → Comments の階層
-- localStorage 永続化 (projects / tasks / comments)
+- 20+ reducers (Project CRUD / Task CRUD / status / priority / assignee / dueDate editing / tag / comment / filter / view switching / theme)
+- List view ⇄ Board view (4 status columns)
+- the hierarchy of Projects → Tasks (subtasks via parentTaskId) → Comments
+- localStorage persistence (projects / tasks / comments)
 - Light / Dark theme
 
-## 20.3 結果
+## 20.3 Results
 
-| 条件 | LOC | parse | typecheck | build | 全機能ブラウザ動作 |
+| Condition | LOC | parse | typecheck | build | Full-feature browser operation |
 |---|---:|:-:|:-:|:-:|:-:|
 | P-Claude | 1255 | ✓ | ✗ | — | — |
-| **P-Codex (gpt-5.5)** | **1309** | **✓** | **✓** | **✓** | **✓ (全機能動作)** |
+| **P-Codex (gpt-5.5)** | **1309** | **✓** | **✓** | **✓** | **✓ (all features work)** |
 | P-Gemini | 606 | ✗ | — | — | — |
 
-### P-Codex の卓越 — 1309 LOC 一発通過
+### P-Codex's Excellence — 1309 LOC Passed in One Shot
 
-**これまでで最大規模の成功事例**。OpenAI gpt-5.5 が 1300+ LOC の PM Tool を一発書きで parse/typecheck/build 通過。後述のランタイム修正後、ブラウザで全機能動作:
-- Project 作成 / アーカイブ / 削除
-- Task 作成 / status・priority・assignee・due date 編集 / tag / コメント / サブタスク
-- **List view ⇄ Board view 切替**（Board は 4 status カラム）
-- **フィルタ**（status / priority / assignee / search、Board でも有効）
-- due date 設定（Overdue/Today/Soon/Upcoming 判定）
-- Light/Dark theme 切替 / localStorage 永続化
+**The largest-scale success case so far**. OpenAI gpt-5.5 passed parse/typecheck/build of a 1300+ LOC PM Tool in one-shot writing. After the runtime fixes described below, all features work in the browser:
+- Project creation / archive / deletion
+- Task creation / status / priority / assignee / due date editing / tag / comment / subtask
+- **List view ⇄ Board view switching** (Board is 4 status columns)
+- **filters** (status / priority / assignee / search, also effective on Board)
+- due date setting (Overdue/Today/Soon/Upcoming determination)
+- Light/Dark theme switching / localStorage persistence
 
-### P-Claude (1255 LOC) — typecheck で 1-write 違反
+### P-Claude (1255 LOC) — 1-write Violation at typecheck
 
-P-Claude は最も網羅的に書いたが、`deleteTask` reducer で:
+P-Claude wrote the most comprehensively, but in the `deleteTask` reducer:
 ```strand
 tasks := tasks.remove(tid)
-tasks := tasks.filter(taskNotChildOf($2, tid))   # ← 同 path 2 回目で E0601
+tasks := tasks.filter(taskNotChildOf($2, tid))   # ← E0601 on the 2nd write to the same path
 ```
-これは Strand の **1-reducer-1-write 制約**（path-shape granularity, docs 01 §1.6.4）に対する違反。`tasks := tasks.remove(tid).filter(...)` とチェーンすれば 1-write で通る。agent-loop なら自己復旧できる範囲だが、一発書きでは違反した。**仕様の意図通りの reject** であり実装バグではない。
+This is a violation of Strand's **1-reducer-1-write constraint** (path-shape granularity, docs 01 §1.6.4). Chaining as `tasks := tasks.remove(tid).filter(...)` passes within 1-write. With agent-loop it is within self-recovery range, but in one-shot writing it violated. This is a **reject as the specification intends**, not an implementation bug.
 
-### P-Gemini (606 LOC) — tile に tuple 引数
+### P-Gemini (606 LOC) — tuple Argument to a tile
 
-Gemini は最も簡潔だが、`StatusColumn((p.id, Backlog))` のように **tile に tuple リテラル引数**を渡した。Strand の tile 引数は単一値で、tuple リテラルは未サポート。仕様外の構文を持ち込んだ。spec では record 引数 `{projectId: ..., status: ...}` を使うべき（P-Codex はこの形で正しく書いた）。
+Gemini was the most concise, but passed a **tuple literal argument to a tile** as in `StatusColumn((p.id, Backlog))`. Strand's tile arguments are a single value, and tuple literals are unsupported. It brought in out-of-spec syntax. In the spec, a record argument `{projectId: ..., status: ...}` should be used (P-Codex wrote it correctly in this form).
 
-## 20.4 ブラウザ動作検証で発覚した仕様 ↔ 実装の乖離 (v4 で 7 件)
+## 20.4 Specification ↔ Implementation Divergences Revealed by Browser Operation Verification (7 in v4)
 
-P-Codex のコードを実機で動かす過程で発覚し、修正:
+Revealed and fixed in the process of running P-Codex's code on real devices:
 
-| # | 修正 | 検出シナリオ |
+| # | Fix | Detection scenario |
 |---|---|---|
-| 31 | `Duration.h/m/s/ms/d` コンストラクタを ms に変換 | `now.plus(Duration.h(72))` |
-| 32 | `Time.plus / .minus / .diff` method（ms 演算） | `now.plus(...)` |
-| 33 | `.flat-map` を Option dispatch (`flatMapOption`) | `routeProjectId(r).flat-map(ps.get($1))` |
-| 34 | `.map` を List/Option polymorphic (`mapOver`) | `option.map(...)` / `list.map(...)` |
-| 35 | `.filter` / `.map` の `.entries` tuple destructure 統一 | `ts.entries.filter($2.projectId == ...)` |
-| 36 | input/textarea の **DOM-path focus 復元**（bind/id なしでも） | `value=`-only な検索ボックスで focus が外れる |
-| 37 | **select の valueKey を payload まで再帰**（variant 衝突回避） | `Option(Status)` の `Some(Backlog)` / `Some(InProgress)` が全部 `_tag:"Some"` で衝突し「最後の選択肢」に固定される |
-| 38 | named arg (`text=if c then ... else ...`) の if を value context | `button(text=if viewMode == ListView then "Board" else "List")` |
+| 31 | convert the `Duration.h/m/s/ms/d` constructor to ms | `now.plus(Duration.h(72))` |
+| 32 | `Time.plus / .minus / .diff` methods (ms arithmetic) | `now.plus(...)` |
+| 33 | Option dispatch for `.flat-map` (`flatMapOption`) | `routeProjectId(r).flat-map(ps.get($1))` |
+| 34 | make `.map` List/Option polymorphic (`mapOver`) | `option.map(...)` / `list.map(...)` |
+| 35 | unify `.entries` tuple destructure for `.filter` / `.map` | `ts.entries.filter($2.projectId == ...)` |
+| 36 | **DOM-path focus restoration** for input/textarea (even without bind/id) | focus drops off on a `value=`-only search box |
+| 37 | **recurse select's valueKey down to the payload** (variant collision avoidance) | `Option(Status)`'s `Some(Backlog)` / `Some(InProgress)` all collide as `_tag:"Some"` and get fixed to the "last option" |
+| 38 | value context for the if in a named arg (`text=if c then ... else ...`) | `button(text=if viewMode == ListView then "Board" else "List")` |
 
-特に **#37 (valueKey の variant 衝突)** は v4 で初めて `Option(Variant)` を select の値にしたことで浮上した。フラットな `_tag` 比較では `Some(A)` と `Some(B)` が区別できず、最後の選択肢が常に選ばれる UX バグだった。
+In particular, **#37 (valueKey's variant collision)** surfaced for the first time in v4 by making `Option(Variant)` a select value. With a flat `_tag` comparison, `Some(A)` and `Some(B)` cannot be distinguished, a UX bug where the last option is always selected.
 
-## 20.5 含意
+## 20.5 Implications
 
-### gpt-5.5 が 1300 LOC を一発書き
+### gpt-5.5 One-Shot Writes 1300 LOC
 
-v3 では Claude が 727 LOC で勝者だったが、v4 では **gpt-5.5 (Codex) が 1309 LOC で唯一の完全通過**。モデルによって得意なスケール帯が違う:
-- **Claude**: 仕様の応用力が高いが、踏み込みすぎて 1-write 制約に抵触
-- **gpt-5.5**: 防御的・冗長だが大規模で堅牢。spec 通りの record 引数を選ぶ慎重さ
-- **Gemini**: 簡潔だが他言語構文（tuple 引数、`let..in`）の混入リスク
+In v3 Claude was the winner at 727 LOC, but in v4 **gpt-5.5 (Codex) is the only full pass at 1309 LOC**. The scale band a model is good at differs by model:
+- **Claude**: high applicative power for the specification, but pushes too far and hits the 1-write constraint
+- **gpt-5.5**: defensive and verbose but robust at large scale. The caution to choose spec-compliant record arguments
+- **Gemini**: concise but with the risk of mixing in other-language syntax (tuple arguments, `let..in`)
 
-### 「動く」の検証が言語の網羅性を試す
+### Verifying "it works" Tests the Language's Coverage
 
-v4 でも parse/typecheck/build 通過後にブラウザで 7 件のランタイム抜けが発覚。これらは **「より深い機能を使ったとき初めて叩かれるパス」**:
-- `Option(Variant)` を select 値にする（valueKey 衝突）
-- `Duration` 演算（due date）
-- `.flat-map` で Option をチェーン
-- bind なし `value=` 検索ボックスの focus
+In v4 too, 7 runtime gaps surfaced in the browser after passing parse/typecheck/build. These are **"paths exercised for the first time when using deeper features"**:
+- making `Option(Variant)` a select value (valueKey collision)
+- `Duration` arithmetic (due date)
+- chaining Option with `.flat-map`
+- focus on a bind-less `value=` search box
 
-小規模アプリでは決して踏まない経路で、**大規模アプリが言語実装の網羅性を試す**という v3 の知見が再確認された。
+These are routes never trodden in small-scale apps, reconfirming the v3 insight that **large-scale apps test the language implementation's coverage**.
 
-## 20.6 累計サマリ（v1〜v4）
+## 20.6 Cumulative Summary (v1–v4)
 
-学習コスト検証 4 ラウンドで検出・修正した Strand 実装抜けは **累計 38 件**:
+The Strand implementation gaps detected and fixed across 4 rounds of learning cost verification total **38**:
 
-| 範囲 | 累計件数 |
+| Scope | Cumulative count |
 |---|---:|
 | Parser | 11 |
 | Typecheck | 2 |
 | Codegen | 17 |
 | Runtime | 8 |
 
-全件修正後、71 テスト pass + Pomodoro / Kanban / Issue Tracker / **PM Tool (1309 LOC)** の 4 アプリ完全動作。
+After fixing all, 71 tests pass + full operation of the 4 apps Pomodoro / Kanban / Issue Tracker / **PM Tool (1309 LOC)**.
 
-## 20.7 結論
+## 20.7 Conclusion
 
-| 検証項目 | 結果 |
+| Verification item | Result |
 |---|---|
-| **1000+ LOC の壁** | ✓ gpt-5.5 が 1309 LOC を一発書き完全通過 |
-| **深い階層 (Project→Task→SubTask→Comment)** | ✓ ブラウザ動作確認済 |
-| **複合機能 (List/Board + フィルタ + due date + theme)** | ✓ 全機能動作 |
-| **動的整合** | △ v4 で 7 件の追加抜け → 全件修正済 |
-| **言語仕様の根本的欠陥** | **なし**。検出された全件は実装抜けで埋められた |
+| **The 1000+ LOC wall** | ✓ gpt-5.5 fully passed 1309 LOC in one-shot writing |
+| **Deep hierarchy (Project→Task→SubTask→Comment)** | ✓ browser operation confirmed |
+| **Composite features (List/Board + filter + due date + theme)** | ✓ all features work |
+| **Dynamic consistency** | △ 7 additional gaps in v4 → all fixed |
+| **Fundamental defect of the language specification** | **none**. All detected cases were filled in as implementation gaps |
 
-**結論**: Strand v0.1 は、1300 LOC 級の実用 SaaS 相当 SPA を AI が一発書きで動かすレベルに到達した。中規模ビジネスアプリ（プロジェクト管理 / チケット管理 / 管理画面）が AI 一発書きの射程に完全に入った。
+**Conclusion**: Strand v0.1 reached a level where the AI gets a 1300 LOC-class practical SaaS-equivalent SPA working in one-shot writing. Medium-scale business apps (project management / ticket management / admin screens) have entirely entered the range of AI one-shot writing.
 
-## 20.8 再現
+## 20.8 Reproduction
 
 ```bash
 cd reference

@@ -1,26 +1,28 @@
-# 設計ノート (design-notes/)
+# Design Notes (design-notes/)
 
-ここは Strand の**経緯と判断の記録**である。仕様そのものではなく、「なぜ今この形なのか」を残す。現在の正規仕様は [../spec/](../spec/) を参照すること。本ディレクトリの記述は、書かれた時点のスナップショットであり、現在のコードと食い違うことがある。
+English · [日本語](./README.ja.md)
 
-## 設計理念
+This is the **record of Strand's history and decisions**. Rather than the specification itself, it preserves "why it has its current shape." For the current canonical specification, refer to [../spec/](../spec/). The descriptions in this directory are snapshots from the time they were written, and may diverge from the current code.
 
-- [rationale.md](./rationale.md) — Strand の設計理念と前提
+## Design Rationale
 
-## PoC の段階的実装記録
+- [rationale.md](./rationale.md) — Strand's design rationale and premises
+
+## Incremental PoC Implementation Records
 
 - [poc-phase1.md](./poc-phase1.md) — Counter
 - [poc-phase2.md](./poc-phase2.md) — TodoMVC
 - [poc-phase3.md](./poc-phase3.md) — Blog SPA
-- [poc-phase4.md](./poc-phase4.md) — テーマ・スタイル・a11y・エラー境界
-- [poc-ai-edit.md](./poc-ai-edit.md) — AI 編集 API / CRDT op
-- [reference-phase1-status.md](./reference-phase1-status.md) — Phase 1 リファレンス実装の AC 達成状況
+- [poc-phase4.md](./poc-phase4.md) — Theme, styling, a11y, error boundary
+- [poc-ai-edit.md](./poc-ai-edit.md) — AI editing API / CRDT op
+- [reference-phase1-status.md](./reference-phase1-status.md) — AC achievement status of the Phase 1 reference implementation
 
-## ベンチマーク
+## Benchmarks
 
 - [benchmark.md](./benchmark.md) — Strand vs React (TodoMVC)
-- [learning-cost-v1.md](./learning-cost-v1.md) — LLM 学習コスト v1
-- [learning-cost-v2.md](./learning-cost-v2.md) — v2（クロスモデル + 大規模 + ブラウザ検証）
-- [learning-cost-v3.md](./learning-cost-v3.md) — v3（500+ LOC）
-- [learning-cost-v4.md](./learning-cost-v4.md) — v4（800–1500 LOC・全機能ブラウザ動作）
+- [learning-cost-v1.md](./learning-cost-v1.md) — LLM learning cost v1
+- [learning-cost-v2.md](./learning-cost-v2.md) — v2 (cross-model + large-scale + browser validation)
+- [learning-cost-v3.md](./learning-cost-v3.md) — v3 (500+ LOC)
+- [learning-cost-v4.md](./learning-cost-v4.md) — v4 (800–1500 LOC, full-feature browser operation)
 
-生データと測定スクリプトは [../benchmarks/](../benchmarks/) にある。
+The raw data and measurement scripts are in [../benchmarks/](../benchmarks/).

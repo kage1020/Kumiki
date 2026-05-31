@@ -1,31 +1,33 @@
 # Changelog
 
-形式は [Keep a Changelog](https://keepachangelog.com/) に準拠し、[Semantic Versioning](https://semver.org/) を採用する。
+English · [日本語](./CHANGELOG.ja.md)
+
+The format follows [Keep a Changelog](https://keepachangelog.com/) and adopts [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
 ### Added
 
-- pnpm + Turborepo モノレポ構成（`@strand/compiler` / `@strand/runtime` / `@strand/cli` / `@strand/mcp`）。
-- `@strand/mcp`: コンパイラと AI 編集・仕様検索を MCP ツールとして公開する MCP サーバー。
-- **ランタイム smoke テスト**: `@strand/runtime` の `smoke()`、CLI `strand smoke <file>`、MCP `strand_smoke`。headless DOM に mount して UI を操作し、`check`/`build` では捕まらないランタイム例外・空描画・未処理 rejection を検出。全 example が CI で smoke 検証される（`tests/smoke.test.ts`）。3 層検証モデルは [spec/testing.md](./spec/testing.md) §8.10。
-- **シナリオランナーと自律ループ substrate**: `@strand/runtime` の `runScenario()`、CLI `strand run <file> <scenario.json>`、MCP `strand_run_scenario`。操作列 + slot 状態アサーションでアプリを駆動し、毎ステップの状態・DOM・エラー・emit を trace で返す。effect は capability 境界でモックされ決定論的。状態を oracle にするため「select が常に最後の選択肢になる」等の非例外バグも検出可能。人を介さない生成→実行→観測→修正ループの手順は `.claude/skills/strand-iterate`。
-- **実ブラウザ検証 tier `@strand/e2e`**（Chromium / Playwright）: jsdom と同じシナリオ形式を実ブラウザで実行し、`focused`（実フォーカス）・`visible`/`hidden`（計算済み可視性）など jsdom では検証できない層を捕捉。opt-in（ブラウザバイナリが重く既定 CI には含めない）。例: `examples/apps/06-expenses/scenario.browser.json`。
-- `spec/`: 正規仕様を再編。エラーコードカタログ `spec/errors.md`（E0001..E07xx）を新設。
-- `examples/`: 機能別ミニマル例 23 件（`features/`）と規模順アプリ 5 件（`apps/`）。すべて CI でパース・型検査・ビルドを検証。
-- `tests/`: 全 example の動作保証テスト。
-- `guide/`: はじめに・最初のアプリ・考え方・レシピ。
-- `.claude/skills/`: `strand-author` / `strand-debug` / `strand-iterate` スキル。
-- `design-notes/`: 設計の経緯とベンチマーク（学習コスト v1–v4、React 比トークン効率）を集約。
-- **静的メソッド存在チェック (E0801)**: `obj.method(...)` がランタイム未実装のメソッド（綴り間違い、`Option.to-result` のような誤用、未実装の仕様メソッド）を呼ぶと `check` 段階で検出。実装集合は `@strand/compiler` の `KNOWN_METHODS`（codegen と同期）が唯一の正。以前 smoke 層でしか捕まらなかった `.to-result` 級のバグを layer 1 で先取りする。
-- **`List.fold` / `Int`・`Float.parse` の修正**（iterate ループのデモ中に検出）: `fold` の codegen + runtime を実装、`Int.parse`/`Float.parse` を数値変換に修正（従来は文字列を返し合計等が壊れた）。例: `examples/features/24-fold.strand`, `examples/apps/06-expenses/`。
+- pnpm + Turborepo monorepo structure (`@strand/compiler` / `@strand/runtime` / `@strand/cli` / `@strand/mcp`).
+- `@strand/mcp`: an MCP server exposing the compiler, AI editing, and spec search as MCP tools.
+- **Runtime smoke tests**: `@strand/runtime`'s `smoke()`, CLI `strand smoke <file>`, MCP `strand_smoke`. Mounts to a headless DOM and operates the UI to detect runtime exceptions, empty rendering, and unhandled rejections that `check`/`build` don't catch. All examples are smoke-verified in CI (`tests/smoke.test.ts`). The 3-layer verification model is in [spec/testing.md](./spec/testing.md) §8.10.
+- **Scenario runner and autonomous-loop substrate**: `@strand/runtime`'s `runScenario()`, CLI `strand run <file> <scenario.json>`, MCP `strand_run_scenario`. Drives the app with an operation sequence + slot state assertions, returning the state, DOM, errors, and emits at every step as a trace. Effects are mocked at the capability boundary and are deterministic. Because state is used as the oracle, it can also detect non-exception bugs such as "select always ends up at the last option". The procedure for the human-free generate → run → observe → fix loop is in `.claude/skills/strand-iterate`.
+- **Real-browser verification tier `@strand/e2e`** (Chromium / Playwright): runs the same scenario format as jsdom in a real browser, capturing layers that jsdom can't verify such as `focused` (real focus), `visible`/`hidden` (computed visibility). Opt-in (browser binaries are heavy, so it's not included in default CI). Example: `examples/apps/06-expenses/scenario.browser.json`.
+- `spec/`: reorganized the normative spec. Added a new error code catalog `spec/errors.md` (E0001..E07xx).
+- `examples/`: 23 per-feature minimal examples (`features/`) and 5 apps ordered by size (`apps/`). All have parsing, type checking, and build verified in CI.
+- `tests/`: behavior-guarantee tests for all examples.
+- `guide/`: getting started, first app, mental model, recipes.
+- `.claude/skills/`: `strand-author` / `strand-debug` / `strand-iterate` skills.
+- `design-notes/`: consolidates design rationale and benchmarks (learning cost v1–v4, token efficiency vs. React).
+- **Static method existence check (E0801)**: when `obj.method(...)` calls a method not implemented in the runtime (a typo, misuse like `Option.to-result`, or an unimplemented spec method), it is detected at the `check` stage. The implementation set is the single source of truth in `@strand/compiler`'s `KNOWN_METHODS` (kept in sync with codegen). It catches `.to-result`-class bugs — previously caught only at the smoke layer — at layer 1.
+- **`List.fold` / `Int` / `Float.parse` fixes** (found while demoing the iterate loop): implemented `fold`'s codegen + runtime, and fixed `Int.parse`/`Float.parse` to do numeric conversion (previously they returned strings, breaking sums and the like). Examples: `examples/features/24-fold.strand`, `examples/apps/06-expenses/`.
 
 ### Changed
 
-- 1 reducer 1 書き込み規則を、ルート名粒度から **パス形状（lvalue shape）粒度**へ。`tasks[id].status` と `tasks[id].updatedAt` が共存可能に。
-- ランタイム: dispose 後の遅延 effect 結果が DOM を触らないようガード（in-flight fetch 起因の `NotFoundError` を解消）。
-- AST: `IfStmt` / `IfExpr` / `TileIf` のフィールドを `then`/`else` → `consequent`/`alternate` に改名。
+- Changed the one-reducer-one-write rule from route-name granularity to **path-shape (lvalue shape) granularity**. `tasks[id].status` and `tasks[id].updatedAt` can now coexist.
+- Runtime: guard so that delayed effect results after dispose don't touch the DOM (resolves `NotFoundError` caused by in-flight fetches).
+- AST: renamed the fields of `IfStmt` / `IfExpr` / `TileIf` from `then`/`else` → `consequent`/`alternate`.
 
 ### Notes
 
-- experimental v0.1。言語・ランタイム・ツールは予告なく変わりうる。
+- experimental v0.1. The language, runtime, and tools may change without notice.

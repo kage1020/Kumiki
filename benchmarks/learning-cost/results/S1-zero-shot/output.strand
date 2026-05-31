@@ -1,4 +1,4 @@
-# Pomodoro Timer — Strand 実装
+# Pomodoro Timer — Strand implementation
 
 type Mode      = Work | Break
 type Remaining = nominal Int where between(0, 1500)

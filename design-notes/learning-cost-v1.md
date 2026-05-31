@@ -1,57 +1,59 @@
-# Strand 学習コストベンチマーク
+# Strand Learning Cost Benchmark
 
-Strand は学習データを持たない新規言語。LLM が **仕様 docs だけを context にして** どれだけ正確に Strand を書けるかを実測した。
+English · [日本語](./learning-cost-v1.ja.md)
 
-## 17.1 実験設計
+Strand is a new language with no training data. We measured how accurately an LLM can write Strand **using only the specification docs as context**.
 
-**タスク**: Pomodoro タイマー SPA（2 モード切替、Start/Pause/Reset、1 秒ごとの tick、モード境界での自動切替）。タスクは `benchmarks/learning-cost/task-spec.md`。
+## 17.1 Experiment Design
 
-**4 条件** を独立した Claude subagent に並列実行させた（subagent には親会話の context は渡らないので、Strand を「初見」として扱う）：
+**Task**: A Pomodoro timer SPA (2-mode switching, Start/Pause/Reset, a tick every 1 second, automatic switching at mode boundaries). The task is in `benchmarks/learning-cost/task-spec.md`.
 
-| 条件 | LLM に与えた context | 自己修復 |
+We ran **4 conditions** in parallel on independent Claude subagents (the subagents do not receive the parent conversation's context, so they treat Strand as "first encounter"):
+
+| Condition | context given to the LLM | Self-repair |
 |---|---|---|
-| **S1: 0-shot** | 仕様 docs (01–10) のみ。examples は禁止 | なし（一発書き） |
-| **S2: 1-shot** | 仕様 + `01-counter.strand` | なし |
-| **S3: few-shot** | 仕様 + 3 examples (Counter / TodoMVC / Blog) | なし |
-| **S4: agent-loop** | S3 と同じ + `strand check` を呼ぶ権限 (最大 10 iter) | あり |
+| **S1: 0-shot** | specification docs (01–10) only. examples forbidden | none (one-shot write) |
+| **S2: 1-shot** | specification + `01-counter.strand` | none |
+| **S3: few-shot** | specification + 3 examples (Counter / TodoMVC / Blog) | none |
+| **S4: agent-loop** | same as S3 + permission to call `strand check` (up to 10 iter) | yes |
 
-評価は `reference/scripts/learning-cost-eval.mjs` で **parse / typecheck / build** の各段階を判定。
+Evaluation judges each of the **parse / typecheck / build** stages via `reference/scripts/learning-cost-eval.mjs`.
 
-## 17.2 結果
+## 17.2 Results
 
-| 条件 | parse | typecheck | build | LOC | cl100k トークン | self_confidence |
+| Condition | parse | typecheck | build | LOC | cl100k tokens | self_confidence |
 |---|:-:|:-:|:-:|---:|---:|---|
 | S1 (0-shot)        | ✗ | ✗ | ✗ | 66 | 449 | med |
 | S2 (1-shot)        | ✗ | ✗ | ✗ | 64 | 437 | med |
 | S3 (few-shot)      | ✗ | ✗ | ✗ | 90 | 609 | high |
 | **S4 (agent-loop)**| **✓** | **✓** | **✓** | 94 | 562 | high |
 
-**衝撃の事実: 一発書きは 3 設定全て parse 不能。agent-loop だけが clean に到達した。**
+**Shocking fact: all 3 one-shot configurations fail to parse. Only agent-loop reached clean.**
 
-## 17.3 共通の失敗パターン
+## 17.3 Common Failure Patterns
 
-S1 / S2 / S3 はそれぞれ独立に書いたにも関わらず、**3 つとも同じ失敗で parse 不能**：
+Even though S1 / S2 / S3 were each written independently, **all three failed to parse with the same failure**:
 
 ```
 Parse error: Expected op(.), got op(()  near `on=timer(1s)`
 ```
 
-仕様 docs の EBNF には `timer-event ::= 'timer' '(' duration ')'` 風の記述があるが、**parser には実装されていない**。LLM は仕様に書いてあるのでそれを使ってしまった。
+The specification docs' EBNF contains a description like `timer-event ::= 'timer' '(' duration ')'`, but **it is not implemented in the parser**. The LLM used it because it was written in the specification.
 
-これは「Strand 仕様自体のバグ」と「LLM が仕様を素直に信じた結果」の合体。次のような副次的失敗もあった：
+This is a fusion of "a bug in the Strand specification itself" and "the result of the LLM naively believing the specification." There were also secondary failures like the following:
 
-| 落とし穴 | LLM が間違えた箇所 |
+| Pitfall | Where the LLM went wrong |
 |---|---|
-| timer event 未実装 | 3/3 条件で `on=timer(1s)` を使用 |
-| reducer do-block の多文 if/else は `{...}` 必須 | S3, S4 で発生 |
-| **1 reducer につき 1 slot 書き込みは排他分岐でも数える** | S1 〜 S4 全て遭遇 |
-| variant 構築の syntax (`Work` vs `Work()`) | S1 が不安と報告 |
-| Bool prop に slot 直接束縛できるか不明 | S1 が不安と報告 |
-| Int の文字列化が `.show` か `.to-text` か | S3 が不安と報告 |
+| timer event unimplemented | used `on=timer(1s)` in 3/3 conditions |
+| multi-statement if/else in a reducer do-block requires `{...}` | occurred in S3, S4 |
+| **1 slot write per 1 reducer counts even across exclusive branches** | encountered in all of S1–S4 |
+| variant construction syntax (`Work` vs `Work()`) | S1 reported uncertainty |
+| unclear whether a slot can be bound directly to a Bool prop | S1 reported uncertainty |
+| whether Int stringification is `.show` or `.to-text` | S3 reported uncertainty |
 
-## 17.4 S4 (agent-loop) のループ詳細
+## 17.4 S4 (agent-loop) Loop Details
 
-S4 が clean に到達するまでの 4 iteration：
+The 4 iterations until S4 reached clean:
 
 ```
 Iter 1: Parse error at 46:13 — `on=timer(1s)` not supported (parser).
@@ -62,134 +64,134 @@ Iter 4: 0 errors — refactored to compute next state via pure fns,
                    capture into `let` bindings, each slot written exactly once.
 ```
 
-LLM はエラーメッセージを見て **正しい方向に自己修正できた**。各 iter で異なる問題を 1 つずつ潰している。
+The LLM was able to **self-correct in the right direction** by looking at the error messages. Each iter eliminates one distinct problem at a time.
 
-## 17.5 解釈
+## 17.5 Interpretation
 
-### 「examples を増やせば学習できる」は誤り
+### "You can learn it by adding more examples" is wrong
 
-S1 → S2 → S3 で context は増えていったが、**通過率は 0% から動かない**。3 つの example でも `timer(1s)` の罠は見抜けなかった。これは：
+Across S1 → S2 → S3 the context grew, but **the pass rate does not budge from 0%**. Even 3 examples could not foresee the `timer(1s)` trap. This shows:
 
-- 仕様 docs の EBNF / 散文と **実装の乖離** が LLM の最大の敵
-- 「examples で正しい用例を見せる」は強力だが、**examples に含まれない構文** は推測されてしまう
-- few-shot は self_confidence を「med → high」に上げてしまい、**過信したまま間違える** という悪化方向もある
+- The **divergence between implementation** and the specification docs' EBNF / prose is the LLM's biggest enemy
+- "Showing correct usage through examples" is powerful, but **syntax not contained in the examples** ends up being guessed
+- few-shot raised self_confidence from "med → high", which can also worsen things: **being overconfident while still wrong**
 
-### 「strand check を自己ループさせる」のは決定的
+### "Self-looping strand check" is decisive
 
-S4 は同じ仕様、同じ examples でも、`strand check` を 4 回回せば clean になる。これは Strand の中心的設計：
+With the same specification and the same examples, S4 becomes clean after running `strand check` 4 times. This is Strand's central design:
 
-1. **構造化エラーコード** (E0601 など) と位置情報
-2. **validate-then-rollback** で破壊的編集を抑止
-3. **小さな修正単位** で 1 ループ 1 問題に分離
+1. **Structured error codes** (such as E0601) and location information
+2. **validate-then-rollback** to suppress destructive edits
+3. **Small fix units** to separate one problem per loop
 
-つまり Strand は **「一発で書ける言語」ではなく「ループで書く言語」** として運用するのが正解。
+In other words, Strand should be operated as **"a language you write in a loop," not "a language you can write in one shot."**
 
-### MCP server / AI 編集 API の正当性
+### Legitimacy of the MCP server / AI editing API
 
-S4 の loop は「LLM が手動で `strand check` を呼んだ」だけだが、これを MCP server / AI 編集 API として固定化すれば：
+S4's loop is merely "the LLM manually called `strand check`," but if we cement this as an MCP server / AI editing API:
 
-- LLM 側のプロンプトに「ループせよ」と書かなくても、tool 呼び出し regimen として自動的にループする
-- validate-then-rollback で間違った op は適用されない（Strand v0.1 既存機能）
-- 結果として「Strand に学習コストはあるが、ループ前提なら 4 iter 程度で収束する」と数値化できる
+- It loops automatically as a tool-invocation regimen, even without writing "loop" in the LLM-side prompt
+- With validate-then-rollback, incorrect ops are not applied (an existing feature of Strand v0.1)
+- As a result, we can quantify it as "Strand has a learning cost, but on a loop-based premise it converges in around 4 iter"
 
-## 17.6 トークンコストの観点
+## 17.6 Token Cost Perspective
 
-S4 の総コスト（ループ全体）を推定：
-- 仕様 docs を読む: ~5500 行 ≈ 30k tokens（context 入力）
-- iter 1〜4 の入出力（output 562 + 各 error report 〜200）: ~3k tokens
-- **合計 ≈ 33k tokens** で 90 行の動く Strand コード
+Estimating S4's total cost (the entire loop):
+- Reading the specification docs: ~5500 lines ≈ 30k tokens (context input)
+- I/O for iter 1–4 (output 562 + each error report ~200): ~3k tokens
+- **Total ≈ 33k tokens** for 90 lines of working Strand code
 
-比較として **React で同等タスクを Claude に書かせる** と推定で：
-- 仕様読み込みゼロ（学習データに React がある）
-- output 〜80 行 / 〜500 tokens（一発）
-- **合計 ≈ 1k tokens**
+For comparison, **having Claude write an equivalent task in React** is estimated at:
+- Zero specification loading (React is in the training data)
+- output ~80 lines / ~500 tokens (one-shot)
+- **Total ≈ 1k tokens**
 
-つまり **Strand は初回タスクで 30 倍コスト高**。ただし：
-- 仕様 docs の読み込みは **session 1 回**（多くのコーディングエージェントは context cache する）
-- 2 タスク目以降は op stream 形式で 0.5k tokens / タスク（15 章ベンチマーク参照）
-- **N タスク目の累積コスト** は Strand: `30k + 0.5k * N`、React: `1k * N` → **N=30 で逆転**
+In other words, **Strand is 30x more costly on the first task**. However:
+- Reading the specification docs happens **once per session** (many coding agents context cache)
+- From the 2nd task onward it is 0.5k tokens / task in op stream form (see the Chapter 15 benchmark)
+- The **cumulative cost at the Nth task** is Strand: `30k + 0.5k * N`, React: `1k * N` → **the crossover is at N=30**
 
-長期 / 大規模 / 並列 agent シナリオでは Strand 有利、単発タスクでは React 有利、という構図。
+The picture: Strand is favorable in long-term / large-scale / parallel agent scenarios, while React is favorable for one-off tasks.
 
-## 17.7 Strand 側で取るべき改善
+## 17.7 Improvements to Make on the Strand Side
 
-このベンチマークで判明した既知問題：
+Known issues revealed by this benchmark:
 
-| 問題 | 緊急度 | 対応 |
+| Issue | Urgency | Response |
 |---|---|---|
-| `timer(d)` event が docs にあり parser に無い | **高** | parser に追加 or docs から削除 |
-| reducer do-block の多文 if/else が `{...}` 必須なことを example に出す | 中 | examples に 1 件追加 |
-| 1 reducer 1 slot 書き込みルールが守れない場合のエラー文言 | 中 | E0601 のメッセージに「if/else でも合算」を明示 |
-| 仕様 docs に「初心者がやりがちなアンチパターン」セクション | 低 | doc 追記 |
+| `timer(d)` event is in the docs but not in the parser | **High** | add to parser or remove from docs |
+| show in an example that multi-statement if/else in a reducer do-block requires `{...}` | Medium | add 1 example |
+| error wording for when the 1 slot write per 1 reducer rule is broken | Medium | make E0601's message explicit that "if/else is also summed" |
+| add an "anti-patterns beginners tend to fall into" section to the specification docs | Low | doc addendum |
 
-## 17.8 結論
+## 17.8 Conclusion
 
-- **Strand を一発で正しく書かせるのは現実的でない**。3 通りの context 設定全てで parse 失敗
-- **しかし agent-loop ありなら 4 iter で 100% clean**。Strand の自己修復ループ設計は正当化された
-- **AI 編集 API + MCP server で運用するのが Strand の意図通り**
-- **長期累積では React より安くなる**（推定 N=30 タスク目で逆転）
+- **Having Strand written correctly in one shot is not realistic**. All 3 context configurations failed to parse
+- **However, with agent-loop it is 100% clean in 4 iter**. Strand's self-repair loop design is justified
+- **Operating it with the AI editing API + MCP server is as Strand intends**
+- **In long-term accumulation it becomes cheaper than React** (estimated crossover at the N=30 task)
 
-このベンチマークは **「Strand には学習コストがあるが、ループ運用で吸収できる」** ことを実証した。
+This benchmark demonstrated that **"Strand has a learning cost, but it can be absorbed through loop-based operation."**
 
-## 17.9 言語仕様修正後の再測定
+## 17.9 Re-measurement After Language Specification Fixes
 
-17.7 で挙げた既知問題のうち 4 件を実装した：
+We implemented 4 of the known issues raised in 17.7:
 
-| 修正 | 内容 |
+| Fix | Content |
 |---|---|
-| `timer(d)` event | parser + runtime に追加（reducer が `on=timer(1s)` で 1 秒ごと発火） |
-| 多文 if/else の braces 省略 | `parseStatementBody` を改行ベースに拡張、`else`/`}`/`\|`/EOF で停止 |
-| 1-reducer-1-write を branch-aware に | `if/match` の排他分岐内では各分岐で 1 write OK、合算しない |
-| `.show` / `.to-text` を統一 | docs から `to-text` を削除、`.show` を全型共通として明記 |
+| `timer(d)` event | added to parser + runtime (a reducer fires every 1 second with `on=timer(1s)`) |
+| omitting braces for multi-statement if/else | extended `parseStatementBody` to be newline-based, stopping at `else`/`}`/`\|`/EOF |
+| make 1-reducer-1-write branch-aware | within exclusive branches of `if/match`, 1 write per branch is OK, not summed |
+| unify `.show` / `.to-text` | removed `to-text` from the docs, specified `.show` as common to all types |
 
-**修正前の 4 出力 (元の subagent コード) を修正後の toolchain で再評価** した結果：
+The result of **re-evaluating the 4 pre-fix outputs (the original subagent code) with the post-fix toolchain**:
 
-| 条件 | parse 修正前 → 後 | typecheck | build | 残った問題 |
+| Condition | parse before → after fix | typecheck | build | Remaining issue |
 |---|---|:-:|:-:|---|
-| S1 (0-shot) | ✗ → ✗ | ✗ | ✗ | `&` を bool AND として使用（Strand は `&&`） |
-| S2 (1-shot) | ✗ → ✗ | ✗ | ✗ | 同上 |
-| **S3 (few-shot)** | **✗ → ✓** | **✓** | **✓** | なし — 一発で clean |
-| S4 (agent-loop) | ✓ → ✓ | ✓ | ✓ | (元から clean) |
+| S1 (0-shot) | ✗ → ✗ | ✗ | ✗ | used `&` as a bool AND (Strand uses `&&`) |
+| S2 (1-shot) | ✗ → ✗ | ✗ | ✗ | same as above |
+| **S3 (few-shot)** | **✗ → ✓** | **✓** | **✓** | none — clean in one shot |
+| S4 (agent-loop) | ✓ → ✓ | ✓ | ✓ | (clean from the start) |
 
-**4 修正で few-shot は一発書き成功に到達**。これは `timer(1s)` 不在 / `else` braces / 1-write rule の 3 つが S3 の本質的障壁だったことを意味する。
+**With the 4 fixes, few-shot reached one-shot-write success**. This means that the three of `timer(1s)` absence / `else` braces / the 1-write rule were S3's essential barriers.
 
-### 追加修正と最終結果
+### Additional Fixes and Final Results
 
-S1 / S2 が依然失敗していたのは LLM が C 風に `&` / `text(match...)` を書いたため。さらに 2 件の修正を追加：
+S1 / S2 were still failing because the LLM wrote C-style `&` / `text(match...)`. We added 2 more fixes:
 
-| 修正 | 内容 |
+| Fix | Content |
 |---|---|
-| **`&` を `&&` の alias として許容** | `parseLogicAnd` で `&` も bool AND として受理。`|` は型 union / match arm と衝突するため alias 対象外 |
-| **value-arg builtin の判別** | `text` / `heading` / `markdown` / `label` / `link` / `image` / `icon` の引数中の `match` は value match (`MatchExpr`)、それ以外の builtin は tile match (`TileMatch`)。`VALUE_ARG_BUILTINS` set で区別 |
+| **allow `&` as an alias of `&&`** | `parseLogicAnd` also accepts `&` as a bool AND. `|` collides with type union / match arm, so it is excluded from aliasing |
+| **discriminating value-arg builtins** | a `match` inside the arguments of `text` / `heading` / `markdown` / `label` / `link` / `image` / `icon` is a value match (`MatchExpr`); for other builtins it is a tile match (`TileMatch`). Distinguished via the `VALUE_ARG_BUILTINS` set |
 
-**最終再評価結果**:
+**Final re-evaluation results**:
 
-| 条件 | parse | typecheck | build | LOC | tokens |
+| Condition | parse | typecheck | build | LOC | tokens |
 |---|:-:|:-:|:-:|---:|---:|
 | **S1 (0-shot)**        | **✓** | **✓** | **✓** | 66 | 449 |
 | **S2 (1-shot)**        | **✓** | **✓** | **✓** | 63 | 431 |
 | **S3 (few-shot)**      | **✓** | **✓** | **✓** | 90 | 609 |
 | **S4 (agent-loop)**    | **✓** | **✓** | **✓** | 94 | 562 |
 
-**4/4 完全通過 (100%)**。zero-shot でも仕様 docs だけを context にして parse / typecheck / build まで通る。
+**4/4 fully pass (100%)**. Even zero-shot passes through parse / typecheck / build using only the specification docs as context.
 
-### 結論修正
+### Conclusion Revision
 
-学習コストはほぼ完全に **「言語仕様 ↔ 実装の不整合」と「LLM の直感に反する制約」** で説明できた。これらを潰した結果：
+The learning cost could be almost completely explained by **"the mismatch between the language specification ↔ implementation" and "constraints that run counter to the LLM's intuition."** As a result of eliminating these:
 
-- **MCP server / agent-loop は補助メカニズムにとどまる** — 通常タスクでは不要
-- **zero-shot 〜 few-shot の全領域で一発書きが成立** — ループによるトークン浪費なし
-- **長期累積コストの逆転点 N=30 → 大幅縮小** — 初回タスクで learning cost 1k tokens 程度（仕様 docs のキャッシュ込み）
+- **The MCP server / agent-loop remain auxiliary mechanisms** — unnecessary for ordinary tasks
+- **One-shot writing holds across the entire range from zero-shot to few-shot** — no token waste from loops
+- **The crossover point of the long-term cumulative cost N=30 → greatly shrank** — the learning cost on the first task is around 1k tokens (including caching of the specification docs)
 
-順序は正しく実証された: **仕様を AI に優しく直す（5 修正）→ 残った稀なエラーだけループで吸収**。
+The ordering was correctly demonstrated: **make the specification AI-friendly (5 fixes) → absorb only the remaining rare errors with a loop**.
 
-## 17.10 再現
+## 17.10 Reproduction
 
 ```bash
-# 4 subagent をそれぞれ独立に走らせる（外部 LLM API でも可）
-# 各 subagent への prompt は benchmarks/learning-cost/ 配下を参照
+# Run the 4 subagents independently (external LLM APIs are also fine)
+# For the prompt to each subagent, see under benchmarks/learning-cost/
 
-# 出力を評価
+# Evaluate the outputs
 cd reference
 pnpm exec tsx scripts/learning-cost-eval.mjs \
   ../benchmarks/learning-cost/results/S1-zero-shot/output.strand \
@@ -198,8 +200,8 @@ pnpm exec tsx scripts/learning-cost-eval.mjs \
   ../benchmarks/learning-cost/results/S4-agent-loop/output.strand
 ```
 
-実測ファイル:
-- `benchmarks/learning-cost/task-spec.md` — Pomodoro タスク仕様
-- `benchmarks/learning-cost/results/<condition>/output.strand` — LLM が書いたコード
-- `benchmarks/learning-cost/results/S4-agent-loop/loop.log` — agent-loop の試行ログ
-- `benchmarks/learning-cost/results/eval.json` — 自動評価結果
+Measured files:
+- `benchmarks/learning-cost/task-spec.md` — Pomodoro task specification
+- `benchmarks/learning-cost/results/<condition>/output.strand` — the code the LLM wrote
+- `benchmarks/learning-cost/results/S4-agent-loop/loop.log` — the agent-loop trial log
+- `benchmarks/learning-cost/results/eval.json` — automatic evaluation results

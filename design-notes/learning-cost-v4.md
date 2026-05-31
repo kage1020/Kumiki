@@ -124,7 +124,7 @@ node benchmarks/scripts/learning-cost-eval.mjs \
   benchmarks/learning-cost-v4/results/P-Codex/output.kumiki \
   benchmarks/learning-cost-v4/results/P-Gemini/output.kumiki
 
-pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build \
+pnpm kumiki build \
   benchmarks/learning-cost-v4/results/P-Codex/output.kumiki \
   out/pm-tool
 node benchmarks/scripts/serve.mjs out/pm-tool 5193 &

@@ -79,7 +79,7 @@ examples/apps/03-blog/app.kumiki は **errors=0** で通る。
 
 ### AC-Browser
 
-`pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/03-blog/app.kumiki out/blog` の結果を、mock JSON を同梱した状態でブラウザで開いて、posts → detail → about → 404 が回る。
+`pnpm kumiki build examples/apps/03-blog/app.kumiki out/blog` の結果を、mock JSON を同梱した状態でブラウザで開いて、posts → detail → about → 404 が回る。
 
 ## Mock Backend 戦略
 

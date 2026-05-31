@@ -161,7 +161,7 @@ node benchmarks/scripts/learning-cost-eval.mjs \
   benchmarks/learning-cost-v3/results/I-Gemini/output.kumiki
 
 # ブラウザ動作検証
-pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build \
+pnpm kumiki build \
   benchmarks/learning-cost-v3/results/I-Claude/output.kumiki \
   out/issue-tracker
 node benchmarks/scripts/serve.mjs out/issue-tracker 5192 &

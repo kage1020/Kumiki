@@ -195,10 +195,10 @@ node benchmarks/scripts/learning-cost-eval.mjs \
   benchmarks/learning-cost-v2/results/K-Gemini/output.kumiki
 
 # ブラウザ動作検証
-pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build \
+pnpm kumiki build \
   benchmarks/learning-cost/results/S1-zero-shot/output.kumiki \
   out/pomodoro
-pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build \
+pnpm kumiki build \
   benchmarks/learning-cost-v2/results/K-Gemini/output.kumiki \
   out/kanban
 

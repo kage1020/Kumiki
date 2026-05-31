@@ -123,5 +123,5 @@ Strand does not aim for the following.
 
 ## 0.8 What to Read Next
 
-- Overall view of the language → [../spec/language.md](../spec/language.md)
-- Want to see an example right away → [examples/01-counter.strand](./examples/01-counter.strand)
+- Overall view of the language → [Language Core](../spec/language.md)
+- Want to see an example right away → [examples/apps/01-counter/app.strand](https://github.com/kage1020/Strand/blob/main/examples/apps/01-counter/app.strand)

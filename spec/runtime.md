@@ -4,8 +4,6 @@ English · [日本語](./runtime.ja.md)
 
 For runtime implementers, this defines the compilation pipeline and the execution model.
 
----
-
 ## 10.1 Compilation Pipeline
 
 ```
@@ -32,7 +30,7 @@ For runtime implementers, this defines the compilation pipeline and the executio
     • dev-tool trace UI
 ```
 
-Each phase performs an independent check. Errors are returned as the structured errors of [./ai-edit.md](./ai-edit.md).
+Each phase performs an independent check. Errors are returned as the structured errors of [AI Editing](./ai-edit.md).
 
 ---
 
@@ -387,7 +385,7 @@ app.unmount()
 
 ## 10.10 Implementation Responsibilities of the Standard Library
 
-For the built-ins enumerated in `./stdlib.md`, the runtime implementation guarantees the following behavior:
+For the built-ins enumerated in [Standard Library](./stdlib.md), the runtime implementation guarantees the following behavior:
 
 | Feature | Guarantee |
 |---|---|
@@ -428,4 +426,4 @@ To meet these, the runtime is Rust → WASM (optional) or hand-written JS (defau
 
 ## 10.13 Next
 
-- Complete examples → [examples/](./examples/)
+- Complete examples → [examples/](../examples/)

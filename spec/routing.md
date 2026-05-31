@@ -4,8 +4,6 @@ English · [日本語](./routing.ja.md)
 
 Strand routing **assumes an SPA**. It is based on the **History API**, not hash routing. The server statically returns the same HTML, and the client runtime resolves the route.
 
----
-
 ## 3.1 Declaring Routes
 
 Routes are declared in the `routes` field of `app`.
@@ -169,7 +167,7 @@ reducer guardEdit
         else ()
 ```
 
-`confirm` is a standard effect (→ [./stdlib.md](./stdlib.md)) that delivers the answer to a separate reducer. See [./lifecycle.md](./lifecycle.md) for details.
+`confirm` is a standard effect (→ [Standard Library](./stdlib.md)) that delivers the answer to a separate reducer. See [Lifecycle](./lifecycle.md) for details.
 
 ---
 
@@ -356,6 +354,6 @@ app SecureApp
 
 ## 3.13 Next
 
-- Form submit handlers → [./forms.md](./forms.md)
-- HTTP fetch → [./http.md](./http.md)
-- Error pages / suspense → [./lifecycle.md](./lifecycle.md)
+- Form submit handlers → [Forms](./forms.md)
+- HTTP fetch → [HTTP / Storage](./http.md)
+- Error pages / suspense → [Lifecycle](./lifecycle.md)

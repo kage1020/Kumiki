@@ -10,8 +10,6 @@ Strand のテストは **3 種類**：
 
 すべて Strand 言語の中で記述する（外部テストフレームワーク不要）。
 
----
-
 ## 8.1 テスト定義レイヤ
 
 ```ebnf
@@ -20,8 +18,6 @@ test-expr ::= reducer-test | tile-test | episode-test | property-test
 ```
 
 `test` 定義は **6 つ目のレイヤ**。CRDT graph に格納され、`strand test` で実行される。本番ビルドには含まれない。
-
----
 
 ## 8.2 Reducer テスト
 
@@ -61,8 +57,6 @@ test addTodo-empty =
         given = {slots: {todos: {}, draft: ""}, event: {type: ui.submit, target: NewTodoForm}}
         expect = {panic: "draft cannot be empty"}
 ```
-
----
 
 ## 8.3 Property テスト
 
@@ -112,8 +106,6 @@ test foo =
         ...
 ```
 
----
-
 ## 8.4 Tile snapshot テスト
 
 tile の構造を期待値と比較：
@@ -128,8 +120,6 @@ test counter-display =
 ```
 
 snapshot は深い構造比較。クラス名やスタイルは比較対象外（明示指定したものだけ）。
-
----
 
 ## 8.5 Effect mock
 
@@ -153,8 +143,6 @@ test loadUser-success =
 
 `mocks: {effect-name: ok(value) | err(error) | delay(ms, ok(value))}` で任意の effect の結果を差し替える。
 
----
-
 ## 8.6 Episode replay
 
 実運用で記録した episode log を再生して結果を検証：
@@ -175,15 +163,13 @@ test bug-2026-05-21 =
 
 ### 8.6.1 episode log の形式
 
-→ [./runtime.md](./runtime.md) で詳述。
+→ [Runtime](./runtime.md) で詳述。
 
 ### 8.6.2 用途
 
 - バグ報告に付随した episode log を fixture にして regression test 化
 - モデル / アルゴリズムを変更した後でも同じ入力で同じ結果が出るか確認
 - スキーマ変更時に旧 log が migration できるか検証
-
----
 
 ## 8.7 ランナー
 
@@ -200,15 +186,13 @@ strand test --coverage         # カバレッジ (reducer/effect/tile 単位)
 ```
 PASS  addTodo-basic        (1ms)
 PASS  toggle-is-involution (100 cases, 23ms)
-FAIL  counter-display      
+FAIL  counter-display
   expected: column(heading("Count: 5"), row(...))
   actual:   column(heading("Count: 0"), row(...))
   diff at:  [0].text  "Count: 5" -> "Count: 0"
 ```
 
 エラーは `strand fix --auto-patch <test-name>` で**修正パッチを提案**するモードを v0.2 で実装予定。
-
----
 
 ## 8.8 統合テスト（ブラウザ駆動）
 
@@ -225,8 +209,6 @@ const todos = await page.evaluate(() => window.__STRAND__.slots.todos)
 expect(Object.keys(todos)).toHaveLength(1)
 ```
 
----
-
 ## 8.9 設計上の判断記録
 
 | 判断 | 理由 |
@@ -236,8 +218,6 @@ expect(Object.keys(todos)).toHaveLength(1)
 | property test を一級市民に | reducer の不変条件を構造で検証 |
 | episode replay を一級市民に | 本番バグを自動的にテスト化できる |
 | E2E は外部ツール | Strand のスコープ外、既存ツールを尊重 |
-
----
 
 ## 8.10 ツールによる検証の 3 層
 
@@ -275,5 +255,5 @@ expect(Object.keys(todos)).toHaveLength(1)
 
 ## 8.11 次
 
-- AI 編集と自動修正 → [./ai-edit.md](./ai-edit.md)
-- ランタイム内部 → [./runtime.md](./runtime.md)
+- AI 編集と自動修正 → [AI Editing](./ai-edit.md)
+- ランタイム内部 → [Runtime](./runtime.md)

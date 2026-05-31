@@ -2,7 +2,7 @@
 
 English · [日本語](./your-first-app.ja.md)
 
-Build a working Counter by adding the 7 layers one at a time. The finished version is [../examples/apps/01-counter/app.strand](../examples/apps/01-counter/app.strand).
+Build a working Counter by adding the 7 layers one at a time. The finished version is [examples/apps/01-counter/app.strand](https://github.com/kage1020/Strand/blob/main/examples/apps/01-counter/app.strand).
 
 ## 1. Declare State (slot)
 
@@ -49,8 +49,8 @@ pnpm --filter @strand/cli exec tsx src/strand.ts build counter.strand ./out
 
 ## Going Further
 
-- Constrain a value's range → nominal type + refinement ([../examples/features/02-nominal-type.strand](../examples/features/02-nominal-type.strand))
-- Two-way binding with an input field → `bind` ([../examples/features/13-text-input-bind.strand](../examples/features/13-text-input-bind.strand))
-- Render a list → `for ... in` ([../examples/features/07-list.strand](../examples/features/07-list.strand))
+- Constrain a value's range → nominal type + refinement ([examples/features/02-nominal-type.strand](https://github.com/kage1020/Strand/blob/main/examples/features/02-nominal-type.strand))
+- Two-way binding with an input field → `bind` ([examples/features/13-text-input-bind.strand](https://github.com/kage1020/Strand/blob/main/examples/features/13-text-input-bind.strand))
+- Render a list → `for ... in` ([examples/features/07-list.strand](https://github.com/kage1020/Strand/blob/main/examples/features/07-list.strand))
 
-For the big picture of how to think about it, head to [thinking-in-strand.md](./thinking-in-strand.md).
+For the big picture of how to think about it, head to [Thinking in Strand](./thinking-in-strand.md).

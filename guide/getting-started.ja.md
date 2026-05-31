@@ -39,8 +39,8 @@ pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/
 
 ## エディタ / AI 連携（MCP）
 
-`@strand/mcp` は検査・ビルド・編集・仕様検索を MCP ツールとして公開する。MCP クライアント設定例は [../packages/mcp/README.md](../packages/mcp/README.md) を参照。
+`@strand/mcp` は検査・ビルド・編集・仕様検索を MCP ツールとして公開する。MCP クライアント設定例は [packages/mcp/README.md](https://github.com/kage1020/Strand/blob/main/packages/mcp/README.md) を参照。
 
 ## 次へ
 
-[your-first-app.md](./your-first-app.md) で Counter を一から書く。
+[Your First App](./your-first-app.md) で Counter を一から書く。

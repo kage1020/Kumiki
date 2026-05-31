@@ -4,8 +4,6 @@
 
 外部世界とのやりとりはすべて **effect** で行う。ここでは標準提供される effect の詳細仕様を述べる。
 
----
-
 ## 6.1 HTTP 共通
 
 ### 6.1.1 capability
@@ -453,5 +451,5 @@ slot password : Text = ""
 
 ## 6.12 次
 
-- 永続化のライフサイクル → [./lifecycle.md](./lifecycle.md)
-- replay でのモック → [./testing.md](./testing.md)
+- 永続化のライフサイクル → [Lifecycle](./lifecycle.md)
+- replay でのモック → [Testing](./testing.md)

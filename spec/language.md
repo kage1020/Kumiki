@@ -10,7 +10,7 @@ A Strand program is a **set of 7 kinds of definitions**. There are no physical f
 (layer, name, body, content-hash)
 ```
 
-The textual representation is a projection from the graph and can be retrieved with `strand view` when needed (→ [./ai-edit.md](./ai-edit.md)).
+The textual representation is a projection from the graph and can be retrieved with `strand view` when needed (→ [AI Editing](./ai-edit.md)).
 
 ```ebnf
 program     ::= definition*
@@ -643,7 +643,7 @@ items.fold(0, $1 + $2.price)               ; ($1: acc, $2: elem)
 - References are **written by name** and resolved to a content-hash when stored in the CRDT graph
 - Rename = a CRDT op that creates a different hash under the new name and updates references
 
-→ [./ai-edit.md](./ai-edit.md)
+→ [AI Editing](./ai-edit.md)
 
 ---
 
@@ -679,7 +679,7 @@ route-entry ::= string '->' identifier        ; to a tile name
 emit-list  ::= effect-call (',' effect-call)*
 ```
 
-→ [./routing.md](./routing.md), [./http.md](./http.md)
+→ [Routing](./routing.md), [HTTP / Storage](./http.md)
 
 ```strand
 app TodoApp
@@ -742,4 +742,4 @@ app Counter
     init   = []
 ```
 
-→ [./stdlib.md](./stdlib.md), [./routing.md](./routing.md), [examples/01-counter.strand](./examples/01-counter.strand)
+→ [Standard Library](./stdlib.md), [Routing](./routing.md), [examples/apps/01-counter/app.strand](https://github.com/kage1020/Strand/blob/main/examples/apps/01-counter/app.strand)

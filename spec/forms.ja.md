@@ -417,5 +417,5 @@ effect uploadFile  cap=http.post
 
 ## 5.12 次
 
-- HTTP の詳細 → [./http.md](./http.md)
-- ライフサイクル → [./lifecycle.md](./lifecycle.md)
+- HTTP の詳細 → [HTTP / Storage](./http.md)
+- ライフサイクル → [Lifecycle](./lifecycle.md)

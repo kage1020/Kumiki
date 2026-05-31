@@ -4,8 +4,6 @@
 
 Strand のルーティングは **SPA を前提**にしている。ハッシュルーティングではなく **History API** ベース。サーバから静的に同じ HTML を返し、クライアントランタイムがルートを解決する。
 
----
-
 ## 3.1 ルートの宣言
 
 `app` の `routes` フィールドで宣言する。
@@ -52,7 +50,7 @@ app TodoApp
 slot route : Route = Route.empty       ; ランタイムが管理
 ```
 
-`Route` 型は[標準提供](./stdlib.md#213-ドメイン型標準提供)：
+`Route` 型は[標準ライブラリ](./stdlib.md#213-ドメイン型標準提供)：
 
 ```strand
 type Route = {
@@ -169,7 +167,7 @@ reducer guardEdit
         else ()
 ```
 
-`confirm` は標準 effect（→ [./stdlib.md](./stdlib.md)）で、回答を別 reducer に届ける。詳細は [./lifecycle.md](./lifecycle.md)。
+`confirm` は標準 effect（→ [Standard Library](./stdlib.md)）で、回答を別 reducer に届ける。詳細は [Lifecycle](./lifecycle.md)。
 
 ---
 
@@ -356,6 +354,6 @@ app SecureApp
 
 ## 3.13 次
 
-- フォームの submit ハンドラ → [./forms.md](./forms.md)
-- HTTP fetch → [./http.md](./http.md)
-- エラーページ / suspense → [./lifecycle.md](./lifecycle.md)
+- フォームの submit ハンドラ → [Forms](./forms.md)
+- HTTP fetch → [HTTP / Storage](./http.md)
+- エラーページ / suspense → [Lifecycle](./lifecycle.md)

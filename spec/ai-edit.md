@@ -11,21 +11,19 @@ This provides:
 - References don't break on rename (hash is invariant)
 - An **automatic repair loop** can be run when an edit fails
 
----
-
 ## 9.1 Overview
 
 ```
-┌──────────────────────────────────────────────┐
-│            CRDT graph store                  │
+┌─────────────────────────────────────────────────┐
+│                 CRDT graph store                  │
 │  (a set of definitions, each content-addressable) │
-└──────────────────────────────────────────────┘
+└─────────────────────────────────────────────────┘
         ↑                          ↓
         │                          │ strand view
         │ strand op apply          │
         │                          ↓
 ┌──────────────┐          ┌──────────────────────┐
-│   AI agent   │ ←───────│ projection (text)    │
+│   AI agent   │ ←─────── │ projection (text)    │
 └──────────────┘  edit op └──────────────────────┘
 ```
 
@@ -78,8 +76,6 @@ strand fix --auto-patch <error-id>          # propose a CRDT op that auto-fixes 
 strand fix --apply                          # apply the proposal as-is
 strand fix --interactive                    # apply proposals one at a time with confirmation
 ```
-
----
 
 ## 9.3 The Form of a CRDT op
 
@@ -134,8 +130,6 @@ The Strand graph is an **Add-Wins LWW-Map** (last-write-wins + add takes priorit
 
 These are mathematically guaranteed to converge. However, **semantic consistency requires separate checking** (next section).
 
----
-
 ## 9.4 Enforcing Referential Integrity
 
 Even though CRDT guarantees syntactic convergence, **semantic conflicts** are a separate matter:
@@ -181,8 +175,6 @@ transaction commit
 
 The resolve policy is set via `strand config conflict-policy <strict|heal|warn>`. Default is `strict`.
 
----
-
 ## 9.5 hash Computation and Reference Resolution
 
 ### 9.5.1 hash Computation
@@ -203,8 +195,6 @@ A name reference like `users` in the source text is recorded within the graph st
 ### 9.5.3 Names at Display Time
 
 When retrieved via `strand view`, hashes are turned back into human-readable names (**labels**).
-
----
 
 ## 9.6 Error Codes and Automatic Repair
 
@@ -279,8 +269,6 @@ done
 
 With `strand fix --auto-patch <code>`, errors that have an auto-patch are resolved structurally. Only errors without an auto-patch are placed in the AI's context for it to fix.
 
----
-
 ## 9.7 MCP Server
 
 Strand can run as a Model Context Protocol server, allowing AI agents to call tools directly:
@@ -307,8 +295,6 @@ The tools provided:
 | `strand_episode` | `episode_id` | episode log |
 
 From the AI, these are called in place of file operations.
-
----
 
 ## 9.8 Agent Parallel Development Protocol
 
@@ -345,8 +331,6 @@ strand lock agent-1 'slot.todos*,reducer.todo-*'
 
 If another agent issues an op in the same namespace, it is rejected.
 
----
-
 ## 9.9 The Relationship Between episode and op
 
 The runtime episode log is recorded against the build artifact. ops are **the edit history of the source graph**. The two are separated:
@@ -358,9 +342,7 @@ The runtime episode log is recorded against the build artifact. ops are **the ed
 | Purpose | parallel development / regression checking | debugging / replay test |
 | Unit | CRDT op | reducer execution + effect result |
 
-→ The episode log is in [./runtime.md](./runtime.md).
-
----
+→ The episode log is in [Runtime](./runtime.md).
 
 ## 9.10 Filesystem Compatibility Layer
 
@@ -392,8 +374,6 @@ project.strand/
 
 This allows coexistence with existing Git-based workflows. However, **the true source of compatibility is on the graph store side**.
 
----
-
 ## 9.11 Design Decision Record
 
 | Decision | Rationale |
@@ -409,5 +389,5 @@ This allows coexistence with existing Git-based workflows. However, **the true s
 
 ## 9.12 Next
 
-- Runtime implementation details → [./runtime.md](./runtime.md)
-- Complete examples → [examples/](./examples/)
+- Runtime implementation details → [Runtime](./runtime.md)
+- Complete examples → [examples/](../examples/)

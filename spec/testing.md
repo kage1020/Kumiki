@@ -10,8 +10,6 @@ Strand testing comes in **three kinds**:
 
 All are written within the Strand language (no external test framework required).
 
----
-
 ## 8.1 The Test Definition Layer
 
 ```ebnf
@@ -20,8 +18,6 @@ test-expr ::= reducer-test | tile-test | episode-test | property-test
 ```
 
 A `test` definition is **the sixth layer**. It is stored in the CRDT graph and run with `strand test`. It is not included in the production build.
-
----
 
 ## 8.2 Reducer Tests
 
@@ -61,8 +57,6 @@ test addTodo-empty =
         given = {slots: {todos: {}, draft: ""}, event: {type: ui.submit, target: NewTodoForm}}
         expect = {panic: "draft cannot be empty"}
 ```
-
----
 
 ## 8.3 Property Tests
 
@@ -112,8 +106,6 @@ test foo =
         ...
 ```
 
----
-
 ## 8.4 Tile snapshot Tests
 
 Compare a tile's structure against an expected value:
@@ -128,8 +120,6 @@ test counter-display =
 ```
 
 The snapshot is a deep structural comparison. Class names and styles are out of scope for comparison (only those explicitly specified).
-
----
 
 ## 8.5 Effect mock
 
@@ -153,8 +143,6 @@ test loadUser-success =
 
 With `mocks: {effect-name: ok(value) | err(error) | delay(ms, ok(value))}`, you can replace the result of any effect.
 
----
-
 ## 8.6 Episode replay
 
 Replay an episode log recorded in production and verify the result:
@@ -175,15 +163,13 @@ test bug-2026-05-21 =
 
 ### 8.6.1 The Format of the episode log
 
-→ Detailed in [./runtime.md](./runtime.md).
+→ Detailed in [Runtime](./runtime.md).
 
 ### 8.6.2 Use Cases
 
 - Turn an episode log attached to a bug report into a fixture and make it a regression test
 - Confirm that the same input produces the same result even after changing a model / algorithm
 - Verify that an old log can be migrated when the schema changes
-
----
 
 ## 8.7 The Runner
 
@@ -200,15 +186,13 @@ strand test --coverage         # coverage (per reducer/effect/tile)
 ```
 PASS  addTodo-basic        (1ms)
 PASS  toggle-is-involution (100 cases, 23ms)
-FAIL  counter-display      
+FAIL  counter-display
   expected: column(heading("Count: 5"), row(...))
   actual:   column(heading("Count: 0"), row(...))
   diff at:  [0].text  "Count: 5" -> "Count: 0"
 ```
 
 A mode that **proposes a fix patch** via `strand fix --auto-patch <test-name>` for errors is planned for v0.2.
-
----
 
 ## 8.8 Integration Tests (browser-driven)
 
@@ -225,8 +209,6 @@ const todos = await page.evaluate(() => window.__STRAND__.slots.todos)
 expect(Object.keys(todos)).toHaveLength(1)
 ```
 
----
-
 ## 8.9 Design Decision Record
 
 | Decision | Rationale |
@@ -236,8 +218,6 @@ expect(Object.keys(todos)).toHaveLength(1)
 | Make property tests first-class | Verify reducer invariants structurally |
 | Make episode replay first-class | Production bugs can be turned into tests automatically |
 | E2E is an external tool | Out of Strand's scope; respect existing tools |
-
----
 
 ## 8.10 The Three Layers of Tooling Verification
 
@@ -275,5 +255,5 @@ Why this works cleanly in Strand: because state is explicit (slots), the oracle 
 
 ## 8.11 Next
 
-- AI editing and automatic fixing → [./ai-edit.md](./ai-edit.md)
-- Runtime internals → [./runtime.md](./runtime.md)
+- AI editing and automatic fixing → [AI Editing](./ai-edit.md)
+- Runtime internals → [Runtime](./runtime.md)

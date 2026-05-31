@@ -312,5 +312,5 @@ slot password : Text          volatile  = ""    ; episode log にも書かれな
 
 ## 7.11 次
 
-- テスト書き方 → [./testing.md](./testing.md)
-- AI 編集 API → [./ai-edit.md](./ai-edit.md)
+- テスト書き方 → [Testing](./testing.md)
+- AI 編集 API → [AI Editing](./ai-edit.md)

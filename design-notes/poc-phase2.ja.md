@@ -2,9 +2,9 @@
 
 [English](./poc-phase2.md) · 日本語
 
-## 12.1 ゴール
+## ゴール
 
-`docs/examples/02-todomvc.strand` を入力に `strand build` を実行すると、ブラウザで開いて以下が動作する：
+`examples/apps/02-todomvc/app.strand` を入力に `strand build` を実行すると、ブラウザで開いて以下が動作する：
 
 - Todo の追加（input + Enter）
 - 完了トグル（checkbox）
@@ -16,7 +16,7 @@
 
 Phase 1 で動かなかった機能をすべて入れる。
 
-## 12.2 サポート範囲（Phase 2 追加分）
+## サポート範囲（Phase 2 追加分）
 
 | カバー | 詳細 |
 |---|---|
@@ -32,7 +32,7 @@ Phase 1 で動かなかった機能をすべて入れる。
 
 Phase 2 で **扱わない**: routing 解決、theme 完全対応、a11y 検証、AI 編集 API、episode log、SSR/Edge、HTTP capability、IndexedDB、analytics、WebSocket、アニメーション。
 
-## 12.3 受け入れ基準（AC）
+## 受け入れ基準（AC）
 
 TDD で先に固める。
 
@@ -118,7 +118,7 @@ tile TodoList = column(for id in todos.keys when(matchFilter(todos[id], filter),
 ### AC-CLI
 
 ```
-pnpm strand build ../docs/examples/02-todomvc.strand ../examples-build/todomvc
+pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/02-todomvc/app.strand out/todomvc
 ```
 
 - 終了コード 0
@@ -134,7 +134,7 @@ pnpm strand build ../docs/examples/02-todomvc.strand ../examples-build/todomvc
 5. Clear completed → done が消える
 6. リロードすると同じ状態が復元される（localStorage）
 
-## 12.4 実装順序（TDD）
+## 実装順序（TDD）
 
 | step | 内容 | テスト |
 |---|---|---|
@@ -148,7 +148,7 @@ pnpm strand build ../docs/examples/02-todomvc.strand ../examples-build/todomvc
 | 8 | codegen 拡張 | codegen.test.ts に追加 |
 | 9 | TodoMVC build & 手動確認 | E2E |
 
-## 12.5 設計上の判断（PoC スコープ）
+## 設計上の判断（PoC スコープ）
 
 | 判断 | 理由 |
 |---|---|
@@ -159,9 +159,9 @@ pnpm strand build ../docs/examples/02-todomvc.strand ../examples-build/todomvc
 | localStorage はランタイムが直接読み書き | capability handler の最初の例 |
 | Theme / a11y / routing は Phase 3 | TodoMVC 単体には不要 |
 
-## 12.6 完了の定義
+## 完了の定義
 
 - すべての AC が pass
-- `examples-build/todomvc/index.html` を実ブラウザで開いて全機能が動作
+- `out/todomvc/index.html` を実ブラウザで開いて全機能が動作
 - リロード後も Todo が保持される（localStorage）
 - 既存の Counter テストも回帰なく pass

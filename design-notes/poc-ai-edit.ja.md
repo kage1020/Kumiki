@@ -1,15 +1,15 @@
-# PoC Phase 5 — AI 編集 API / CRDT op
+# AI 編集 API / CRDT op
 
 [English](./poc-ai-edit.md) · 日本語
 
-`docs../spec/ai-edit.md` で書いた CLI を実装し、Strand の "AI 専用" 思想の中核
+`../spec/ai-edit.md` で書いた CLI を実装し、Strand の "AI 専用" 思想の中核
 である **構造化編集 + 参照整合性 + op-log** を動作させる。
 
 CRDT graph store の本格実装はせず、`.strand` ファイル単位の **read-parse-mutate-write** で
 動かす。並列 op の収束は本格 CRDT ではなく「op を順序付け、parse 失敗・
 ref-integrity 違反を検出して reject」のレベル。
 
-## 16.1 ゴール
+## ゴール
 
 ```bash
 strand list                                    # 全定義名
@@ -30,7 +30,7 @@ strand fix --apply E0103                       # 特定コードだけ
 
 全 op は `<file>.strand-ops.jsonl` に追記される（git でレビュー可能）。
 
-## 16.2 スコープ
+## スコープ
 
 | 機能 | 実装 | 備考 |
 |---|---|---|
@@ -45,10 +45,10 @@ strand fix --apply E0103                       # 特定コードだけ
 | `rename <qname> <new>` | ✓ | 名前変更 + 参照箇所の置換 |
 | `fix [--apply] [<code>]` | ✓ | did-you-mean、欠落 /404、ほか |
 | op-log JSONL | ✓ | `<file>.strand-ops.jsonl` |
-| MCP server | × | Phase 6 へ |
+| MCP server | × | 後のフェーズへ |
 | 真の CRDT 並列 merge | × | parse + ref-integrity だけで近似 |
 
-## 16.3 op-log フォーマット
+## op-log フォーマット
 
 ```jsonl
 {"op":"add","layer":"slot","name":"users","body":"Map(UserId, User) = {}","ts":1779000000000,"opId":"op_01..."}
@@ -58,30 +58,30 @@ strand fix --apply E0103                       # 特定コードだけ
 
 `opId` は ULID 風の単調増加 ID。`parent-ops` は単純化のため省略（直前 commit hash で代替）。
 
-## 16.4 受け入れ基準
+## 受け入れ基準
 
 ### AC-list/view
-- `pnpm strand list` で 02-todomvc.strand の全 35 定義（type/slot/effect/reducer/fn/tile/app/theme 合計）を表示
-- `pnpm strand view slot.todos` で `slot todos : Map(TodoId, Todo) = {}` を返す
-- `pnpm strand view --with-deps reducer.addTodo` で関連 fn / slot も同梱
+- `pnpm --filter @strand/cli exec tsx src/strand.ts list` で examples/apps/02-todomvc/app.strand の全 35 定義（type/slot/effect/reducer/fn/tile/app/theme 合計）を表示
+- `pnpm --filter @strand/cli exec tsx src/strand.ts view slot.todos` で `slot todos : Map(TodoId, Todo) = {}` を返す
+- `pnpm --filter @strand/cli exec tsx src/strand.ts view --with-deps reducer.addTodo` で関連 fn / slot も同梱
 
 ### AC-refs
-- `pnpm strand refs slot.todos` で todos を参照する reducer / tile / fn の (name, file, line) を列挙
+- `pnpm --filter @strand/cli exec tsx src/strand.ts refs slot.todos` で todos を参照する reducer / tile / fn の (name, file, line) を列挙
 
 ### AC-mutate
-- `pnpm strand add slot foo 'Int = 0'` でファイル末尾に slot 追加、op-log に記録
-- `pnpm strand replace slot.draft 'Text = ""'` で該当 slot だけ書き換え
-- `pnpm strand remove slot.draft` で参照ありなら exit code 1 + エラー、`--cascade` でカスケード削除
-- `pnpm strand rename slot.draft newTodoText` で定義 + 全参照を rename
+- `pnpm --filter @strand/cli exec tsx src/strand.ts add slot foo 'Int = 0'` でファイル末尾に slot 追加、op-log に記録
+- `pnpm --filter @strand/cli exec tsx src/strand.ts replace slot.draft 'Text = ""'` で該当 slot だけ書き換え
+- `pnpm --filter @strand/cli exec tsx src/strand.ts remove slot.draft` で参照ありなら exit code 1 + エラー、`--cascade` でカスケード削除
+- `pnpm --filter @strand/cli exec tsx src/strand.ts rename slot.draft newTodoText` で定義 + 全参照を rename
 
 ### AC-fix
-- 04-todomvc.strand に `slot usres : Int = 0; reducer r on=ui.click(B) do= usres := 1` のような typo を入れて `strand fix` がパッチ提案
+- examples/apps/02-todomvc/app.strand に `slot usres : Int = 0; reducer r on=ui.click(B) do= usres := 1` のような typo を入れて `strand fix` がパッチ提案
 - `--apply` で実適用
 
 ### AC-並列 op
 - 2 つのエージェントが独立に op を JSONL に書き、片方ずつ replay しても収束する例
 
-## 16.5 実装順序
+## 実装順序
 
 1. **Definition store**: `.strand` を parse して `Map<qname, { def, fileRange }>` を作る
 2. **list/view/refs/check**: read-only コマンド
@@ -90,7 +90,7 @@ strand fix --apply E0103                       # 特定コードだけ
 5. **fix**: 既存の typecheck エラーから auto-patch を生成
 6. **並列 op 検証**: vitest で 2 ops を別順序で apply して同じ結果
 
-## 16.6 設計メモ
+## 設計メモ
 
 - "本物の CRDT" は graph + content-hash + Add-Wins LWW-Map が必要。今回は **op 単位の commit** だけで近似
 - ファイルベースのため、書き換えはテキスト単位（parse 単位ではない）。これで Git diff も人間が読める

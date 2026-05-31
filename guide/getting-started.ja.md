@@ -11,7 +11,7 @@
 
 ```sh
 git clone <this-repo>
-cd new-js-framework
+cd Strand
 pnpm install
 pnpm build
 pnpm test     # 全パッケージのテストが緑になることを確認

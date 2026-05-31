@@ -2,7 +2,7 @@
 
 English · [日本語](./rationale.ja.md)
 
-## 0.1 Motivation
+## Motivation
 
 React is a human-centered optimum. Hooks / Context / JSX are idioms that feel natural for humans to read and write, and are also the culmination of nearly 20 years of trial and error. But as code writing shifts to AI, the following characteristics become friction.
 
@@ -18,7 +18,7 @@ These are "writable when the AI writes them," but become sharply harder "**when 
 
 Strand eliminates this friction structurally.
 
-## 0.2 Design Requirements
+## Design Requirements
 
 1. **Token efficiency**: The same UI can be expressed with fewer tokens than React
 2. **Static traceability of side effects**: Which side effect depends on which state and where it fires is self-evident from the syntax
@@ -26,7 +26,7 @@ Strand eliminates this friction structurally.
 4. **Resilience to parallel development**: It does not break semantically even when dozens of agents edit simultaneously
 5. **Allowing readability to be sacrificed**: Whether humans can read it is a secondary goal. The primary goal is that the AI can write and fix it accurately
 
-## 0.3 Lessons from Prior Work
+## Lessons from Prior Work
 
 The attempts referenced on the way to the design, and the elements adopted / avoided from them:
 
@@ -42,18 +42,18 @@ The attempts referenced on the way to the design, and the elements adopted / avo
 | Hyperscript | DOM locality, zero context switching | Tightly-coupled spaghetti at scale |
 | Datomic | Append-only fact log, time-travel queries | Not suited to high-frequency updates |
 
-## 0.4 Convergence Point of the 4-Proposal Brainstorm
+## Where Four Independent Proposals Converged
 
-In the design study, 4 independent proposals were produced:
+The design began as four independent proposals, each from a separate model-assisted exploration that did not see the others:
 
-| Proposal | Origin | One-liner |
-|---|---|---|
-| **IR + Actor + Effect descriptor** | Codex, 1st round | S-expression IR, Elm Architecture, capability-bearing effects, compile-to-DOM |
-| **Loom: Episode-oriented Runtime** | Codex, 2nd round | Episode / Intent / Capability / Projection / Trace |
-| **Pyramid: Effect-Typed Tile Language** | Claude | TSV one declaration per line, 5-layer separation, global slot |
-| **Nexus: CRDT-Native Triple-Graph** | Gemini | Graph DB, Triple op, Reactive Datalog |
+| Proposal | One-liner |
+|---|---|
+| **IR + Actor + Effect descriptor** | S-expression IR, Elm Architecture, capability-bearing effects, compile-to-DOM |
+| **Loom: Episode-oriented Runtime** | Episode / Intent / Capability / Projection / Trace |
+| **Pyramid: Effect-Typed Tile Language** | TSV one declaration per line, 5-layer separation, global slot |
+| **Nexus: CRDT-Native Triple-Graph** | Graph DB, Triple op, Reactive Datalog |
 
-As a result of critically comparing the 4 proposals, it turned out that **even though the surface expression differs, everyone converged on the same 4 points**.
+Critically comparing the four made one thing clear: **the surface syntax differed, but all of them converged on the same four points.**
 
 ### The 4 Cores They Converged On
 
@@ -64,7 +64,7 @@ As a result of critically comparing the 4 proposals, it turned out that **even t
 
 The only remaining point of contention was **the physical form of the source representation**.
 
-## 0.5 Strand's Position
+## Strand's Position
 
 Strand is a hybrid of the 4 proposals. It takes the strong parts of each and covers the weak parts with another proposal.
 
@@ -94,7 +94,7 @@ Strand is a hybrid of the 4 proposals. It takes the strong parts of each and cov
 | Long-distance references with opaque IDs | Nexus | Names on the surface, hashes internally; references resolved by the CLI |
 | Computation cost of Reactive Datalog | Nexus | A compiled signal graph rather than Datalog |
 
-## 0.6 Terminology
+## Terminology
 
 | Term | Meaning |
 |---|---|
@@ -111,7 +111,7 @@ Strand is a hybrid of the 4 proposals. It takes the strong parts of each and cov
 | **capability** | The set of side-effect permissions declared at app startup |
 | **CRDT op** | An editing operation an AI agent performs against the definition store |
 
-## 0.7 Non-Goals
+## Non-Goals
 
 Strand does not aim for the following.
 
@@ -121,7 +121,7 @@ Strand does not aim for the following.
 - **Dynamic types / runtime type generation**: Everything is static
 - **Multiple rendering targets**: DOM only (Native / Canvas are separate languages)
 
-## 0.8 What to Read Next
+## What to Read Next
 
 - Overall view of the language → [Language Core](../spec/language.md)
 - Want to see an example right away → [examples/apps/01-counter/app.strand](https://github.com/kage1020/Strand/blob/main/examples/apps/01-counter/app.strand)

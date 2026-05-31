@@ -11,7 +11,7 @@ English · [日本語](./getting-started.ja.md)
 
 ```sh
 git clone <this-repo>
-cd new-js-framework
+cd Strand
 pnpm install
 pnpm build
 pnpm test     # Confirm that tests for all packages turn green

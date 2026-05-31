@@ -91,5 +91,5 @@ GitHub Issues 風の Issue Tracker SPA:
 
 ## 評価
 
-`reference/scripts/learning-cost-eval.mjs` で parse / typecheck / build を採点。
+`benchmarks/scripts/learning-cost-eval.mjs` で parse / typecheck / build を採点。
 さらにベスト版は `strand build` + ブラウザでの動作確認まで。

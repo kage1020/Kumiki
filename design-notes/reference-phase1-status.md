@@ -15,38 +15,26 @@ Phase 1 PoC: with 01-counter.strand as input, **lexer → parser → typecheck �
 | AC-Runtime (5) | pass |
 | AC-CLI (1) | pass |
 | **Total 28 / 28** | pass |
-| Manual browser check | server started, visual inspection on the user side |
+| Manual browser check | served and verified by visual inspection |
 
 ## Directory
 
 ```
-reference/
-├── package.json
-├── tsconfig.json
-├── biome.json
-├── vite.config.ts
-├── scripts/
-│   └── serve.mjs              static file server
-├── src/
-│   ├── compiler/
-│   │   ├── ast.ts             Phase 1 AST types
-│   │   ├── lexer.ts           lexical analysis
-│   │   ├── parser.ts          hand-written recursive-descent parser
-│   │   ├── typecheck.ts       name resolution + type checking
-│   │   ├── codegen.ts         AST → JS
-│   │   └── compile.ts         lex→parse→check→codegen
-│   ├── runtime/
-│   │   └── index.ts           mount / DOM rendering / dispatch
-│   └── cli/
-│       ├── strand.ts          strand build command
-│       └── strip-ts.ts        strip the runtime's TS types
-└── test/
-    ├── lexer.test.ts
-    ├── parser.test.ts
-    ├── typecheck.test.ts
-    ├── codegen.test.ts
-    ├── runtime.test.ts
-    └── cli.test.ts
+packages/
+├── compiler/
+│   └── src/
+│       ├── ast.ts             Phase 1 AST types
+│       ├── lexer.ts           lexical analysis
+│       ├── parser.ts          hand-written recursive-descent parser
+│       ├── typecheck.ts       name resolution + type checking
+│       ├── codegen.ts         AST → JS
+│       └── compile.ts         lex→parse→check→codegen
+├── runtime/
+│   └── src/
+│       └── index.ts           mount / DOM rendering / dispatch
+└── cli/
+    └── src/
+        └── strand.ts          strand build command
 ```
 
 ## Usage
@@ -63,15 +51,14 @@ pnpm lint
 ### Building Counter
 
 ```bash
-pnpm strand build ../docs/examples/01-counter.strand ../examples-build/counter
-# → index.html, app.js, runtime.js are emitted to examples-build/counter/
+pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand out/counter
+# → index.html, app.js, runtime.js are emitted to out/counter/
 ```
 
 ### Verifying Operation in the Browser
 
 ```bash
-# in the reference/ directory:
-node scripts/serve.mjs ../examples-build/counter 5174
+node benchmarks/scripts/serve.mjs out/counter 5174
 # → open http://localhost:5174 in the browser
 ```
 

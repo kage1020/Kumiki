@@ -39,7 +39,7 @@
 
 ## 評価
 
-`reference/scripts/learning-cost-eval.mjs` で：
+`benchmarks/scripts/learning-cost-eval.mjs` で：
 - parse 通過？
 - typecheck 通過？
 - build 通過？

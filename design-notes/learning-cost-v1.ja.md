@@ -4,7 +4,7 @@
 
 Strand は学習データを持たない新規言語。LLM が **仕様 docs だけを context にして** どれだけ正確に Strand を書けるかを実測した。
 
-## 17.1 実験設計
+## 実験設計
 
 **タスク**: Pomodoro タイマー SPA（2 モード切替、Start/Pause/Reset、1 秒ごとの tick、モード境界での自動切替）。タスクは `benchmarks/learning-cost/task-spec.md`。
 
@@ -17,9 +17,9 @@ Strand は学習データを持たない新規言語。LLM が **仕様 docs だ
 | **S3: few-shot** | 仕様 + 3 examples (Counter / TodoMVC / Blog) | なし |
 | **S4: agent-loop** | S3 と同じ + `strand check` を呼ぶ権限 (最大 10 iter) | あり |
 
-評価は `reference/scripts/learning-cost-eval.mjs` で **parse / typecheck / build** の各段階を判定。
+評価は `benchmarks/scripts/learning-cost-eval.mjs` で **parse / typecheck / build** の各段階を判定。
 
-## 17.2 結果
+## 結果
 
 | 条件 | parse | typecheck | build | LOC | cl100k トークン | self_confidence |
 |---|:-:|:-:|:-:|---:|---:|---|
@@ -28,9 +28,9 @@ Strand は学習データを持たない新規言語。LLM が **仕様 docs だ
 | S3 (few-shot)      | ✗ | ✗ | ✗ | 90 | 609 | high |
 | **S4 (agent-loop)**| **✓** | **✓** | **✓** | 94 | 562 | high |
 
-**衝撃の事実: 一発書きは 3 設定全て parse 不能。agent-loop だけが clean に到達した。**
+注目すべき点：一発書きは 3 設定全て parse 不能。agent-loop だけが clean に到達した。
 
-## 17.3 共通の失敗パターン
+## 共通の失敗パターン
 
 S1 / S2 / S3 はそれぞれ独立に書いたにも関わらず、**3 つとも同じ失敗で parse 不能**：
 
@@ -51,7 +51,7 @@ Parse error: Expected op(.), got op(()  near `on=timer(1s)`
 | Bool prop に slot 直接束縛できるか不明 | S1 が不安と報告 |
 | Int の文字列化が `.show` か `.to-text` か | S3 が不安と報告 |
 
-## 17.4 S4 (agent-loop) のループ詳細
+## S4 (agent-loop) のループ詳細
 
 S4 が clean に到達するまでの 4 iteration：
 
@@ -66,7 +66,7 @@ Iter 4: 0 errors — refactored to compute next state via pure fns,
 
 LLM はエラーメッセージを見て **正しい方向に自己修正できた**。各 iter で異なる問題を 1 つずつ潰している。
 
-## 17.5 解釈
+## 解釈
 
 ### 「examples を増やせば学習できる」は誤り
 
@@ -94,7 +94,7 @@ S4 の loop は「LLM が手動で `strand check` を呼んだ」だけだが、
 - validate-then-rollback で間違った op は適用されない（Strand v0.1 既存機能）
 - 結果として「Strand に学習コストはあるが、ループ前提なら 4 iter 程度で収束する」と数値化できる
 
-## 17.6 トークンコストの観点
+## トークンコストの観点
 
 S4 の総コスト（ループ全体）を推定：
 - 仕様 docs を読む: ~5500 行 ≈ 30k tokens（context 入力）
@@ -108,12 +108,12 @@ S4 の総コスト（ループ全体）を推定：
 
 つまり **Strand は初回タスクで 30 倍コスト高**。ただし：
 - 仕様 docs の読み込みは **session 1 回**（多くのコーディングエージェントは context cache する）
-- 2 タスク目以降は op stream 形式で 0.5k tokens / タスク（15 章ベンチマーク参照）
+- 2 タスク目以降は op stream 形式で 0.5k tokens / タスク（[Benchmark](./benchmark.md) 参照）
 - **N タスク目の累積コスト** は Strand: `30k + 0.5k * N`、React: `1k * N` → **N=30 で逆転**
 
 長期 / 大規模 / 並列 agent シナリオでは Strand 有利、単発タスクでは React 有利、という構図。
 
-## 17.7 Strand 側で取るべき改善
+## Strand 側で取るべき改善
 
 このベンチマークで判明した既知問題：
 
@@ -124,7 +124,7 @@ S4 の総コスト（ループ全体）を推定：
 | 1 reducer 1 slot 書き込みルールが守れない場合のエラー文言 | 中 | E0601 のメッセージに「if/else でも合算」を明示 |
 | 仕様 docs に「初心者がやりがちなアンチパターン」セクション | 低 | doc 追記 |
 
-## 17.8 結論
+## 結論
 
 - **Strand を一発で正しく書かせるのは現実的でない**。3 通りの context 設定全てで parse 失敗
 - **しかし agent-loop ありなら 4 iter で 100% clean**。Strand の自己修復ループ設計は正当化された
@@ -133,9 +133,9 @@ S4 の総コスト（ループ全体）を推定：
 
 このベンチマークは **「Strand には学習コストがあるが、ループ運用で吸収できる」** ことを実証した。
 
-## 17.9 言語仕様修正後の再測定
+## 言語仕様修正後の再測定
 
-17.7 で挙げた既知問題のうち 4 件を実装した：
+前節で挙げた既知問題のうち 4 件を実装した：
 
 | 修正 | 内容 |
 |---|---|
@@ -185,19 +185,18 @@ S1 / S2 が依然失敗していたのは LLM が C 風に `&` / `text(match...)
 
 順序は正しく実証された: **仕様を AI に優しく直す（5 修正）→ 残った稀なエラーだけループで吸収**。
 
-## 17.10 再現
+## 再現
 
 ```bash
 # 4 subagent をそれぞれ独立に走らせる（外部 LLM API でも可）
 # 各 subagent への prompt は benchmarks/learning-cost/ 配下を参照
 
 # 出力を評価
-cd reference
-pnpm exec tsx scripts/learning-cost-eval.mjs \
-  ../benchmarks/learning-cost/results/S1-zero-shot/output.strand \
-  ../benchmarks/learning-cost/results/S2-one-shot/output.strand \
-  ../benchmarks/learning-cost/results/S3-few-shot/output.strand \
-  ../benchmarks/learning-cost/results/S4-agent-loop/output.strand
+node benchmarks/scripts/learning-cost-eval.mjs \
+  benchmarks/learning-cost/results/S1-zero-shot/output.strand \
+  benchmarks/learning-cost/results/S2-one-shot/output.strand \
+  benchmarks/learning-cost/results/S3-few-shot/output.strand \
+  benchmarks/learning-cost/results/S4-agent-loop/output.strand
 ```
 
 実測ファイル:

@@ -2,9 +2,9 @@
 
 [English](./poc-phase3.md) · 日本語
 
-## 13.1 ゴール
+## ゴール
 
-`docs/examples/03-blog-spa.strand` を入力に `strand build` を実行すると、ブラウザで開いて以下が動作する：
+`examples/apps/03-blog/app.strand` を入力に `strand build` を実行すると、ブラウザで開いて以下が動作する：
 
 - `/` → リダイレクト → `/posts`（投稿一覧）
 - 投稿カードをクリック → `/posts/:id`（投稿詳細、Markdown 描画）
@@ -17,7 +17,7 @@
 
 Phase 2 で実装した language + runtime に加えて、**ルーティング** と **HTTP** を入れる。
 
-## 13.2 サポート範囲（Phase 3 追加分）
+## サポート範囲（Phase 3 追加分）
 
 | カバー | 詳細 |
 |---|---|
@@ -44,11 +44,11 @@ Phase 3 で **扱わない**:
 - Optimistic update の高度な機構（楽観的状態保持・ロールバック）
 - 認証フロー全体（login form の submit 後は mock 401 で停止する想定）
 
-## 13.3 受け入れ基準（AC）
+## 受け入れ基準（AC）
 
 ### AC-Parse
 
-03-blog-spa.strand の以下が parse 成功：
+examples/apps/03-blog/app.strand の以下が parse 成功：
 - `routes` 内の静的リダイレクト `"/" ->> "/posts"`
 - `error-boundary = ErrorFallback` tile 属性
 - `app.http = { base-url: ..., headers: ..., on-401: doLogout, timeout: 10s }` （values は parser が受け入れ、typecheck はゆるく許す）
@@ -56,7 +56,7 @@ Phase 3 で **扱わない**:
 
 ### AC-Typecheck
 
-03-blog-spa.strand は **errors=0** で通る。
+examples/apps/03-blog/app.strand は **errors=0** で通る。
 
 ### AC-Routing
 
@@ -79,14 +79,14 @@ Phase 3 で **扱わない**:
 
 ### AC-Browser
 
-`pnpm strand build ../docs/examples/03-blog-spa.strand ../examples-build/blog` の結果を、mock JSON を同梱した状態でブラウザで開いて、posts → detail → about → 404 が回る。
+`pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/03-blog/app.strand out/blog` の結果を、mock JSON を同梱した状態でブラウザで開いて、posts → detail → about → 404 が回る。
 
-## 13.4 Mock Backend 戦略
+## Mock Backend 戦略
 
-実 backend は立てない。代わりに `examples-build/blog/api/` に静的 JSON を置き、現在の `scripts/serve.mjs` がそのまま配信する。
+実 backend は立てない。代わりに `out/blog/api/` に静的 JSON を置き、現在の `benchmarks/scripts/serve.mjs` がそのまま配信する。
 
 ```
-examples-build/blog/
+out/blog/
 ├── index.html
 ├── app.js
 ├── runtime.js
@@ -96,13 +96,13 @@ examples-build/blog/
     └── auth/login             ← /api/auth/login (401 を返す)
 ```
 
-URL のパス末尾に拡張子なしで JSON を置けばよいよう、`serve.mjs` を拡張する。
+URL のパス末尾に拡張子なしで JSON を置けばよいよう、`benchmarks/scripts/serve.mjs` を拡張する。
 
 `app.http.base-url` は `""`（同一オリジン）にし、`/api/posts` のような相対パスを使う。
 
-03-blog-spa.strand の `base-url: "https://api.example.com"` はビルド時にコメントアウト or 空文字に上書き、または **app.strand 修正** で対応する。
+examples/apps/03-blog/app.strand の `base-url: "https://api.example.com"` はビルド時にコメントアウト or 空文字に上書き、または **app.strand 修正** で対応する。
 
-## 13.5 実装順序
+## 実装順序
 
 | step | 内容 | 検証 |
 |---|---|---|
@@ -111,11 +111,11 @@ URL のパス末尾に拡張子なしで JSON を置けばよいよう、`serve.
 | 3 | Runtime: history + route matching + route slot | router unit test |
 | 4 | Runtime: http effect dispatcher | http unit test |
 | 5 | Runtime: link / markdown / toast / spinner | runtime test |
-| 6 | Mock backend (静的 JSON) | serve.mjs 拡張 |
+| 6 | Mock backend (静的 JSON) | benchmarks/scripts/serve.mjs 拡張 |
 | 7 | Blog SPA build + E2E | jsdom fetch mock |
 | 8 | 手動ブラウザ確認 | スクリーンショット |
 
-## 13.6 設計上の判断
+## 設計上の判断
 
 | 判断 | 理由 |
 |---|---|
@@ -127,7 +127,7 @@ URL のパス末尾に拡張子なしで JSON を置けばよいよう、`serve.
 | mock は静的 JSON | サーバ起動を増やさない |
 | Decoder は実は無視 (常に JSON parse) | 仕様より緩い |
 
-## 13.7 完了の定義
+## 完了の定義
 
 - AC すべて pass
 - Blog SPA のビルドが errors=0

@@ -4,7 +4,7 @@ English · [日本語](./learning-cost-v1.ja.md)
 
 Strand is a new language with no training data. We measured how accurately an LLM can write Strand **using only the specification docs as context**.
 
-## 17.1 Experiment Design
+## Experiment Design
 
 **Task**: A Pomodoro timer SPA (2-mode switching, Start/Pause/Reset, a tick every 1 second, automatic switching at mode boundaries). The task is in `benchmarks/learning-cost/task-spec.md`.
 
@@ -17,9 +17,9 @@ We ran **4 conditions** in parallel on independent Claude subagents (the subagen
 | **S3: few-shot** | specification + 3 examples (Counter / TodoMVC / Blog) | none |
 | **S4: agent-loop** | same as S3 + permission to call `strand check` (up to 10 iter) | yes |
 
-Evaluation judges each of the **parse / typecheck / build** stages via `reference/scripts/learning-cost-eval.mjs`.
+Evaluation judges each of the **parse / typecheck / build** stages via `benchmarks/scripts/learning-cost-eval.mjs`.
 
-## 17.2 Results
+## Results
 
 | Condition | parse | typecheck | build | LOC | cl100k tokens | self_confidence |
 |---|:-:|:-:|:-:|---:|---:|---|
@@ -28,9 +28,9 @@ Evaluation judges each of the **parse / typecheck / build** stages via `referenc
 | S3 (few-shot)      | ✗ | ✗ | ✗ | 90 | 609 | high |
 | **S4 (agent-loop)**| **✓** | **✓** | **✓** | 94 | 562 | high |
 
-**Shocking fact: all 3 one-shot configurations fail to parse. Only agent-loop reached clean.**
+Key finding: all 3 one-shot configurations fail to parse. Only agent-loop reached clean.
 
-## 17.3 Common Failure Patterns
+## Common Failure Patterns
 
 Even though S1 / S2 / S3 were each written independently, **all three failed to parse with the same failure**:
 
@@ -51,7 +51,7 @@ This is a fusion of "a bug in the Strand specification itself" and "the result o
 | unclear whether a slot can be bound directly to a Bool prop | S1 reported uncertainty |
 | whether Int stringification is `.show` or `.to-text` | S3 reported uncertainty |
 
-## 17.4 S4 (agent-loop) Loop Details
+## S4 (agent-loop) Loop Details
 
 The 4 iterations until S4 reached clean:
 
@@ -66,7 +66,7 @@ Iter 4: 0 errors — refactored to compute next state via pure fns,
 
 The LLM was able to **self-correct in the right direction** by looking at the error messages. Each iter eliminates one distinct problem at a time.
 
-## 17.5 Interpretation
+## Interpretation
 
 ### "You can learn it by adding more examples" is wrong
 
@@ -94,7 +94,7 @@ S4's loop is merely "the LLM manually called `strand check`," but if we cement t
 - With validate-then-rollback, incorrect ops are not applied (an existing feature of Strand v0.1)
 - As a result, we can quantify it as "Strand has a learning cost, but on a loop-based premise it converges in around 4 iter"
 
-## 17.6 Token Cost Perspective
+## Token Cost Perspective
 
 Estimating S4's total cost (the entire loop):
 - Reading the specification docs: ~5500 lines ≈ 30k tokens (context input)
@@ -108,12 +108,12 @@ For comparison, **having Claude write an equivalent task in React** is estimated
 
 In other words, **Strand is 30x more costly on the first task**. However:
 - Reading the specification docs happens **once per session** (many coding agents context cache)
-- From the 2nd task onward it is 0.5k tokens / task in op stream form (see the Chapter 15 benchmark)
+- From the 2nd task onward it is 0.5k tokens / task in op stream form (see the [Benchmark](./benchmark.md))
 - The **cumulative cost at the Nth task** is Strand: `30k + 0.5k * N`, React: `1k * N` → **the crossover is at N=30**
 
 The picture: Strand is favorable in long-term / large-scale / parallel agent scenarios, while React is favorable for one-off tasks.
 
-## 17.7 Improvements to Make on the Strand Side
+## Improvements to Make on the Strand Side
 
 Known issues revealed by this benchmark:
 
@@ -124,7 +124,7 @@ Known issues revealed by this benchmark:
 | error wording for when the 1 slot write per 1 reducer rule is broken | Medium | make E0601's message explicit that "if/else is also summed" |
 | add an "anti-patterns beginners tend to fall into" section to the specification docs | Low | doc addendum |
 
-## 17.8 Conclusion
+## Conclusion
 
 - **Having Strand written correctly in one shot is not realistic**. All 3 context configurations failed to parse
 - **However, with agent-loop it is 100% clean in 4 iter**. Strand's self-repair loop design is justified
@@ -133,9 +133,9 @@ Known issues revealed by this benchmark:
 
 This benchmark demonstrated that **"Strand has a learning cost, but it can be absorbed through loop-based operation."**
 
-## 17.9 Re-measurement After Language Specification Fixes
+## Re-measurement After Language Specification Fixes
 
-We implemented 4 of the known issues raised in 17.7:
+We implemented 4 of the known issues raised in the section above:
 
 | Fix | Content |
 |---|---|
@@ -185,19 +185,18 @@ The learning cost could be almost completely explained by **"the mismatch betwee
 
 The ordering was correctly demonstrated: **make the specification AI-friendly (5 fixes) → absorb only the remaining rare errors with a loop**.
 
-## 17.10 Reproduction
+## Reproduction
 
 ```bash
 # Run the 4 subagents independently (external LLM APIs are also fine)
 # For the prompt to each subagent, see under benchmarks/learning-cost/
 
 # Evaluate the outputs
-cd reference
-pnpm exec tsx scripts/learning-cost-eval.mjs \
-  ../benchmarks/learning-cost/results/S1-zero-shot/output.strand \
-  ../benchmarks/learning-cost/results/S2-one-shot/output.strand \
-  ../benchmarks/learning-cost/results/S3-few-shot/output.strand \
-  ../benchmarks/learning-cost/results/S4-agent-loop/output.strand
+node benchmarks/scripts/learning-cost-eval.mjs \
+  benchmarks/learning-cost/results/S1-zero-shot/output.strand \
+  benchmarks/learning-cost/results/S2-one-shot/output.strand \
+  benchmarks/learning-cost/results/S3-few-shot/output.strand \
+  benchmarks/learning-cost/results/S4-agent-loop/output.strand
 ```
 
 Measured files:

@@ -4,17 +4,17 @@ English · [日本語](./benchmark.ja.md)
 
 For Strand to call itself "AI-friendly," **actual cost measurements** are needed. We implemented the same TodoMVC feature set in both Strand and React and measured token count / line count / edit impact scope.
 
-## 15.1 Environment
+## Environment
 
 | Item | Value |
 |---|---|
-| Strand source | `docs/examples/02-todomvc.strand` |
+| Strand source | `examples/apps/02-todomvc/app.strand` |
 | React source | `benchmarks/todomvc-react/src/App.tsx` |
 | Feature set | add / toggle done / delete / Filter (All/Active/Done) / Clear completed / localStorage persistence / theme tokens |
-| Measurement scripts | `reference/scripts/measure.mjs`, `reference/scripts/measure-scenarios.mjs` |
+| Measurement scripts | `benchmarks/scripts/measure.mjs`, `benchmarks/scripts/measure-scenarios.mjs` |
 | Tokenizers | `cl100k_base` (GPT-4) and `o200k_base` (GPT-4o) from `gpt-tokenizer` |
 
-## 15.2 File Size Comparison
+## File Size Comparison
 
 ```
 label                    files  chars  loc-total  loc-code  cl100k  o200k
@@ -42,7 +42,7 @@ react  (App.tsx)         1      7357   279        236       1883    1923
 | Strand's `match` expression / `for ... when` loop | In React, a chain of `Object.entries(...).filter(...).map(...)` |
 | Strand's theme is declaration-only; React scatters inline styles | React side writes about 10 references to `theme.colors.primary` |
 
-## 15.3 Edit Impact Scope Scenarios (4 kinds)
+## Edit Impact Scope Scenarios (4 kinds)
 
 We manually applied 4 typical changes to both implementations and tallied the additions/deletions/characters/tokens of the diff from the base.
 
@@ -99,7 +99,7 @@ This backs up Strand's claim that "**because the runtime holds built-in features
 
 Up through 03 the number of spots is the same, but **only 04 differs greatly**: React must pass the theme to every component via props.
 
-## 15.4 The Essence of Token Efficiency
+## The Essence of Token Efficiency
 
 | Scenario | Strand favored | React favored |
 |---|---|---|
@@ -117,9 +117,9 @@ Up through 03 the number of spots is the same, but **only 04 differs greatly**: 
 - **Cross-cutting fixes**: Strand is roughly 40% cheaper (thanks to the runtime's built-in mechanisms)
 - **Total**: Summing the patches across the 4 scenarios, Strand is 87% of React's character count / 87% of its token count
 
-## 15.4-bis Efficiency of Strand Edit Ops
+## Efficiency of Strand Edit Ops
 
-Using `strand add / replace / remove` implemented in Specification 16 (AI editing API),
+Using `strand add / replace / remove` implemented in [AI Editing](../spec/ai-edit.md),
 **a fix is completed by sending only "the body of the def being changed."** For the same 4 scenarios,
 we compared 3 "ways of conveying a fix":
 
@@ -165,29 +165,28 @@ TOTAL                       29    20,269    5,888    3,855    1,130    5,195    
 The AI cost of "2 → 3" in this loop is **about 1/4** of the full-file approach.
 This is the economic benefit of the AI editing API.
 
-## 15.5 Measurement Constraints
+## Measurement Constraints
 
 - The comparison covers **the same feature set only**. Adding serious optimizations like React's `useMemo` / `useCallback` / Suspense would increase LOC, but the Strand side has likewise not added signal-graph optimization (Phase 1 PoC level)
 - The React side does **not** implement an **error boundary / automatic theme application / a11y checks** (they are in the Strand runtime; adding equivalents to the React version should be around +50 lines)
 - Differences appear depending on the tokenizer (`cl100k_base` vs `o200k_base`). Both are around 1.4x
-- **There is only one edit-impact-scope scenario** (the priority field). Other patterns such as adding validation / adding a variant are deferred to Phase 5
+- **There is only one edit-impact-scope scenario** (the priority field). Other patterns such as adding validation / adding a variant are deferred to a later phase
 
-## 15.6 Notes (for the reader)
+## Notes (for the reader)
 
 - **This is not evidence that "Strand is superior to React."** Strand compresses its expression on the premise that humans won't read it, so it merely has fewer tokens
 - React has syntax tuned to human cognition, so for human maintenance it is superior to Strand
 - It is enough to understand the fact that "from the perspective of AI coding cost, there is a 1.4x difference"
 
-## 15.7 Reproduction
+## Reproduction
 
 ```bash
-cd reference
-node scripts/measure.mjs                       # full-file comparison
-node scripts/measure-scenarios.mjs             # patch comparison across the 4 scenarios
-pnpm exec tsx scripts/measure-ops.mjs          # op stream cost for the same 4 scenarios
+node benchmarks/scripts/measure.mjs            # full-file comparison
+node benchmarks/scripts/measure-scenarios.mjs  # patch comparison across the 4 scenarios
+node benchmarks/scripts/measure-ops.mjs        # op stream cost for the same 4 scenarios
 ```
 
-## 15.8 Numbers (written directly, for later regeneration)
+## Numbers (written directly, for later regeneration)
 
 Last measured: 2026-05-29
 

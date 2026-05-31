@@ -39,7 +39,7 @@ Write it out as a `.strand` file at the specified path.
 
 ## Evaluation
 
-With `reference/scripts/learning-cost-eval.mjs`:
+With `benchmarks/scripts/learning-cost-eval.mjs`:
 - Does it pass parse?
 - Does it pass typecheck?
 - Does it pass build?

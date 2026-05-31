@@ -2,22 +2,22 @@
 
 English · [日本語](./poc-phase1.ja.md)
 
-## 11.1 Goal
+## Goal
 
-Running `strand build` with `docs/examples/01-counter.strand` as input builds a single SPA that, when opened in the browser, has working `+` / `−` / `reset` buttons.
+Running `strand build` with `examples/apps/01-counter/app.strand` as input builds a single SPA that, when opened in the browser, has working `+` / `−` / `reset` buttons.
 
 The flow for a human editor:
 
 ```bash
-cd reference
 pnpm install
-pnpm strand build ../docs/examples/01-counter.strand ../examples-build/counter
-pnpm vite preview --root ../examples-build/counter --open
+pnpm build
+pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand out/counter
+node benchmarks/scripts/serve.mjs out/counter 5173
 ```
 
 → In the browser, "Count: 0" + 3 buttons. `+` increments by 1, `reset` sets to 0, `−` decrements (the refinement rejects values below 0).
 
-## 11.2 Support Scope (Phase 1)
+## Support Scope (Phase 1)
 
 | Covered | Details |
 |---|---|
@@ -32,43 +32,27 @@ pnpm vite preview --root ../examples-build/counter --open
 
 **Not handled in Phase 1**: `effect`, `fn`, `match`, `for`, `when`, `if-then-else` expressions, `Map`/`Set`/`List`, other refinement predicates, route resolution, themes, a11y, the AI editing API, the episode log.
 
-## 11.3 Directory Layout
+## Directory Layout
 
 ```
-new-js-framework/
-├── docs/                      ← specification documents (existing)
-├── reference/                 ← PoC implementation
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── biome.json
-│   ├── vite.config.ts
-│   ├── src/
-│   │   ├── compiler/
-│   │   │   ├── ast.ts         ← AST types
-│   │   │   ├── lexer.ts       ← tokenizer
-│   │   │   ├── parser.ts      ← syntax analysis
-│   │   │   ├── typecheck.ts   ← name resolution + type checking
-│   │   │   ├── codegen.ts     ← AST → JS code
-│   │   │   └── compile.ts     ← lex→parse→check→codegen integration
-│   │   ├── runtime/
-│   │   │   ├── index.ts       ← runtime entry (mount)
-│   │   │   ├── slots.ts       ← slot store + dirty tracking
-│   │   │   └── dom.ts         ← virtual tile → DOM reflection
-│   │   └── cli/
-│   │       └── strand.ts      ← strand build command
-│   └── test/
-│       ├── lexer.test.ts
-│       ├── parser.test.ts
-│       ├── typecheck.test.ts
-│       ├── codegen.test.ts
-│       └── e2e.test.ts        ← builds counter.strand end-to-end
-└── examples-build/            ← output directory of strand build
-    └── counter/
-        ├── index.html
-        └── app.js
+packages/
+├── compiler/
+│   └── src/
+│       ├── ast.ts            ← AST types
+│       ├── lexer.ts          ← tokenizer
+│       ├── parser.ts         ← syntax analysis
+│       ├── typecheck.ts      ← name resolution + type checking
+│       ├── codegen.ts        ← AST → JS code
+│       └── compile.ts        ← lex→parse→check→codegen integration
+├── runtime/
+│   └── src/
+│       └── index.ts          ← runtime entry (mount), slot store + dirty tracking, virtual tile → DOM reflection
+└── cli/
+    └── src/
+        └── strand.ts         ← strand build command
 ```
 
-## 11.4 Acceptance Criteria (AC)
+## Acceptance Criteria (AC)
 
 Locked down first with TDD.
 
@@ -85,7 +69,7 @@ Locked down first with TDD.
 
 ### AC-Parser
 
-Feeding all of 01-counter.strand, the following AST node counts:
+Feeding all of `examples/apps/01-counter/app.strand`, the following AST node counts:
 
 - TypeDef: 1 (N)
 - SlotDef: 1 (count)
@@ -119,35 +103,35 @@ When the generated JS is mounted onto the DOM in the browser:
 ### AC-CLI
 
 ```bash
-pnpm strand build ../docs/examples/01-counter.strand ../examples-build/counter
+pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand out/counter
 ```
 
 - Exit code 0
-- `examples-build/counter/index.html` and `app.js` are created
+- `out/counter/index.html` and `app.js` are created
 - Opening the HTML in the browser works as in AC-Runtime
 
 ### AC-E2E
 
 In `test/e2e.test.ts`:
-- Read 01-counter.strand and build
+- Read `examples/apps/01-counter/app.strand` and build
 - eval / dynamic-import the output JS
 - Mount on jsdom
 - Dispatch a `+` event → the DOM text changes to "Count: 1"
 
-## 11.5 Implementation Order (TDD)
+## Implementation Order (TDD)
 
 | step | Content | Test |
 |---|---|---|
 | 1 | Project setup | `pnpm test` succeeds with 0 cases |
 | 2 | AST types + Lexer | all examples in `lexer.test.ts` |
-| 3 | Parser | `parser.test.ts` parses 01-counter.strand successfully |
+| 3 | Parser | `parser.test.ts` parses `examples/apps/01-counter/app.strand` successfully |
 | 4 | Typecheck | `typecheck.test.ts` covers each normal/abnormal case of AC-Typecheck |
 | 5 | Codegen | `codegen.test.ts` checks the generated JS has a structure close to the expected form |
 | 6 | Runtime | `runtime.test.ts` confirms mounting and updating on jsdom |
 | 7 | CLI | `cli.test.ts` checks the build command creates index.html |
 | 8 | E2E + manual browser check | Screenshots |
 
-## 11.6 Design Decisions (PoC Scope)
+## Design Decisions (PoC Scope)
 
 | Decision | Reason |
 |---|---|
@@ -155,12 +139,12 @@ In `test/e2e.test.ts`:
 | Hand-written recursive-descent parser | Avoids adding dependencies (acorn/peggy, etc.) and runs on Strand's syntax alone |
 | Runtime is "re-render all tiles + no DOM diff" | Phase 1 prioritizes operation over performance. After the initial render, dirty detection → regenerate only the affected tile |
 | Omit the IR, generate JS code directly | Phase 1 short-circuits without going through an IR. Phase 2 inserts an IR |
-| The dev server is vite serving examples-build directly | strand dev is for Phase 2 |
+| The dev server serves the build output (`out/`) directly | strand dev is for Phase 2 |
 | The signal graph is also not implemented in Phase 1 | A naive implementation that re-renders the affected tile whenever any slot changes |
 
-## 11.7 Definition of Done
+## Definition of Done
 
 - All of the above AC pass
-- `examples-build/counter/index.html` can be opened in the browser and manually verified
+- `out/counter/index.html` can be opened in the browser and manually verified
 - Screenshots are kept
 - Known constraints are documented in the README

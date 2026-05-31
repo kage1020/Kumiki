@@ -2,13 +2,13 @@
 
 [English](./poc-phase4.md) · 日本語
 
-## 14.1 ゴール
+## ゴール
 
 Phase 1〜3 で「動く SPA」までを通したので、Phase 4 では **見た目** と **堅牢さ** を仕上げる。
 
 サンプルは Counter / TodoMVC / Blog SPA をそのまま使い、追加機能でビジュアル / a11y / 例外耐性を改善する。
 
-## 14.2 スコープ
+## スコープ
 
 | カバー | 詳細 |
 |---|---|
@@ -25,7 +25,7 @@ Phase 4 で **扱わない**：
 - Web Animations API への低レベル access
 - focus trap / a11y-tree の動的計算
 
-## 14.3 受け入れ基準（AC）
+## 受け入れ基準（AC）
 
 ### AC-Theme
 - `theme Dark = {...}` を parse、codegen が `_theme = {...}` として runtime に渡す
@@ -61,7 +61,7 @@ Phase 4 で **扱わない**：
 - jsdom 上で navigate / fetch mock の Blog SPA E2E 動作
 - Counter / TodoMVC に theme を適用してブラウザで目視
 
-## 14.4 実装順序
+## 実装順序
 
 | step | 内容 | 検証 |
 |---|---|---|
@@ -74,7 +74,7 @@ Phase 4 で **扱わない**：
 | 7 | アニメーション | ブラウザ |
 | 8 | Blog SPA E2E + 既存例 theme 化 | jsdom |
 
-## 14.5 設計上の判断
+## 設計上の判断
 
 | 判断 | 理由 |
 |---|---|
@@ -83,9 +83,9 @@ Phase 4 で **扱わない**：
 | Responsive は viewport size を watch しない | `matchMedia` でブレークポイント別 class を切替 |
 | a11y は警告のデフォルト | 既存例の互換性のため。`--strict-a11y` でエラー化 |
 | エラー境界は try/catch ベース | render 中の例外を捕捉、tile 階層単位 |
-| アニメーション 3 種固定 | カスタムを Phase 5 へ |
+| アニメーション 3 種固定 | カスタムは後のフェーズへ |
 
-## 14.6 完了の定義
+## 完了の定義
 
 - AC すべて pass
 - 既存 46 件 + Phase 4 で追加するテスト (theme/state/responsive/a11y/error-boundary/animation) も全部 pass

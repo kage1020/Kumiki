@@ -91,5 +91,5 @@ Write it out as a `.strand` file at the specified path. **Do not leave any stray
 
 ## Evaluation
 
-Score parse / typecheck / build with `reference/scripts/learning-cost-eval.mjs`.
+Score parse / typecheck / build with `benchmarks/scripts/learning-cost-eval.mjs`.
 The best version also goes through `strand build` + a browser smoke test.

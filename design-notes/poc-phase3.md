@@ -2,9 +2,9 @@
 
 English · [日本語](./poc-phase3.ja.md)
 
-## 13.1 Goal
+## Goal
 
-Running `strand build` with `docs/examples/03-blog-spa.strand` as input, opening the result in the browser makes the following work:
+Running `strand build` with `examples/apps/03-blog/app.strand` as input, opening the result in the browser makes the following work:
 
 - `/` → redirect → `/posts` (the post list)
 - Clicking a post card → `/posts/:id` (post detail, Markdown rendering)
@@ -17,7 +17,7 @@ Running `strand build` with `docs/examples/03-blog-spa.strand` as input, opening
 
 In addition to the language + runtime implemented in Phase 2, add **routing** and **HTTP**.
 
-## 13.2 Support Scope (Phase 3 additions)
+## Support Scope (Phase 3 additions)
 
 | Covered | Details |
 |---|---|
@@ -44,11 +44,11 @@ In addition to the language + runtime implemented in Phase 2, add **routing** an
 - Advanced optimistic-update machinery (optimistic state retention / rollback)
 - The entire authentication flow (after submitting the login form, it stops at a mock 401)
 
-## 13.3 Acceptance Criteria (AC)
+## Acceptance Criteria (AC)
 
 ### AC-Parse
 
-The following in 03-blog-spa.strand parse successfully:
+The following in examples/apps/03-blog/app.strand parse successfully:
 - The static redirect `"/" ->> "/posts"` inside `routes`
 - The `error-boundary = ErrorFallback` tile attribute
 - `app.http = { base-url: ..., headers: ..., on-401: doLogout, timeout: 10s }` (the parser accepts the values, and typecheck permits them loosely)
@@ -56,7 +56,7 @@ The following in 03-blog-spa.strand parse successfully:
 
 ### AC-Typecheck
 
-03-blog-spa.strand passes with **errors=0**.
+examples/apps/03-blog/app.strand passes with **errors=0**.
 
 ### AC-Routing
 
@@ -79,14 +79,14 @@ The following in 03-blog-spa.strand parse successfully:
 
 ### AC-Browser
 
-Opening the result of `pnpm strand build ../docs/examples/03-blog-spa.strand ../examples-build/blog` in the browser, with the mock JSON bundled, posts → detail → about → 404 cycles.
+Opening the result of `pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/03-blog/app.strand out/blog` in the browser, with the mock JSON bundled, posts → detail → about → 404 cycles.
 
-## 13.4 Mock Backend Strategy
+## Mock Backend Strategy
 
-We do not stand up a real backend. Instead, place static JSON under `examples-build/blog/api/` and have the current `scripts/serve.mjs` serve it as-is.
+We do not stand up a real backend. Instead, place static JSON under `out/blog/api/` and have the current `benchmarks/scripts/serve.mjs` serve it as-is.
 
 ```
-examples-build/blog/
+out/blog/
 ├── index.html
 ├── app.js
 ├── runtime.js
@@ -96,13 +96,13 @@ examples-build/blog/
     └── auth/login             ← /api/auth/login (returns 401)
 ```
 
-Extend `serve.mjs` so that placing JSON without an extension at the end of the URL path is enough.
+Extend `benchmarks/scripts/serve.mjs` so that placing JSON without an extension at the end of the URL path is enough.
 
 Set `app.http.base-url` to `""` (same origin) and use relative paths such as `/api/posts`.
 
-The `base-url: "https://api.example.com"` in 03-blog-spa.strand is handled by commenting it out or overwriting it with an empty string at build time, or by **editing app.strand**.
+The `base-url: "https://api.example.com"` in examples/apps/03-blog/app.strand is handled by commenting it out or overwriting it with an empty string at build time, or by **editing app.strand**.
 
-## 13.5 Implementation Order
+## Implementation Order
 
 | step | Content | Validation |
 |---|---|---|
@@ -111,11 +111,11 @@ The `base-url: "https://api.example.com"` in 03-blog-spa.strand is handled by co
 | 3 | Runtime: history + route matching + route slot | router unit test |
 | 4 | Runtime: http effect dispatcher | http unit test |
 | 5 | Runtime: link / markdown / toast / spinner | runtime test |
-| 6 | Mock backend (static JSON) | serve.mjs extension |
+| 6 | Mock backend (static JSON) | benchmarks/scripts/serve.mjs extension |
 | 7 | Blog SPA build + E2E | jsdom fetch mock |
 | 8 | Manual browser check | Screenshots |
 
-## 13.6 Design Decisions
+## Design Decisions
 
 | Decision | Reason |
 |---|---|
@@ -127,7 +127,7 @@ The `base-url: "https://api.example.com"` in 03-blog-spa.strand is handled by co
 | The mock is static JSON | Avoid adding another server to start |
 | The Decoder is actually ignored (always JSON parse) | Looser than the spec |
 
-## 13.7 Definition of Done
+## Definition of Done
 
 - All AC pass
 - The Blog SPA build has errors=0

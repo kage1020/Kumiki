@@ -2,9 +2,9 @@
 
 English · [日本語](./poc-phase2.ja.md)
 
-## 12.1 Goal
+## Goal
 
-Running `strand build` with `docs/examples/02-todomvc.strand` as input, opening the result in the browser makes the following work:
+Running `strand build` with `examples/apps/02-todomvc/app.strand` as input, opening the result in the browser makes the following work:
 
 - Adding a Todo (input + Enter)
 - Toggling done (checkbox)
@@ -16,7 +16,7 @@ Running `strand build` with `docs/examples/02-todomvc.strand` as input, opening 
 
 Add all the features that did not work in Phase 1.
 
-## 12.2 Support Scope (Phase 2 additions)
+## Support Scope (Phase 2 additions)
 
 | Covered | Details |
 |---|---|
@@ -32,7 +32,7 @@ Add all the features that did not work in Phase 1.
 
 **Not handled** in Phase 2: routing resolution, full theme support, a11y validation, the AI editing API, the episode log, SSR/Edge, the HTTP capability, IndexedDB, analytics, WebSocket, animation.
 
-## 12.3 Acceptance Criteria (AC)
+## Acceptance Criteria (AC)
 
 Locked down first with TDD.
 
@@ -118,7 +118,7 @@ tile TodoList = column(for id in todos.keys when(matchFilter(todos[id], filter),
 ### AC-CLI
 
 ```
-pnpm strand build ../docs/examples/02-todomvc.strand ../examples-build/todomvc
+pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/02-todomvc/app.strand out/todomvc
 ```
 
 - Exit code 0
@@ -134,7 +134,7 @@ In the browser:
 5. Clear completed → done items disappear
 6. Reloading restores the same state (localStorage)
 
-## 12.4 Implementation Order (TDD)
+## Implementation Order (TDD)
 
 | step | Content | Test |
 |---|---|---|
@@ -148,7 +148,7 @@ In the browser:
 | 8 | codegen extensions | added to codegen.test.ts |
 | 9 | TodoMVC build & manual check | E2E |
 
-## 12.5 Design Decisions (PoC Scope)
+## Design Decisions (PoC Scope)
 
 | Decision | Reason |
 |---|---|
@@ -159,9 +159,9 @@ In the browser:
 | The runtime reads/writes localStorage directly | The first example of a capability handler |
 | Theme / a11y / routing are for Phase 3 | Not needed for TodoMVC alone |
 
-## 12.6 Definition of Done
+## Definition of Done
 
 - All AC pass
-- Opening `examples-build/todomvc/index.html` in a real browser makes all features work
+- Opening `out/todomvc/index.html` in a real browser makes all features work
 - Todos are retained after reload (localStorage)
 - The existing Counter tests also pass without regression

@@ -4,7 +4,7 @@ English · [日本語](./learning-cost-v3.ja.md)
 
 A sequel to `./learning-cost-v1.md` (Pomodoro / Claude / 4 conditions) and `./learning-cost-v2.md` (Kanban / 3 vendors). We demonstrate the LLM's practical range with an **even larger Issue Tracker SPA**.
 
-## 19.1 Purpose
+## Purpose
 
 In v2 we confirmed "**one-shot-write success of Kanban (200 LOC) with 3 vendors + browser actual operation**." Remaining doubts:
 
@@ -14,7 +14,7 @@ In v2 we confirmed "**one-shot-write success of Kanban (200 LOC) with 3 vendors 
 
 v3 verifies (1)(2)(3) with an **Issue Tracker SPA** (GitHub Issues-like, 4 routes, card operations + filters + tags + comment + localStorage + theme).
 
-## 19.2 Task
+## Task
 
 `benchmarks/learning-cost-v3/task-spec.md` — Issue Tracker SPA:
 - 4 routes (`/`, `/issues/:id`, `/new`, `/settings`)
@@ -23,17 +23,17 @@ v3 verifies (1)(2)(3) with an **Issue Tracker SPA** (GitHub Issues-like, 4 route
 - localStorage persistence (issues + comments)
 - Light/Dark theme switching
 
-## 19.3 Conditions
+## Conditions
 
 | ID | LLM | Provider | Path |
 |---|---|---|---|
 | I-Claude | Claude | Anthropic | Claude Code Agent tool |
 | I-Codex  | gpt-5.5 | OpenAI    | `codex exec --sandbox workspace-write` |
-| I-Gemini | Gemini  | Google    | `agy.exe --print` (via PowerShell) |
+| I-Gemini | Gemini  | Google    | Gemini CLI (`--print`) |
 
 Experiment rule: one-shot write, self-loop forbidden. Free reference to specification docs + 3 examples.
 
-## 19.4 Results
+## Results
 
 | Condition | LOC | parse | typecheck | build | Browser actual operation |
 |---|---:|:-:|:-:|:-:|:-:|
@@ -41,7 +41,7 @@ Experiment rule: one-shot write, self-loop forbidden. Free reference to specific
 | I-Codex   | 1058 | ✓ | ✓ | ✗ | n/a |
 | I-Gemini  | 501  | ✗ | ✗ | ✗ | n/a |
 
-### I-Claude's Excellence
+### Largest one-shot pass (I-Claude, 727 LOC)
 
 - **Fully passed one-shot writing at 727 LOC** (1.45x the specification, 11x the scale of Pomodoro)
 - After the additional specification/implementation fixes described below, **all features work in the browser**:
@@ -58,7 +58,7 @@ I-Codex wrote up to 1058 LOC beyond the spec scope (over-generation of defensive
 
 It brought in the OCaml/Haskell-derived `let x = y in z` expression syntax, which the Strand parser cannot parse. Gemini was able to write a structurally correct design (separation of types/fns/effects/tiles, 4-route integration), but other-language knowledge mixed in syntactically.
 
-## 19.5 Specification ↔ Implementation Divergences Revealed by Browser Operation Verification (19 in v3)
+## Specification ↔ Implementation Divergences Revealed by Browser Operation Verification (19 in v3)
 
 In the process of running I-Claude with `strand build` + static serve + Chrome, initially **numerous runtime errors occurred in the browser after build**. All were mismatches / coverage gaps between Strand's specification docs and implementation, so we fixed them.
 
@@ -96,7 +96,7 @@ In the process of running I-Claude with `strand build` + static serve + Chrome, 
 | 29 | dynamic theme: resolve `app.theme = slotName` via `_live[slotName]` | I-Claude `theme = themeName` |
 | 30 | re-run `applyThemeDefaults` at the start of `render()` | DOM reflection on theme switch |
 
-## 19.6 Implications
+## Implications
 
 ### "The LLM writes, the human operates" holds
 
@@ -123,7 +123,7 @@ In v3, I-Claude's code that passed parse/typecheck/build in one shot produced **
 | gpt-5.5 (Codex) | defensive and robust. Does not break down even beyond spec scope | prone to hallucination (`fieldset`/`error` builtins) |
 | Gemini | summarizes most concisely and declaratively | high risk of mixing in other-language syntax (`let ... in`) |
 
-## 19.7 Cumulative Summary (v1 + v2 + v3)
+## Cumulative Summary (v1 + v2 + v3)
 
 The Strand specification gaps detected and fixed across 3 rounds of learning cost verification total **30**:
 
@@ -136,7 +136,7 @@ The Strand specification gaps detected and fixed across 3 rounds of learning cos
 
 After fixing all, maintained 71 tests pass + full operation of the 3 apps Pomodoro/Kanban/Issue Tracker.
 
-## 19.8 Conclusion
+## Conclusion
 
 | Verification item | Result |
 |---|---|
@@ -148,22 +148,22 @@ After fixing all, maintained 71 tests pass + full operation of the 3 apps Pomodo
 
 **Conclusion**: Strand v0.1 reached a level where the AI gets a medium-scale (~700 LOC) practical SPA working in one-shot writing.
 
-## 19.9 Reproduction
+## Reproduction
 
 ```bash
+# Run from the repo root.
 # Obtain each LLM's output (same procedure as v2)
 
 # Eval (static)
-cd reference
-pnpm exec tsx scripts/learning-cost-eval.mjs \
-  ../benchmarks/learning-cost-v3/results/I-Claude/output.strand \
-  ../benchmarks/learning-cost-v3/results/I-Codex/output.strand \
-  ../benchmarks/learning-cost-v3/results/I-Gemini/output.strand
+node benchmarks/scripts/learning-cost-eval.mjs \
+  benchmarks/learning-cost-v3/results/I-Claude/output.strand \
+  benchmarks/learning-cost-v3/results/I-Codex/output.strand \
+  benchmarks/learning-cost-v3/results/I-Gemini/output.strand
 
 # Browser operation verification
-pnpm exec tsx src/cli/strand.ts build \
-  ../benchmarks/learning-cost-v3/results/I-Claude/output.strand \
-  ../examples-build/issue-tracker
-node scripts/serve.mjs ../examples-build/issue-tracker 5192 &
+pnpm --filter @strand/cli exec tsx src/strand.ts build \
+  benchmarks/learning-cost-v3/results/I-Claude/output.strand \
+  out/issue-tracker
+node benchmarks/scripts/serve.mjs out/issue-tracker 5192 &
 # → open http://localhost:5192/ in the browser
 ```

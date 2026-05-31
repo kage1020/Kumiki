@@ -2,13 +2,13 @@
 
 English · [日本語](./poc-phase4.ja.md)
 
-## 14.1 Goal
+## Goal
 
 Since Phases 1–3 carried us through to a "working SPA," Phase 4 finishes off the **appearance** and **robustness**.
 
 The samples reuse Counter / TodoMVC / Blog SPA as-is, and additional features improve the visuals / a11y / exception resilience.
 
-## 14.2 Scope
+## Scope
 
 | Covered | Details |
 |---|---|
@@ -25,7 +25,7 @@ The samples reuse Counter / TodoMVC / Blog SPA as-is, and additional features im
 - Low-level access to the Web Animations API
 - Dynamic computation of focus trap / a11y-tree
 
-## 14.3 Acceptance Criteria (AC)
+## Acceptance Criteria (AC)
 
 ### AC-Theme
 - Parse `theme Dark = {...}`, and codegen passes it to the runtime as `_theme = {...}`
@@ -61,7 +61,7 @@ The samples reuse Counter / TodoMVC / Blog SPA as-is, and additional features im
 - Blog SPA E2E operation with navigate / fetch mock on jsdom
 - Apply a theme to Counter / TodoMVC and verify visually in the browser
 
-## 14.4 Implementation Order
+## Implementation Order
 
 | step | Content | Validation |
 |---|---|---|
@@ -74,7 +74,7 @@ The samples reuse Counter / TodoMVC / Blog SPA as-is, and additional features im
 | 7 | Animation | browser |
 | 8 | Blog SPA E2E + theming the existing examples | jsdom |
 
-## 14.5 Design Decisions
+## Design Decisions
 
 | Decision | Reason |
 |---|---|
@@ -83,9 +83,9 @@ The samples reuse Counter / TodoMVC / Blog SPA as-is, and additional features im
 | Responsive does not watch the viewport size | Switch per-breakpoint classes with `matchMedia` |
 | a11y defaults to warnings | For compatibility with the existing examples. `--strict-a11y` turns them into errors |
 | The error boundary is try/catch-based | Captures exceptions during render, per tile hierarchy |
-| 3 fixed animations | Custom ones are deferred to Phase 5 |
+| 3 fixed animations | Custom ones are deferred to a later phase |
 
-## 14.6 Definition of Done
+## Definition of Done
 
 - All AC pass
 - The existing 46 tests + the tests added in Phase 4 (theme/state/responsive/a11y/error-boundary/animation) all pass

@@ -4,17 +4,17 @@
 
 Strand が "AI フレンドリー" を名乗るからには、**実コストの実測**が必要。同じ機能の TodoMVC を Strand と React で実装し、トークン数 / 行数 / 編集影響範囲を測った。
 
-## 15.1 環境
+## 環境
 
 | 項目 | 値 |
 |---|---|
-| Strand ソース | `docs/examples/02-todomvc.strand` |
+| Strand ソース | `examples/apps/02-todomvc/app.strand` |
 | React ソース | `benchmarks/todomvc-react/src/App.tsx` |
 | 機能セット | 追加 / 完了トグル / 削除 / Filter (All/Active/Done) / Clear completed / localStorage 永続化 / theme tokens |
-| 計測スクリプト | `reference/scripts/measure.mjs`, `reference/scripts/measure-scenarios.mjs` |
+| 計測スクリプト | `benchmarks/scripts/measure.mjs`, `benchmarks/scripts/measure-scenarios.mjs` |
 | トークナイザ | `gpt-tokenizer` の `cl100k_base` (GPT-4) と `o200k_base` (GPT-4o) |
 
-## 15.2 ファイルサイズ比較
+## ファイルサイズ比較
 
 ```
 label                    files  chars  loc-total  loc-code  cl100k  o200k
@@ -42,7 +42,7 @@ react  (App.tsx)         1      7357   279        236       1883    1923
 | Strand の `match` 式 / `for ... when` ループ | React では `Object.entries(...).filter(...).map(...)` の連鎖 |
 | Strand の theme は宣言だけ。React は inline style 散在 | React 側で `theme.colors.primary` の参照を約 10 箇所書く |
 
-## 15.3 編集影響範囲シナリオ（4 種）
+## 編集影響範囲シナリオ（4 種）
 
 4 つの典型的な変更を両実装に手で適用し、ベースからの diff の追加/削除/文字/トークンを集計した。
 
@@ -99,7 +99,7 @@ React / Strand ratios (totals)
 
 03 までは箇所の数は同じだが、**04 だけ大きく違う**：React は theme を prop で全コンポーネントに渡す必要がある。
 
-## 15.4 トークン効率の本質
+## トークン効率の本質
 
 | シナリオ | Strand 有利 | React 有利 |
 |---|---|---|
@@ -117,9 +117,9 @@ React / Strand ratios (totals)
 - **横断的修正**: Strand が 40% 程度安い（runtime にビルトイン機構があるため）
 - **合計**: 4 シナリオの patch を合算すると、Strand は React の 87% の文字数 / 87% のトークン数
 
-## 15.4-bis Strand 編集 op の効率
+## Strand 編集 op の効率
 
-仕様 16（AI 編集 API）で実装した `strand add / replace / remove` を使うと、
+[AI Editing](../spec/ai-edit.md) で実装した `strand add / replace / remove` を使うと、
 **「変更を受ける def の本体だけ」を送れば修正が完了する**。同じ 4 シナリオ
 について、3 つの「修正の伝え方」を比較した：
 
@@ -165,29 +165,28 @@ TOTAL                       29    20,269    5,888    3,855    1,130    5,195    
 このループの「2 → 3」の AI コストが、フルファイル方式の **約 1/4**。
 これが AI 編集 API の経済的メリット。
 
-## 15.5 計測の制約
+## 計測の制約
 
 - 比較は **同一機能だけ**。React の `useMemo` / `useCallback` / Suspense などの本気の最適化を入れると LOC は増えるが、Strand 側も signal-graph 最適化を入れていない（Phase 1 PoC レベル）
 - React 側は **エラー境界 / theme 自動適用 / a11y チェック** を実装していない（Strand ランタイムには入っているが、React 版に同等を入れたら +50 行程度のはず）
 - トークナイザの種類で差が出る (`cl100k_base` vs `o200k_base`)。両方とも 1.4 倍前後
-- **編集影響範囲のシナリオは 1 件のみ**（priority field）。validation 追加 / variant 追加など他パターンは Phase 5 で
+- **編集影響範囲のシナリオは 1 件のみ**（priority field）。validation 追加 / variant 追加など他パターンは後のフェーズで
 
-## 15.6 注意事項（読み手向け）
+## 注意事項（読み手向け）
 
 - **これは "Strand が React より優れている" の証拠ではない**。Strand は人間が読まない前提で表現を圧縮しているので、ただトークンが少ないだけ
 - React は人間の認知に合わせた構文を持つので、人間メンテ向けには Strand より優秀
 - "AI コーディングコストの観点では 1.4 倍違う" という事実が分かれば十分
 
-## 15.7 再現
+## 再現
 
 ```bash
-cd reference
-node scripts/measure.mjs                       # フルファイルの比較
-node scripts/measure-scenarios.mjs             # 4 シナリオの patch 比較
-pnpm exec tsx scripts/measure-ops.mjs          # 同 4 シナリオの op stream コスト
+node benchmarks/scripts/measure.mjs            # フルファイルの比較
+node benchmarks/scripts/measure-scenarios.mjs  # 4 シナリオの patch 比較
+node benchmarks/scripts/measure-ops.mjs        # 同 4 シナリオの op stream コスト
 ```
 
-## 15.8 数字（直書き、後で再生成する用）
+## 数字（直書き、後で再生成する用）
 
 最終計測: 2026-05-29
 

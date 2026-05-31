@@ -4,7 +4,7 @@ English · [日本語](./learning-cost-v2.ja.md)
 
 We verify the result obtained in `./learning-cost-v1.md` that "Strand can be written zero-shot after specification fixes" with a **different model** and a **larger task**. Furthermore, we confirmed not only static checks but also **actual operation in the browser**.
 
-## 18.1 Purpose
+## Purpose
 
 In v1 we had 4 Claude subagent conditions implement Pomodoro (~90 LOC). Remaining doubts:
 
@@ -14,24 +14,24 @@ In v1 we had 4 Claude subagent conditions implement Pomodoro (~90 LOC). Remainin
 
 v2 confirms (1) by running with **OpenAI Codex (gpt-5.5) + Google Gemini**, (2) with a **Kanban Board** (assumed 150–250 LOC), and (3) by real-device verification with `strand build` + a static server + Chrome.
 
-## 18.2 Task
+## Task
 
 `benchmarks/learning-cost-v2/task-spec.md` — Kanban Board SPA:
 - 3 columns (Todo / Doing / Done)
 - card add / column move / delete
 - count display / localStorage persistence / theme
 
-## 18.3 Conditions
+## Conditions
 
 | ID | LLM | Provider | Path | context |
 |---|---|---|---|---|
 | K-Claude | Claude (subagent) | Anthropic | Claude Code Agent tool | specification docs + 3 examples |
 | K-Codex  | gpt-5.5            | OpenAI    | `codex exec --sandbox workspace-write` | same as above |
-| K-Gemini | Gemini             | Google    | `agy.exe --print`                       | same as above |
+| K-Gemini | Gemini             | Google    | Gemini CLI (`--print`)                  | same as above |
 
 Experiment rule: one-shot write, self-looping with `strand check` is forbidden.
 
-## 18.4 Results
+## Results
 
 | Condition | parse | typecheck | build | LOC | cl100k tokens |
 |---|:-:|:-:|:-:|---:|---:|
@@ -64,18 +64,11 @@ Even though the 3 models wrote independently, all of them:
 
 This shows that Strand's structural constraints guide the LLM to the same "correct design" **regardless of model choice**.
 
-### K-Gemini Execution Note
+### Output Capture Note
 
-agy.exe (Gemini CLI) has a known issue where **stdout is empty when going through bash** on Windows. We solved it by passing the prompt via `Get-Content -Raw` from PowerShell and redirecting with `>`. Execution command:
+Each model's output was captured to its result `output.strand` via its own CLI. The prompt instructed the model to emit code and report in a single response, separated by a delimiter so the code could be extracted into `output.strand`.
 
-```powershell
-$prompt = Get-Content "...\gemini-prompt-stdout.txt" -Raw
-agy --print --print-timeout 15m $prompt > "...\K-Gemini\response.txt"
-```
-
-response.txt was instructed in a format that separates code and report with `===STRAND_BEGIN===` / `===STRAND_END===`, allowing extraction with awk.
-
-## 18.5 Additional Strand Specification Bugs Detected
+## Additional Strand Specification Bugs Detected
 
 K-Claude failed 1 case at the build stage → fixed codegen afterward:
 
@@ -85,7 +78,7 @@ K-Claude failed 1 case at the build stage → fixed codegen afterward:
 
 After the fix K-Claude fully passes. With this, Strand specification gaps total **6 detected + all fixed**.
 
-## 18.6 Token Efficiency at Scale (Pomodoro vs Kanban)
+## Token Efficiency at Scale (Pomodoro vs Kanban)
 
 | Metric | Pomodoro (K-Claude equivalent) | Kanban (K-Claude) | Ratio |
 |---|---:|---:|---:|
@@ -95,7 +88,7 @@ After the fix K-Claude fully passes. With this, Strand specification gaps total 
 
 2.3x LOC / 3.1x chars. This is natural because Kanban has many functional elements: "3 columns × 3 operations × 2 effects (persistence)." **In Strand the amount of code per feature grows linearly with scale change** (no exponential growth).
 
-## 18.7 Browser Operation Verification
+## Browser Operation Verification
 
 "Passing parse / typecheck / build" and "actually working in the browser" are separate problems. The former is static consistency, the latter is runtime compatibility. We performed operation verification.
 
@@ -103,10 +96,10 @@ After the fix K-Claude fully passes. With this, Strand specification gaps total 
 
 | App | Source LLM | Learning setting | LOC |
 |---|---|---|---:|
-| Pomodoro Timer | Claude (S1, derived from `docs./learning-cost-v1.md`) | **zero-shot** | 66 |
+| Pomodoro Timer | Claude (S1, derived from `./learning-cost-v1.md`) | **zero-shot** | 66 |
 | Kanban Board   | Gemini (`benchmarks/learning-cost-v2/results/K-Gemini/`) | few-shot | 183 |
 
-We output static assets to `examples-build/{pomodoro,kanban}/` with `strand build`, hosted them on ports 5190/5191 with `scripts/serve.mjs`, and confirmed operation in a Chromium-based browser.
+We output static assets to `out/{pomodoro,kanban}/` with `strand build`, hosted them on ports 5190/5191 with `benchmarks/scripts/serve.mjs`, and confirmed operation in a Chromium-based browser.
 
 ### Results
 
@@ -126,7 +119,7 @@ We output static assets to `examples-build/{pomodoro,kanban}/` with `strand buil
 | 10 | `Cannot access '_d_1' before initialization` (TDZ) | the IIFE of a nested tile call redeclares `const _d_1 = ...`, colliding when an inner expression references the same-named outer | changed codegen to pass tile args and props **via IIFE arguments** (`((_arg, _propsOuter) => { const _d_1 = _arg; ... })(oneJs, propsJs)`) |
 | 11 | `appendChild` parameter not Node | codegen generates `{kind:"grid",...}` etc. but `renderTile`'s switch case was unregistered, returning `undefined` | added `grid` / `stack` / `region` / `scroll` / `panel` / `divider` cases to `renderTile` |
 
-All fixes were reflected in `reference/src/{compiler/codegen.ts, runtime/index.ts}`, maintaining 71 tests pass.
+All fixes were reflected in `packages/compiler/src/codegen.ts` and `packages/runtime/src/index.ts`, maintaining 71 tests pass.
 
 ### Implications
 
@@ -134,7 +127,7 @@ All fixes were reflected in `reference/src/{compiler/codegen.ts, runtime/index.t
 - Of the **4 bugs revealed for the first time by browser verification, 3 are codegen-to-runtime correspondences** (not specification problems)
 - 1 case (the null from `when`'s false branch) is a design-finalization problem not written in the specification docs → the semantics of "tree nodes omittable in conditional branching" should be made explicit
 
-## 18.8 Conclusion
+## Conclusion
 
 | Verification item | Result |
 |---|---|
@@ -148,7 +141,7 @@ All fixes were reflected in `reference/src/{compiler/codegen.ts, runtime/index.t
 
 ### Cumulative Specification Gap Fixes (11)
 
-Detected and fixed through `docs./learning-cost-v1.md` + `docs./learning-cost-v2.md`:
+Detected and fixed through `./learning-cost-v1.md` + `./learning-cost-v2.md`:
 
 | Category | # | Fix |
 |---|---|---|
@@ -173,45 +166,45 @@ All resolved in a single detect → fix → re-verify loop. There was no fundame
 - convergence in real-time collaborative editing
 - reflecting fixes into the specification docs (`../spec/language.md` etc.) (documenting spec ↔ impl consistency)
 
-## 18.9 Reproduction
+## Reproduction
 
 ```bash
+# Run from the repo root.
+
 # K-Claude
 # Spawn a general-purpose subagent with the Claude Code Agent tool and
 # pass benchmarks/learning-cost-v2/task-spec.md
 
 # K-Codex
-cd C:\Users\delta\repositories\demo\new-js-framework
 cat benchmarks/learning-cost-v2/codex-prompt.txt | codex exec \
-  --cd "C:\Users\delta\repositories\demo\new-js-framework" \
   --skip-git-repo-check \
   --sandbox workspace-write \
   -o benchmarks/learning-cost-v2/results/K-Codex/codex-report.txt
 
-# K-Gemini (PowerShell one-liner)
-$prompt = Get-Content "...\benchmarks\learning-cost-v2\gemini-prompt-stdout.txt" -Raw
-agy --print --print-timeout 15m $prompt > "...\benchmarks\learning-cost-v2\results\K-Gemini\response.txt"
-# Extract output.strand from response.txt:
-awk '/^===STRAND_BEGIN===$/{f=1;next} /^===STRAND_END===$/{f=0} f' response.txt > output.strand
+# K-Gemini
+# Run the Gemini CLI on benchmarks/learning-cost-v2/gemini-prompt-stdout.txt
+# and capture its response into the result directory.
+
+# For each model, extract its output.strand from the captured response
+# (the prompt separates code from report with a delimiter), then:
 
 # Eval (static)
-cd reference
-pnpm exec tsx scripts/learning-cost-eval.mjs \
-  ../benchmarks/learning-cost-v2/results/K-Claude/output.strand \
-  ../benchmarks/learning-cost-v2/results/K-Codex/output.strand \
-  ../benchmarks/learning-cost-v2/results/K-Gemini/output.strand
+node benchmarks/scripts/learning-cost-eval.mjs \
+  benchmarks/learning-cost-v2/results/K-Claude/output.strand \
+  benchmarks/learning-cost-v2/results/K-Codex/output.strand \
+  benchmarks/learning-cost-v2/results/K-Gemini/output.strand
 
 # Browser operation verification
-pnpm exec tsx src/cli/strand.ts build \
-  ../benchmarks/learning-cost/results/S1-zero-shot/output.strand \
-  ../examples-build/pomodoro
-pnpm exec tsx src/cli/strand.ts build \
-  ../benchmarks/learning-cost-v2/results/K-Gemini/output.strand \
-  ../examples-build/kanban
+pnpm --filter @strand/cli exec tsx src/strand.ts build \
+  benchmarks/learning-cost/results/S1-zero-shot/output.strand \
+  out/pomodoro
+pnpm --filter @strand/cli exec tsx src/strand.ts build \
+  benchmarks/learning-cost-v2/results/K-Gemini/output.strand \
+  out/kanban
 
 # Serve individually in separate terminals
-node scripts/serve.mjs ../examples-build/pomodoro 5190 &
-node scripts/serve.mjs ../examples-build/kanban   5191 &
+node benchmarks/scripts/serve.mjs out/pomodoro 5190 &
+node benchmarks/scripts/serve.mjs out/kanban   5191 &
 
 # Open http://localhost:5190/ and http://localhost:5191/ in the browser to confirm
 ```

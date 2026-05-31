@@ -138,4 +138,41 @@ describe("typecheck", () => {
     const errors = checkSrc(src);
     expect(errors.some((e) => e.code === "E0601")).toBe(true);
   });
+
+  it("does not flag the stdlib methods restored in issue #5 (no E0801)", () => {
+    // Each fn exercises one previously-missing spec/stdlib.md §2.2 method.
+    const decls = [
+      `fn f(xs: List(Int), ys: List(Int)) -> List(Int) = xs.concat(ys)`,
+      `fn f(xs: List(Int)) -> List(Int) = xs.prepend(0)`,
+      `fn f(xs: List(Int)) -> List(List(Int)) = xs.chunk(2)`,
+      `fn f(xs: List(Int), ys: List(Int)) -> List(Tuple(Int, Int)) = xs.zip(ys)`,
+      `fn f(a: Map(Text, Int), b: Map(Text, Int)) -> Map(Text, Int) = a.merge(b)`,
+      `fn f(a: Map(Text, Int)) -> Map(Text, Int) = a.update("k", $1 + 1)`,
+      `fn f(s: Set(Text)) -> Set(Text) = s.add("x")`,
+      `fn f(a: Set(Text), b: Set(Text)) -> Set(Text) = a.union(b)`,
+      `fn f(a: Set(Text), b: Set(Text)) -> Set(Text) = a.intersect(b)`,
+      `fn f(o: Option(Int), p: Option(Int)) -> Option(Int) = o.or(p)`,
+      `fn f(r: Result(Int, Text)) -> Result(Int, Text) = r.map-err($1)`,
+      `fn f(t: Text) -> Text = t.replace("a", "b")`,
+      `fn f(a: Int, b: Int) -> Int = a.min(b)`,
+      `fn f(a: Int, b: Int) -> Int = a.max(b)`,
+      `fn f(a: Int) -> Int = a.clamp(0, 10)`,
+    ];
+    const wrap = (decl: string) =>
+      `${decl}\n      tile App = column(text("x"))\n      app A caps=[] routes={"/" -> App, "/404" -> App} init=[]`;
+    const failing = decls.filter((decl) => checkSrc(wrap(decl)).some((e) => e.code === "E0801"));
+    expect(failing).toEqual([]);
+  });
+
+  it("still flags genuinely unknown methods (E0801)", () => {
+    const src = `
+      slot xs : List(Int) = [1, 2, 3]
+      fn f(ys: List(Int)) -> List(Int) = ys.frobnicate(1)
+      tile App = column(text("x"))
+      app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+    `;
+    expect(checkSrc(src).some((e) => e.code === "E0801" && e.message.includes("frobnicate"))).toBe(
+      true,
+    );
+  });
 });

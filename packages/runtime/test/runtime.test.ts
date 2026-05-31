@@ -1,5 +1,5 @@
 import type { AppShape } from "@kumiki/runtime";
-import { mount } from "@kumiki/runtime";
+import { _stdlib, mount } from "@kumiki/runtime";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 // Hand-crafted AppShape mirroring the counter example, using the Phase 2 runtime contract.
@@ -161,5 +161,49 @@ describe("runtime", () => {
     const plus = Array.from(root.querySelectorAll("button")).find((b) => b.textContent === "+");
     for (let i = 0; i < 1001; i++) plus?.click();
     expect(root.querySelector("h1")?.textContent).toBe("Count: 999");
+  });
+});
+
+describe("stdlib collection methods (issue #5)", () => {
+  it("listChunk splits into n-sized chunks; last may be shorter", () => {
+    expect(_stdlib.listChunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);
+    expect(_stdlib.listChunk([], 2)).toEqual([]);
+  });
+
+  it("listZip pairs elements up to the shorter length", () => {
+    expect(_stdlib.listZip([1, 2, 3], ["a", "b"])).toEqual([
+      [1, "a"],
+      [2, "b"],
+    ]);
+  });
+
+  it("mapUpdate applies fn to an existing key, no-op when absent", () => {
+    expect(_stdlib.mapUpdate({ a: 1 }, "a", (v) => (v as number) + 1)).toEqual({ a: 2 });
+    expect(_stdlib.mapUpdate({ a: 1 }, "b", (v) => (v as number) + 1)).toEqual({ a: 1 });
+  });
+
+  it("setAdd / setUnion / setIntersect / setDiff", () => {
+    expect(_stdlib.setAdd({}, "x")).toEqual({ x: true });
+    expect(_stdlib.setUnion({ a: true }, { b: true })).toEqual({ a: true, b: true });
+    expect(_stdlib.setIntersect({ a: true, b: true }, { b: true, c: true })).toEqual({ b: true });
+    expect(_stdlib.setDiff({ a: true, b: true }, { b: true })).toEqual({ a: true });
+  });
+
+  it("or returns the receiver when Some/Ok, else other", () => {
+    expect(_stdlib.or(_stdlib.Some(1), _stdlib.Some(2))).toEqual(_stdlib.Some(1));
+    expect(_stdlib.or(_stdlib.None, _stdlib.Some(2))).toEqual(_stdlib.Some(2));
+    expect(_stdlib.or(_stdlib.Ok(1), _stdlib.Ok(2))).toEqual(_stdlib.Ok(1));
+    expect(_stdlib.or(_stdlib.Err("e"), _stdlib.Ok(2))).toEqual(_stdlib.Ok(2));
+  });
+
+  it("mapErr maps the Err payload, passes Ok through", () => {
+    expect(_stdlib.mapErr(_stdlib.Err("x"), (e) => `${e}!`)).toEqual(_stdlib.Err("x!"));
+    expect(_stdlib.mapErr(_stdlib.Ok(1), (e) => `${e}!`)).toEqual(_stdlib.Ok(1));
+  });
+
+  it("diff is numeric for Time/Duration and set-difference for Sets", () => {
+    expect(_stdlib.diff(10, 3)).toBe(7);
+    expect(_stdlib.diff(3, 10)).toBe(7);
+    expect(_stdlib.diff({ a: true, b: true }, { b: true })).toEqual({ a: true });
   });
 });

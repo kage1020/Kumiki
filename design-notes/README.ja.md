@@ -25,4 +25,4 @@
 - [learning-cost-v3.md](./learning-cost-v3.md) — v3（500+ LOC）
 - [learning-cost-v4.md](./learning-cost-v4.md) — v4（800–1500 LOC・全機能ブラウザ動作）
 
-生データと測定スクリプトは [../benchmarks/](../benchmarks/) にある。
+生データと測定スクリプトは [benchmarks/](https://github.com/kage1020/Strand/tree/main/benchmarks) にある。

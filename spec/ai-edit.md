@@ -410,4 +410,4 @@ This allows coexistence with existing Git-based workflows. However, **the true s
 ## 9.12 Next
 
 - Runtime implementation details → [./runtime.md](./runtime.md)
-- Complete examples → [examples/](./examples/)
+- Complete examples → [examples/](../examples/)

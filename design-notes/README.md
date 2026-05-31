@@ -25,4 +25,4 @@ This is the **record of Strand's history and decisions**. Rather than the specif
 - [learning-cost-v3.md](./learning-cost-v3.md) — v3 (500+ LOC)
 - [learning-cost-v4.md](./learning-cost-v4.md) — v4 (800–1500 LOC, full-feature browser operation)
 
-The raw data and measurement scripts are in [../benchmarks/](../benchmarks/).
+The raw data and measurement scripts are in [benchmarks/](https://github.com/kage1020/Strand/tree/main/benchmarks).

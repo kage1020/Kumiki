@@ -124,4 +124,4 @@ Strand does not aim for the following.
 ## 0.8 What to Read Next
 
 - Overall view of the language → [../spec/language.md](../spec/language.md)
-- Want to see an example right away → [examples/01-counter.strand](./examples/01-counter.strand)
+- Want to see an example right away → [examples/apps/01-counter/app.strand](../examples/apps/01-counter/app.strand)

@@ -39,7 +39,7 @@ Open `out/index.html` in a browser and it runs. `app.js` is the generated pure l
 
 ## Editor / AI Integration (MCP)
 
-`@strand/mcp` exposes checking, building, editing, and spec search as MCP tools. For an example MCP client configuration, see [../packages/mcp/README.md](../packages/mcp/README.md).
+`@strand/mcp` exposes checking, building, editing, and spec search as MCP tools. For an example MCP client configuration, see [packages/mcp/README.md](https://github.com/kage1020/Strand/blob/main/packages/mcp/README.md).
 
 ## Next
 

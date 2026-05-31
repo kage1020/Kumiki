@@ -7,6 +7,9 @@
 # Generated Japanese locale tree (built from *.ja.md by scripts/sync-docs.mjs)
 /ja
 
+# Mirrored non-Markdown assets (*.strand, ...) served verbatim by VitePress
+/public
+
 # VitePress build output / cache
 /dist
 /.vitepress/dist

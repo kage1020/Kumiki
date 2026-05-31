@@ -410,4 +410,4 @@ project.strand/
 ## 9.12 次
 
 - ランタイム実装の詳細 → [./runtime.md](./runtime.md)
-- 完全例 → [examples/](./examples/)
+- 完全例 → [examples/](../examples/)

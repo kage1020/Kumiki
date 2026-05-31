@@ -124,4 +124,4 @@ Strand は次のものを目指さない。
 ## 0.8 次に読む
 
 - 言語の全体像 → [../spec/language.md](../spec/language.md)
-- すぐ例を見たい → [examples/01-counter.strand](./examples/01-counter.strand)
+- すぐ例を見たい → [examples/apps/01-counter/app.strand](../examples/apps/01-counter/app.strand)

@@ -71,8 +71,15 @@ for (const d of dirs) {
   const src = join(repoRoot, d);
   const enDest = join(siteDir, d);
   const jaDest = join(siteDir, "ja", d);
+  // Non-Markdown assets go under `public/` so VitePress emits them verbatim;
+  // files alongside Markdown in srcDir are dropped from the build, which would
+  // make every `*.strand` link 404 on the deployed site.
+  const enPub = join(siteDir, "public", d);
+  const jaPub = join(siteDir, "public", "ja", d);
   rmSync(enDest, { recursive: true, force: true });
   rmSync(jaDest, { recursive: true, force: true });
+  rmSync(enPub, { recursive: true, force: true });
+  rmSync(jaPub, { recursive: true, force: true });
 
   for (const rel of walkFiles(src)) {
     const abs = join(src, rel);
@@ -82,9 +89,11 @@ for (const d of dirs) {
     } else if (rel.endsWith(".md")) {
       writeText(join(enDest, toPageRel(rel)), stripSwitchLine(readFileSync(abs, "utf8")));
     } else {
-      // Shared non-Markdown asset (e.g. *.strand, *.json): mirror into both.
-      copyAsset(abs, join(enDest, rel));
-      copyAsset(abs, join(jaDest, rel));
+      // Shared non-Markdown asset (e.g. *.strand, *.json): mirror into both
+      // locale trees under `public/` so `/examples/.../x.strand` and its `/ja/`
+      // counterpart resolve to the served file.
+      copyAsset(abs, join(enPub, rel));
+      copyAsset(abs, join(jaPub, rel));
     }
   }
 }

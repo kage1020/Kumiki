@@ -428,4 +428,4 @@ To meet these, the runtime is Rust → WASM (optional) or hand-written JS (defau
 
 ## 10.13 Next
 
-- Complete examples → [examples/](./examples/)
+- Complete examples → [examples/](../examples/)

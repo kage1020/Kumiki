@@ -1,6 +1,6 @@
 import type { AppShape } from "@kumikijs/runtime";
 import { _stdlib, mount } from "@kumikijs/runtime";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Hand-crafted AppShape mirroring the counter example, using the Phase 2 runtime contract.
 function makeCounterApp(): AppShape {
@@ -161,6 +161,74 @@ describe("runtime", () => {
     const plus = Array.from(root.querySelectorAll("button")).find((b) => b.textContent === "+");
     for (let i = 0; i < 1001; i++) plus?.click();
     expect(root.querySelector("h1")?.textContent).toBe("Count: 999");
+  });
+});
+
+// A named timer (`timer(100ms, name=countdown)`) incrementing `count`, plus a
+// `stop` reducer that returns stopTimers: ["countdown"] (what codegen lowers
+// `stop-timer(countdown)` to).
+function makeTimerApp(): AppShape {
+  const app: AppShape = {
+    slots: { count: { value: 0 } },
+    caps: [],
+    effects: {},
+    init: [],
+    reducers: [
+      {
+        name: "tick",
+        event: { kind: "timer", intervalMs: 100, name: "countdown" },
+        apply: (live) => ({ slots: { count: (live.count as number) + 1 }, emits: [] }),
+      },
+      {
+        name: "stop",
+        selector: { tile: "StopBtn" },
+        event: { kind: "ui", ev: "click" },
+        apply: () => ({ slots: {}, emits: [], stopTimers: ["countdown"] }),
+      },
+    ],
+    root: () => ({ kind: "column", children: [{ kind: "heading", text: "timer" }] }),
+  };
+  return app;
+}
+
+describe("named timers + stop-timer", () => {
+  let root: HTMLElement;
+  beforeEach(() => {
+    vi.useFakeTimers();
+    root = document.createElement("div");
+    document.body.appendChild(root);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    root.remove();
+  });
+
+  const count = (app: AppShape): unknown => (app.live as Record<string, unknown>).count;
+
+  it("a named timer fires until stop-timer clears it", () => {
+    const app = makeTimerApp();
+    const { dispose } = mount(app, root);
+    vi.advanceTimersByTime(350); // ticks at 100/200/300ms
+    expect(count(app)).toBe(3);
+
+    (app as unknown as { _dispatch: (n: string, el: Record<string, unknown>) => void })._dispatch(
+      "stop",
+      {},
+    );
+    const frozen = count(app);
+    vi.advanceTimersByTime(500);
+    expect(count(app)).toBe(frozen); // no further ticks after stop-timer
+    dispose();
+  });
+
+  it("dispose clears a running named timer (no leak)", () => {
+    const app = makeTimerApp();
+    const { dispose } = mount(app, root);
+    vi.advanceTimersByTime(150); // one tick
+    expect(count(app)).toBe(1);
+    dispose();
+    vi.advanceTimersByTime(500);
+    expect(count(app)).toBe(1); // disposed timer does not fire again
   });
 });
 

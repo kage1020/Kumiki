@@ -33,4 +33,21 @@ describe("codegen", () => {
     // concat lowers to an array spread of both lists.
     expect(result.js).toContain("[...(");
   });
+
+  it("compiles a named timer + stop-timer", () => {
+    const src = `
+      slot x : Int = 0
+      reducer tick on=timer(1s, name=t) do= x := x + 1
+      reducer stop on=ui.click(B) do= stop-timer(t)
+      tile B = button(text="stop", onClick=stop)
+      tile App = column(B, text(x.show))
+      app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+    `;
+    const result = compile(src, { runtimeSpecifier: "./runtime.js" });
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.js).toContain('name: "t"');
+    expect(result.js).toContain('_stops.push("t")');
+    expect(result.js).toContain("stopTimers: _stops");
+  });
 });

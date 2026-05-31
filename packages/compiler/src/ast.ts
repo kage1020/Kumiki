@@ -118,7 +118,7 @@ export type Refinement = {
 export type EventPattern =
   | { kind: "UiEvent"; ev: UiEventKind; selector: { tile: string; id?: string }; pos: Pos }
   | { kind: "EffectEvent"; effect: string; outcome: "ok" | "err"; binds: string[]; pos: Pos }
-  | { kind: "TimerEvent"; intervalMs: number; pos: Pos }
+  | { kind: "TimerEvent"; intervalMs: number; name?: string; pos: Pos }
   | { kind: "LifecycleEvent"; name: string; pos: Pos };
 
 export type UiEventKind = "click" | "submit" | "change" | "input" | "focus" | "blur";
@@ -129,6 +129,7 @@ export type Statement =
   | { kind: "SlotAssign"; lvalue: Lvalue; rhs: Expr; pos: Pos }
   | { kind: "LetStmt"; name: string; rhs: Expr; pos: Pos }
   | { kind: "Emit"; effect: string; args: Expr[]; pos: Pos }
+  | { kind: "StopTimer"; name: string; pos: Pos }
   | { kind: "ForStmt"; bind: string; iter: Expr; body: Statement[]; pos: Pos }
   | { kind: "IfStmt"; cond: Expr; consequent: Statement[]; alternate: Statement[]; pos: Pos }
   | {

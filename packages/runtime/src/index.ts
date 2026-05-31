@@ -89,12 +89,12 @@ export type ReducerSpec = {
   event:
     | { kind: "ui"; ev: "click" | "submit" | "change" | "input" }
     | { kind: "effect"; effect: string; outcome: "ok" | "err" }
-    | { kind: "timer"; intervalMs: number }
+    | { kind: "timer"; intervalMs: number; name?: string }
     | { kind: "lifecycle"; name: string };
   apply: (
     slots: Record<string, unknown>,
     payload: Record<string, unknown>,
-  ) => { slots: Record<string, unknown>; emits: EmitSpec[] };
+  ) => { slots: Record<string, unknown>; emits: EmitSpec[]; stopTimers?: string[] };
 };
 
 export type EmitSpec = { effect: string; args: unknown[] };
@@ -219,6 +219,10 @@ export function mount(app: AppShape, target: HTMLElement): { dispose: () => void
 
   let currentRoot: HTMLElement | null = null;
   let disposed = false;
+  // Named timers (`timer(d, name=N)`) are addressable so a reducer can
+  // `stop-timer(N)`. Anonymous timers have no handle exposed to the app.
+  const namedTimers = new Map<string, ReturnType<typeof setInterval>>();
+  const anonTimers: ReturnType<typeof setInterval>[] = [];
   const render = (): void => {
     // Late effect results (e.g. an in-flight fetch that resolves after the app
     // was disposed) must not touch the DOM — `currentRoot` has already been
@@ -301,6 +305,13 @@ export function mount(app: AppShape, target: HTMLElement): { dispose: () => void
       slotValues[k] = v;
     }
     for (const emit of result.emits) dispatcher.dispatch(emit);
+    for (const name of result.stopTimers ?? []) {
+      const h = namedTimers.get(name);
+      if (h !== undefined) {
+        clearInterval(h);
+        namedTimers.delete(name);
+      }
+    }
     render();
   }
 
@@ -411,12 +422,14 @@ export function mount(app: AppShape, target: HTMLElement): { dispose: () => void
       applyReducer(r, {});
     }
   }
-  // Start timer reducers — each fires its reducer every intervalMs.
-  const timerHandles: ReturnType<typeof setInterval>[] = [];
+  // Start timer reducers — each fires its reducer every intervalMs. A named
+  // timer is registered so `stop-timer(name)` can clear it; anonymous timers
+  // only stop on dispose.
   for (const r of app.reducers) {
     if (r.event.kind === "timer") {
       const handle = setInterval(() => applyReducer(r, {}), r.event.intervalMs);
-      timerHandles.push(handle);
+      if (r.event.name !== undefined) namedTimers.set(r.event.name, handle);
+      else anonTimers.push(handle);
     }
   }
   // Fire initial route.enter reducer for current pattern.
@@ -436,7 +449,9 @@ export function mount(app: AppShape, target: HTMLElement): { dispose: () => void
   return {
     dispose: () => {
       disposed = true;
-      for (const h of timerHandles) clearInterval(h);
+      for (const h of anonTimers) clearInterval(h);
+      for (const h of namedTimers.values()) clearInterval(h);
+      namedTimers.clear();
       target.replaceChildren();
       dispatcher.dispose();
     },

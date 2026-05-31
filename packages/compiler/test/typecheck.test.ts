@@ -39,6 +39,44 @@ describe("typecheck", () => {
     expect(checkSrc(src).some((e) => e.code === "E0801")).toBe(false);
   });
 
+  it("accepts a named timer with a matching stop-timer", () => {
+    const src = `
+      slot x : Int = 0
+      reducer tick on=timer(1s, name=t) do= x := x + 1
+      reducer stop on=ui.click(B) do= stop-timer(t)
+      tile B = button(text="stop", onClick=stop)
+      tile App = column(B, text(x.show))
+      app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+    `;
+    expect(checkSrc(src)).toEqual([]);
+  });
+
+  it("reports stop-timer to an undefined timer name (E0106)", () => {
+    const src = `
+      slot x : Int = 0
+      reducer tick on=timer(1s, name=t) do= x := x + 1
+      reducer stop on=ui.click(B) do= stop-timer(nope)
+      tile B = button(text="stop", onClick=stop)
+      tile App = column(B, text(x.show))
+      app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+    `;
+    const errors = checkSrc(src);
+    expect(errors.some((e) => e.code === "E0106" && e.message.includes("nope"))).toBe(true);
+  });
+
+  it("reports duplicate timer names (E0002)", () => {
+    const src = `
+      slot x : Int = 0
+      slot y : Int = 0
+      reducer a on=timer(1s, name=dup) do= x := x + 1
+      reducer b on=timer(2s, name=dup) do= y := y + 1
+      tile App = column(text(x.show), text(y.show))
+      app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+    `;
+    const errors = checkSrc(src);
+    expect(errors.some((e) => e.code === "E0002" && e.message.includes("dup"))).toBe(true);
+  });
+
   it("reports undefined slot reference (E0103)", () => {
     const src = `
       slot count : Int = 0

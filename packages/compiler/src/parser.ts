@@ -497,8 +497,18 @@ class Parser {
       this.next();
       this.eat("op", "(");
       const intervalMs = this.parseDuration();
+      let name: string | undefined;
+      if (this.matchOp(",")) {
+        this.next();
+        const kw = this.eat("ident");
+        if (kw.value !== "name") throw new ParseError(`Expected "name=" in timer(...)`, kw.pos);
+        this.eat("op", "=");
+        name = this.eat("ident").value;
+      }
       this.eat("op", ")");
-      return { kind: "TimerEvent", intervalMs, pos: t.pos };
+      return name === undefined
+        ? { kind: "TimerEvent", intervalMs, pos: t.pos }
+        : { kind: "TimerEvent", intervalMs, name, pos: t.pos };
     }
     // event patterns start with an identifier-like token: `ui`, `app`, `tile`, `route`, or an effect name
     if (t.kind === "ident" || (t.kind === "kw" && (t.value === "app" || t.value === "tile"))) {
@@ -655,6 +665,15 @@ class Parser {
       }
       this.eat("op", ")");
       return { kind: "Emit", effect, args, pos: start.pos };
+    }
+    // `stop-timer(N)` — clear a named timer. `stop-timer` lexes as one ident.
+    const cur = this.peek();
+    if (cur.kind === "ident" && cur.value === "stop-timer") {
+      this.next();
+      this.eat("op", "(");
+      const name = this.eat("ident").value;
+      this.eat("op", ")");
+      return { kind: "StopTimer", name, pos: cur.pos };
     }
     // SlotAssign with lvalue path
     const lvalue = this.parseLvalue();

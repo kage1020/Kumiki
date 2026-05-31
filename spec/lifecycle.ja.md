@@ -72,9 +72,25 @@ reducer poll
     do= emit fetchUpdates()
 ```
 
-`timer(d)` は app の mount 時から `d` 間隔で繰り返し発火する。ランタイム実装は `setInterval` ベースで、`app` の `dispose` 時に自動 clear される。`stop-timer(name)` での明示停止は v0.2 で追加予定。
+`timer(d)` は app の mount 時から `d` 間隔で繰り返し発火する。ランタイム実装は `setInterval` ベースで、`app` の `dispose` 時に自動 clear される。
 
 **duration リテラル**: `1ms`, `500ms`, `1s`, `30s`, `5m` のように整数 + 単位 (`ms` / `s` / `m`) で書ける。
+
+#### 名前付きタイマーと `stop-timer`
+
+タイマーに名前を付けると、reducer から明示的に停止できる：
+
+```kumiki
+slot remaining : Int = 10
+
+reducer tick on=timer(1s, name=countdown) do= remaining := remaining - 1
+reducer stop on=ui.click(StopBtn)         do= stop-timer(countdown)
+```
+
+- `timer(d, name=N)` は interval を識別子 `N` の下に登録する。タイマー名は単一のネームスペースを共有し、アプリ内で一意でなければならない（重複は [E0002](./errors.md)）。
+- `stop-timer(N)` は reducer の文で、`N` という名前の interval を clear する。実行後、そのタイマーは発火しなくなる。未宣言のタイマー名を参照するとコンパイルエラー（[E0106](./errors.md)）。
+- `stop-timer` は純粋な制御文である — slot の読み書きも effect の emit もしないので、reducer は純粋なまま。runtime は reducer の結果を適用するときに interval を clear する。
+- 停止したタイマーは**自動では再開しない**。再開は再マウント時のみ。`app` の dispose 時に、全タイマー（稼働中・停止中問わず）が clear される。
 
 ```kumiki
 reducer tick on=timer(1s)   do= elapsed := elapsed + 1

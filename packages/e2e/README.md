@@ -1,29 +1,31 @@
 # @strand/e2e
 
-実ブラウザ（Chromium / Playwright）で Strand アプリを検証する **opt-in tier**。jsdom では見えない層 — CSS レイアウト・**実フォーカス**・実レンダリング・実イベント — を捕まえる。
+English · [日本語](./README.ja.md)
 
-`@strand/runtime` の jsdom `runScenario` と**同じシナリオ形式**を使い、加えてブラウザ限定アサーションを持つ:
+An **opt-in tier** that verifies Strand apps in a real browser (Chromium / Playwright). It catches layers invisible to jsdom — CSS layout, **real focus**, real rendering, and real events.
 
-- `focused`: その CSS セレクタが実際にフォーカスされていること（再レンダリング時のフォーカス奪取バグを検出）
-- `visible` / `hidden`: 計算済みスタイル上で本当に見えている／いないこと（`display:none` 等、DOM 上の存在では分からない可視性）
+It uses the **same scenario format** as `@strand/runtime`'s jsdom `runScenario`, plus browser-only assertions:
 
-状態 oracle は jsdom 版と同じく `window.__strandApp.live`（slot 値）を `page.evaluate` で読む。表示テキストは `innerText`（可視のみ）。
+- `focused`: that the given CSS selector is actually focused (detects focus-stealing bugs on re-render)
+- `visible` / `hidden`: that it is really visible / invisible per computed style (visibility you can't tell from mere DOM presence, e.g. `display:none`)
 
-## 使い方
+The state oracle, as in the jsdom version, reads `window.__strandApp.live` (slot values) via `page.evaluate`. Displayed text is `innerText` (visible only).
 
-ブラウザのインストールが一度必要:
+## Usage
+
+A one-time browser install is required:
 
 ```sh
 pnpm --filter @strand/e2e exec playwright install chromium
 ```
 
-実行:
+Run:
 
 ```sh
 pnpm --filter @strand/e2e exec tsx src/cli.ts <app.strand> <scenario.json> [--headed]
 ```
 
-例:
+Example:
 
 ```sh
 pnpm --filter @strand/e2e exec tsx src/cli.ts \
@@ -31,8 +33,8 @@ pnpm --filter @strand/e2e exec tsx src/cli.ts \
   examples/apps/06-expenses/scenario.browser.json
 ```
 
-## いつ使うか
+## When to use it
 
-3 層検証（[spec/testing.md](../../spec/testing.md) §8.10）の中で、これは最も重いが最も忠実な層。日常は `strand check` / `strand smoke` / `strand run`（jsdom、高速・CI 標準）で回し、フォーカス・レイアウト・実描画に関わるバグや最終確認のときにこの tier を使う。
+Within the 3-layer verification ([spec/testing.md](../../spec/testing.md) §8.10), this is the heaviest but most faithful layer. Day to day, run `strand check` / `strand smoke` / `strand run` (jsdom, fast, CI standard), and use this tier for bugs involving focus, layout, or real rendering, or for final confirmation.
 
-重い（ブラウザバイナリ）ため、既定の `turbo run test` には含めない。CI で常用する場合はワークフローに `playwright install chromium` を追加する。
+Because it's heavy (browser binaries), it's not included in the default `turbo run test`. To use it routinely in CI, add `playwright install chromium` to the workflow.

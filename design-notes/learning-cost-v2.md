@@ -1,182 +1,184 @@
-# 学習コストベンチマーク v2 — クロスモデル + 大規模タスク + ブラウザ動作検証
+# Learning Cost Benchmark v2 — Cross-Model + Large-Scale Task + Browser Operation Verification
 
-`./learning-cost-v1.md` で得た「Strand は仕様修正後 zero-shot で書ける」結果を **別モデル** と **より大きいタスク** で検証する。さらに静的検査だけでなく **ブラウザでの実動作**まで確認した。
+English · [日本語](./learning-cost-v2.ja.md)
 
-## 18.1 目的
+We verify the result obtained in `./learning-cost-v1.md` that "Strand can be written zero-shot after specification fixes" with a **different model** and a **larger task**. Furthermore, we confirmed not only static checks but also **actual operation in the browser**.
 
-v1 では Claude subagent 4 条件で Pomodoro（〜90 LOC）を実装させた。残る疑念:
+## 18.1 Purpose
 
-1. **Claude bias**: Strand は Claude との対話で設計された。Claude が書きやすいだけかもしれない
-2. **スケール**: Pomodoro は小さい。中規模タスクで同じ性能が出るか
-3. **動的整合**: parse / typecheck / build を通っても、実際にブラウザで動くとは限らない
+In v1 we had 4 Claude subagent conditions implement Pomodoro (~90 LOC). Remaining doubts:
 
-v2 は **OpenAI Codex (gpt-5.5) + Google Gemini** で実行することで (1) を、**Kanban Board** （想定 150〜250 LOC）で (2) を、`strand build` + 静的サーバー + Chrome での実機検証で (3) を確認する。
+1. **Claude bias**: Strand was designed through dialogue with Claude. It might just be easy for Claude to write
+2. **Scale**: Pomodoro is small. Will the same performance hold for a medium-scale task?
+3. **Dynamic consistency**: passing parse / typecheck / build does not necessarily mean it actually works in the browser
 
-## 18.2 タスク
+v2 confirms (1) by running with **OpenAI Codex (gpt-5.5) + Google Gemini**, (2) with a **Kanban Board** (assumed 150–250 LOC), and (3) by real-device verification with `strand build` + a static server + Chrome.
+
+## 18.2 Task
 
 `benchmarks/learning-cost-v2/task-spec.md` — Kanban Board SPA:
-- 3 列 (Todo / Doing / Done)
-- カード追加 / 列移動 / 削除
-- 件数表示 / localStorage 永続化 / theme
+- 3 columns (Todo / Doing / Done)
+- card add / column move / delete
+- count display / localStorage persistence / theme
 
-## 18.3 条件
+## 18.3 Conditions
 
-| ID | LLM | Provider | 経路 | context |
+| ID | LLM | Provider | Path | context |
 |---|---|---|---|---|
-| K-Claude | Claude (subagent) | Anthropic | Claude Code Agent tool | 仕様 docs + 3 examples |
-| K-Codex  | gpt-5.5            | OpenAI    | `codex exec --sandbox workspace-write` | 同上 |
-| K-Gemini | Gemini             | Google    | `agy.exe --print`                       | 同上 |
+| K-Claude | Claude (subagent) | Anthropic | Claude Code Agent tool | specification docs + 3 examples |
+| K-Codex  | gpt-5.5            | OpenAI    | `codex exec --sandbox workspace-write` | same as above |
+| K-Gemini | Gemini             | Google    | `agy.exe --print`                       | same as above |
 
-実験ルール: 一発書き、`strand check` の自己ループは禁止。
+Experiment rule: one-shot write, self-looping with `strand check` is forbidden.
 
-## 18.4 結果
+## 18.4 Results
 
-| 条件 | parse | typecheck | build | LOC | cl100k tokens |
+| Condition | parse | typecheck | build | LOC | cl100k tokens |
 |---|:-:|:-:|:-:|---:|---:|
 | **K-Claude**  | **✓** | **✓** | **✓** | 201 | 1,686 |
 | **K-Codex**   | **✓** | **✓** | **✓** | 239 | 1,785 |
 | **K-Gemini**  | **✓** | **✓** | **✓** | 183 | 1,499 |
 
-**3/3 全モデルが Kanban を一発書きで完全通過**。
+**3/3 — all models fully pass Kanban in one-shot writing**.
 
-- LOC は Pomodoro (60〜90) の **2〜3 倍**。タスクスケール 3 倍でも品質劣化なし
-- **K-Gemini が最も簡潔** (183 LOC, 1499 tokens) — Strand の宣言的構造を最も活かした
-- K-Codex がやや冗長 (239 LOC) — 防御的なフォールバック / 説明的命名
+- LOC is **2–3x** that of Pomodoro (60–90). No quality degradation even at 3x task scale
+- **K-Gemini is the most concise** (183 LOC, 1499 tokens) — made the most of Strand's declarative structure
+- K-Codex is somewhat verbose (239 LOC) — defensive fallbacks / explanatory naming
 
-### モデル間の差異
+### Differences Between Models
 
-| 観点 | Claude | Codex (gpt-5.5) | Gemini |
+| Aspect | Claude | Codex (gpt-5.5) | Gemini |
 |---|---|---|---|
 | LOC | 201 | 239 (+19%) | **183 (-9%)** |
 | tokens | 1686 | 1785 (+6%) | **1499 (-11%)** |
-| docs 読み込み (subset) | 一部のみ | 一部 + lifecycle/errors | 全 form 系/routing 含む幅広 |
-| 自信申告 | "med" | "med" | **"high"** |
-| 不安点の自己申告 | 5 件 | 2 件 | 2 件 |
-| 主要な不安 | lvalue / Map.entries / form vs button | runtime prop 正規化 | `not` unop / `cs[$1]` ユビキタス性 |
+| docs read (subset) | only part | part + lifecycle/errors | broad, including all form-related/routing |
+| confidence report | "med" | "med" | **"high"** |
+| self-reported concerns | 5 | 2 | 2 |
+| main concern | lvalue / Map.entries / form vs button | runtime prop normalization | `not` unop / ubiquity of `cs[$1]` |
 
-3 モデルは独立に書いたにもかかわらず、いずれも:
-- variant 型を活用 (`type Column = Todo \| Doing \| Done`)
-- `fn` で計算ロジックを分離
-- effect で localStorage を抽象化
-- tile を再利用可能な単位に分解
+Even though the 3 models wrote independently, all of them:
+- leveraged variant types (`type Column = Todo \| Doing \| Done`)
+- separated computational logic with `fn`
+- abstracted localStorage with effect
+- decomposed tiles into reusable units
 
-これは Strand の構造的制約が **モデル選択によらず同じ "正しい設計"** に LLM を導いていることを示す。
+This shows that Strand's structural constraints guide the LLM to the same "correct design" **regardless of model choice**.
 
-### K-Gemini 実行ノート
+### K-Gemini Execution Note
 
-agy.exe (Gemini CLI) は Windows 上で **bash 経由だと stdout が空** になる既知問題。PowerShell から `Get-Content -Raw` 経由で prompt を渡し `>` でリダイレクトする方式で解決した。実行コマンド:
+agy.exe (Gemini CLI) has a known issue where **stdout is empty when going through bash** on Windows. We solved it by passing the prompt via `Get-Content -Raw` from PowerShell and redirecting with `>`. Execution command:
 
 ```powershell
 $prompt = Get-Content "...\gemini-prompt-stdout.txt" -Raw
 agy --print --print-timeout 15m $prompt > "...\K-Gemini\response.txt"
 ```
 
-response.txt は `===STRAND_BEGIN===` / `===STRAND_END===` でコードと report を分離するフォーマットで指示済み、awk で切り出し可能。
+response.txt was instructed in a format that separates code and report with `===STRAND_BEGIN===` / `===STRAND_END===`, allowing extraction with awk.
 
-## 18.5 検出された Strand 仕様の追加バグ
+## 18.5 Additional Strand Specification Bugs Detected
 
-K-Claude が build 段階で 1 件失敗 → 後で codegen を修正:
+K-Claude failed 1 case at the build stage → fixed codegen afterward:
 
-| 仕様バグ | 内容 |
+| Specification bug | Content |
 |---|---|
-| `grid` / `stack` / `region` / `scroll` / `divider` builtin が未実装 | parser の `BUILTIN_TILES` には含まれるが、codegen の `BUILTIN_TILES` と switch case には未登録だった。layout builtin の 50% が未実装状態 |
+| `grid` / `stack` / `region` / `scroll` / `divider` builtins unimplemented | they are included in the parser's `BUILTIN_TILES`, but were not registered in codegen's `BUILTIN_TILES` and switch case. 50% of layout builtins were in an unimplemented state |
 
-修正後 K-Claude は完全通過。これで Strand 仕様抜けは累計 **6 件検出 + 全件修正**。
+After the fix K-Claude fully passes. With this, Strand specification gaps total **6 detected + all fixed**.
 
-## 18.6 スケール時のトークン効率（Pomodoro vs Kanban）
+## 18.6 Token Efficiency at Scale (Pomodoro vs Kanban)
 
-| 指標 | Pomodoro (K-Claude 相当) | Kanban (K-Claude) | 倍率 |
+| Metric | Pomodoro (K-Claude equivalent) | Kanban (K-Claude) | Ratio |
 |---|---:|---:|---:|
-| LOC | 87 (平均) | 201 | 2.31x |
-| cl100k tokens | 542 (平均) | 1,686 | 3.11x |
-| chars | 1,838 (平均) | 5,668 | 3.08x |
+| LOC | 87 (average) | 201 | 2.31x |
+| cl100k tokens | 542 (average) | 1,686 | 3.11x |
+| chars | 1,838 (average) | 5,668 | 3.08x |
 
-LOC 2.3 倍 / chars 3.1 倍。これは Kanban が「3 列 × 3 操作 × 2 効果 (永続化)」と機能要素が多いため自然。**Strand は機能あたりのコード量がスケール変化に応じて線形に増える** （指数増加なし）。
+2.3x LOC / 3.1x chars. This is natural because Kanban has many functional elements: "3 columns × 3 operations × 2 effects (persistence)." **In Strand the amount of code per feature grows linearly with scale change** (no exponential growth).
 
-## 18.7 ブラウザ動作検証
+## 18.7 Browser Operation Verification
 
-「parse / typecheck / build が通る」と「ブラウザで実際に動く」は別問題。前者は静的整合性、後者はランタイム互換性。動作検証を実施した。
+"Passing parse / typecheck / build" and "actually working in the browser" are separate problems. The former is static consistency, the latter is runtime compatibility. We performed operation verification.
 
-### 検証対象
+### Verification Targets
 
-| アプリ | 出典 LLM | 学習設定 | LOC |
+| App | Source LLM | Learning setting | LOC |
 |---|---|---|---:|
-| Pomodoro Timer | Claude (S1, `docs./learning-cost-v1.md` 由来) | **zero-shot** | 66 |
+| Pomodoro Timer | Claude (S1, derived from `docs./learning-cost-v1.md`) | **zero-shot** | 66 |
 | Kanban Board   | Gemini (`benchmarks/learning-cost-v2/results/K-Gemini/`) | few-shot | 183 |
 
-`strand build` で `examples-build/{pomodoro,kanban}/` に静的アセットを出力、`scripts/serve.mjs` で port 5190/5191 でホスト、Chromium 系ブラウザで動作確認。
+We output static assets to `examples-build/{pomodoro,kanban}/` with `strand build`, hosted them on ports 5190/5191 with `scripts/serve.mjs`, and confirmed operation in a Chromium-based browser.
 
-### 結果
+### Results
 
-| アプリ | 起動 | UI 表示 | 操作（クリック / 入力） | 永続化 | タイマー |
+| App | Launch | UI display | Operation (click / input) | Persistence | Timer |
 |---|:-:|:-:|:-:|:-:|:-:|
-| Pomodoro | ✓ | ✓ | ✓ (Start/Pause/Reset) | n/a | ✓ (timer event 動作) |
+| Pomodoro | ✓ | ✓ | ✓ (Start/Pause/Reset) | n/a | ✓ (timer event works) |
 | Kanban   | ✓ | ✓ | ✓ (Add/Move/Delete) | ✓ (localStorage) | n/a |
 
-**Pomodoro は LLM の zero-shot 出力をそのまま、ランタイム修正なしで完動**。Kanban は最初の起動で 4 件のランタイム抜けが連鎖発覚 → 修正後完動。
+**Pomodoro fully worked as-is from the LLM's zero-shot output, with no runtime fixes**. For Kanban, 4 runtime gaps surfaced in a chain on the first launch → fully worked after fixes.
 
-### 検出されたランタイム/codegen 仕様抜け（ブラウザ検証で判明）
+### Runtime/codegen Specification Gaps Detected (revealed by browser verification)
 
-| # | 症状 | 原因 | 修正 |
+| # | Symptom | Cause | Fix |
 |---|---|---|---|
-| 8 | `_s.mapFilter(xs, …)` が List 値を受けて爆発 | `.filter` を codegen が常に `_s.mapFilter` に翻訳していた | `_s.filter` という polymorphic dispatch を導入し、`Array.isArray` で List/Map を runtime 振り分け |
-| 9 | `appendChild(null)` で renderTile 死亡 | `when(cond, tile)` の偽分岐が `null` を返し、`{kind:"page", children:[...,null,...]}` を生成 | `renderTile` の child ループ全てに `child != null` ガード追加 |
-| 10 | `Cannot access '_d_1' before initialization` (TDZ) | 入れ子 tile call の IIFE が `const _d_1 = ...` を多重宣言、内側式が同名 outer を参照すると衝突 | tile arg と props を IIFE の **引数経由** で渡すように codegen 変更 (`((_arg, _propsOuter) => { const _d_1 = _arg; ... })(oneJs, propsJs)`) |
-| 11 | `appendChild` parameter not Node | codegen は `{kind:"grid",...}` 等を生成するが `renderTile` の switch case 未登録で `undefined` を返した | `renderTile` に `grid` / `stack` / `region` / `scroll` / `panel` / `divider` の case 追加 |
+| 8 | `_s.mapFilter(xs, …)` blows up receiving a List value | codegen always translated `.filter` to `_s.mapFilter` | introduced a polymorphic dispatch `_s.filter`, runtime-dispatching List/Map via `Array.isArray` |
+| 9 | renderTile dies on `appendChild(null)` | the false branch of `when(cond, tile)` returns `null`, generating `{kind:"page", children:[...,null,...]}` | added a `child != null` guard to all child loops in `renderTile` |
+| 10 | `Cannot access '_d_1' before initialization` (TDZ) | the IIFE of a nested tile call redeclares `const _d_1 = ...`, colliding when an inner expression references the same-named outer | changed codegen to pass tile args and props **via IIFE arguments** (`((_arg, _propsOuter) => { const _d_1 = _arg; ... })(oneJs, propsJs)`) |
+| 11 | `appendChild` parameter not Node | codegen generates `{kind:"grid",...}` etc. but `renderTile`'s switch case was unregistered, returning `undefined` | added `grid` / `stack` / `region` / `scroll` / `panel` / `divider` cases to `renderTile` |
 
-修正は全て `reference/src/{compiler/codegen.ts, runtime/index.ts}` に反映、71 テスト pass 維持。
+All fixes were reflected in `reference/src/{compiler/codegen.ts, runtime/index.ts}`, maintaining 71 tests pass.
 
-### 含意
+### Implications
 
-- **「parse + typecheck + build = 動く」では**ない。Strand は静的検査が緩いというより、codegen ↔ runtime の網羅性が単純に未完成だった
-- ブラウザ検証で **初めて発覚した バグ 4 件のうち 3 件は codegen と runtime の対応関係**（仕様の問題ではない）
-- 1 件（`when` 偽分岐の null）は仕様 docs に書いていなかった設計詰めの問題 → 「条件分岐で省略可能なツリーノード」のセマンティクスを明文化すべき
+- **"parse + typecheck + build = works" is** not true. It is not so much that Strand's static checks are loose, but that the codegen ↔ runtime coverage was simply incomplete
+- Of the **4 bugs revealed for the first time by browser verification, 3 are codegen-to-runtime correspondences** (not specification problems)
+- 1 case (the null from `when`'s false branch) is a design-finalization problem not written in the specification docs → the semantics of "tree nodes omittable in conditional branching" should be made explicit
 
-## 18.8 結論
+## 18.8 Conclusion
 
-| 検証項目 | 結果 |
+| Verification item | Result |
 |---|---|
-| **モデル非依存性** | ✓ Claude + Codex (gpt-5.5) + Gemini の **3 系統** で 100% 一発書き成功 |
-| **スケール耐性** | ✓ Pomodoro → Kanban で 2.3 倍にスケールしても品質維持 |
-| **仕様カバレッジ** | △ さらに 4 件のランタイム抜けを検出 → 修正済（累計 11 件） |
-| **設計の収束** | ✓ 3 モデル独立に書いて同じ「正しい設計」に到達（variant + fn + effect + tile 分離） |
-| **ブラウザ実動作** | ✓ Pomodoro (zero-shot) / Kanban (few-shot) ともに完動 |
+| **Model independence** | ✓ 100% one-shot-write success with the **3 lineages** of Claude + Codex (gpt-5.5) + Gemini |
+| **Scale resilience** | ✓ quality maintained even scaling 2.3x from Pomodoro → Kanban |
+| **Specification coverage** | △ detected 4 more runtime gaps → fixed (11 total) |
+| **Design convergence** | ✓ the 3 models wrote independently and reached the same "correct design" (variant + fn + effect + tile separation) |
+| **Browser actual operation** | ✓ both Pomodoro (zero-shot) / Kanban (few-shot) fully work |
 
-**Strand は AI が学習データなしで書いて、実際に動くコードを生む言語であることがブラウザレベルで実証された**。
+**It was demonstrated at the browser level that Strand is a language where the AI writes without training data and produces code that actually works**.
 
-### 累計の仕様抜け修正 (11 件)
+### Cumulative Specification Gap Fixes (11)
 
-`docs./learning-cost-v1.md` + `docs./learning-cost-v2.md` を通じて検出・修正:
+Detected and fixed through `docs./learning-cost-v1.md` + `docs./learning-cost-v2.md`:
 
-| カテゴリ | # | 修正 |
+| Category | # | Fix |
 |---|---|---|
-| Parser | 1 | `timer(d)` event を実装 |
-| Parser | 2 | 多文 if/else braces 省略を許容 |
-| Parser | 5 | `&` を `&&` の alias に |
-| Parser | 6 | `text/heading/...` builtin で match を value match に |
-| Typecheck | 3 | 1-reducer-1-write を branch-aware に |
-| Docs | 4 | `.show` / `.to-text` を統一 |
-| Codegen | 7 | `grid/stack/region/scroll/divider` の codegen |
-| Codegen | 8 | `.filter` の List/Map poly dispatch |
-| Codegen | 10 | tile call IIFE の TDZ 衝突回避 |
-| Runtime | 9 | `renderTile` の null child ガード |
-| Runtime | 11 | `grid/stack/region/scroll/panel/divider` の renderTile |
+| Parser | 1 | implemented `timer(d)` event |
+| Parser | 2 | allowed omitting braces for multi-statement if/else |
+| Parser | 5 | `&` as an alias of `&&` |
+| Parser | 6 | match as value match in the `text/heading/...` builtins |
+| Typecheck | 3 | made 1-reducer-1-write branch-aware |
+| Docs | 4 | unified `.show` / `.to-text` |
+| Codegen | 7 | codegen for `grid/stack/region/scroll/divider` |
+| Codegen | 8 | List/Map poly dispatch for `.filter` |
+| Codegen | 10 | avoided TDZ collision in tile call IIFE |
+| Runtime | 9 | null child guard in `renderTile` |
+| Runtime | 11 | renderTile for `grid/stack/region/scroll/panel/divider` |
 
-すべて単一の検出 → 修正 → 再検証ループで解消。Strand 仕様自体の根本的な欠陥はなかった。
+All resolved in a single detect → fix → re-verify loop. There was no fundamental defect in the Strand specification itself.
 
-### 残った課題
+### Remaining Issues
 
-- さらに大規模 (500+ LOC) のタスクでの再検証
-- 並列 agent シナリオ (CRDT op-log) の実環境テスト
-- リアルタイム協調編集での収束性
-- 仕様 docs (`../spec/language.md` 等) に修正反映（spec ↔ impl の整合性ドキュメント化）
+- re-verification on even larger (500+ LOC) tasks
+- real-environment testing of the parallel agent scenario (CRDT op-log)
+- convergence in real-time collaborative editing
+- reflecting fixes into the specification docs (`../spec/language.md` etc.) (documenting spec ↔ impl consistency)
 
-## 18.9 再現
+## 18.9 Reproduction
 
 ```bash
 # K-Claude
-# Claude Code Agent tool で general-purpose subagent を spawn し、
-# benchmarks/learning-cost-v2/task-spec.md を渡す
+# Spawn a general-purpose subagent with the Claude Code Agent tool and
+# pass benchmarks/learning-cost-v2/task-spec.md
 
 # K-Codex
 cd C:\Users\delta\repositories\demo\new-js-framework
@@ -186,20 +188,20 @@ cat benchmarks/learning-cost-v2/codex-prompt.txt | codex exec \
   --sandbox workspace-write \
   -o benchmarks/learning-cost-v2/results/K-Codex/codex-report.txt
 
-# K-Gemini (PowerShell ワンライナー)
+# K-Gemini (PowerShell one-liner)
 $prompt = Get-Content "...\benchmarks\learning-cost-v2\gemini-prompt-stdout.txt" -Raw
 agy --print --print-timeout 15m $prompt > "...\benchmarks\learning-cost-v2\results\K-Gemini\response.txt"
-# response.txt から output.strand を切り出し:
+# Extract output.strand from response.txt:
 awk '/^===STRAND_BEGIN===$/{f=1;next} /^===STRAND_END===$/{f=0} f' response.txt > output.strand
 
-# Eval (静的)
+# Eval (static)
 cd reference
 pnpm exec tsx scripts/learning-cost-eval.mjs \
   ../benchmarks/learning-cost-v2/results/K-Claude/output.strand \
   ../benchmarks/learning-cost-v2/results/K-Codex/output.strand \
   ../benchmarks/learning-cost-v2/results/K-Gemini/output.strand
 
-# ブラウザ動作検証
+# Browser operation verification
 pnpm exec tsx src/cli/strand.ts build \
   ../benchmarks/learning-cost/results/S1-zero-shot/output.strand \
   ../examples-build/pomodoro
@@ -207,9 +209,9 @@ pnpm exec tsx src/cli/strand.ts build \
   ../benchmarks/learning-cost-v2/results/K-Gemini/output.strand \
   ../examples-build/kanban
 
-# 別ターミナルで個別サーブ
+# Serve individually in separate terminals
 node scripts/serve.mjs ../examples-build/pomodoro 5190 &
 node scripts/serve.mjs ../examples-build/kanban   5191 &
 
-# ブラウザで http://localhost:5190/ と http://localhost:5191/ を開いて確認
+# Open http://localhost:5190/ and http://localhost:5191/ in the browser to confirm
 ```

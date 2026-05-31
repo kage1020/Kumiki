@@ -1,44 +1,46 @@
-# はじめに
+# Getting Started
 
-## 必要なもの
+English · [日本語](./getting-started.ja.md)
+
+## Requirements
 
 - Node.js 22+
 - pnpm
 
-## セットアップ
+## Setup
 
 ```sh
 git clone <this-repo>
 cd new-js-framework
 pnpm install
 pnpm build
-pnpm test     # 全パッケージのテストが緑になることを確認
+pnpm test     # Confirm that tests for all packages turn green
 ```
 
-## Strand プログラムを検査する
+## Checking a Strand Program
 
-`.strand` ファイルをパース + 型検査する:
+Parse and type-check a `.strand` file:
 
 ```sh
 pnpm --filter @strand/cli exec tsx src/strand.ts check examples/apps/01-counter/app.strand
 # → ok
 ```
 
-エラーがあればコード付きで表示される（例: `E0103 undef-ref at 5:12: ...`）。意味は [../spec/errors.md](../spec/errors.md) を参照。
+If there are errors, they are shown with a code (e.g. `E0103 undef-ref at 5:12: ...`). See [../spec/errors.md](../spec/errors.md) for their meanings.
 
-## ビルドして動かす
+## Building and Running
 
 ```sh
 pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand ./out
 # → Wrote ./out/index.html, app.js, runtime.js
 ```
 
-`out/index.html` をブラウザで開けば動く。`app.js` は生成された純粋なロジック、`runtime.js` は DOM ランタイムである。
+Open `out/index.html` in a browser and it runs. `app.js` is the generated pure logic, and `runtime.js` is the DOM runtime.
 
-## エディタ / AI 連携（MCP）
+## Editor / AI Integration (MCP)
 
-`@strand/mcp` は検査・ビルド・編集・仕様検索を MCP ツールとして公開する。MCP クライアント設定例は [../packages/mcp/README.md](../packages/mcp/README.md) を参照。
+`@strand/mcp` exposes checking, building, editing, and spec search as MCP tools. For an example MCP client configuration, see [../packages/mcp/README.md](../packages/mcp/README.md).
 
-## 次へ
+## Next
 
-[your-first-app.md](./your-first-app.md) で Counter を一から書く。
+Write a Counter from scratch in [your-first-app.md](./your-first-app.md).

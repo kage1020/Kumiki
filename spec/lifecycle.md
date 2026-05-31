@@ -1,29 +1,31 @@
-# ライフサイクル・エラー境界・サスペンス
+# Lifecycle, Error Boundaries, and Suspense
 
-## 7.1 ライフサイクルイベント一覧
+English · [日本語](./lifecycle.ja.md)
 
-| イベント | タイミング |
+## 7.1 List of Lifecycle Events
+
+| Event | Timing |
 |---|---|
-| `app.start` | アプリ起動直後（初期 slot 値が確定し、ランタイムがマウントされた時点） |
-| `app.stop` | アプリ終了直前（ブラウザクローズ・タブ閉じる前） |
-| `app.error` | 未捕捉エラー発生時 |
-| `app.http-401` | HTTP 401 を受信したとき（`app.http.on-401` 経由で来る） |
-| `app.http-403` | 同 403 |
-| `app.http-5xx` | 同 5xx |
-| `app.visible` | タブが表示状態になったとき |
-| `app.hidden` | タブが非表示状態になったとき |
-| `app.online` | ネットワーク復旧 |
-| `app.offline` | ネットワーク切断 |
-| `route.enter(pattern)` | ルート進入直後 |
-| `route.leave(pattern)` | ルート離脱直前 |
-| `route.error(pattern)` | 当該ルートの tile 描画中にエラー |
-| `tile.mount(name)` | 特定 tile の初回マウント |
-| `tile.unmount(name)` | 特定 tile のアンマウント |
-| `timer(duration)` | 指定間隔で繰り返し |
+| `app.start` | Immediately after app startup (when initial slot values are fixed and the runtime is mounted) |
+| `app.stop` | Just before app termination (before closing the browser / closing the tab) |
+| `app.error` | When an uncaught error occurs |
+| `app.http-401` | When an HTTP 401 is received (arrives via `app.http.on-401`) |
+| `app.http-403` | Same, for 403 |
+| `app.http-5xx` | Same, for 5xx |
+| `app.visible` | When the tab becomes visible |
+| `app.hidden` | When the tab becomes hidden |
+| `app.online` | Network restored |
+| `app.offline` | Network disconnected |
+| `route.enter(pattern)` | Immediately after entering a route |
+| `route.leave(pattern)` | Just before leaving a route |
+| `route.error(pattern)` | An error during the tile rendering of that route |
+| `tile.mount(name)` | First mount of a specific tile |
+| `tile.unmount(name)` | Unmount of a specific tile |
+| `timer(duration)` | Repeats at the specified interval |
 
 ### 7.1.1 app.start
 
-アプリ起動時に 1 回だけ発火。`app.init = [...]` で宣言した effect 列が emit された**後**に届く。
+Fires exactly once at app startup. It arrives **after** the effect list declared in `app.init = [...]` has been emitted.
 
 ```strand
 reducer boot
@@ -33,21 +35,21 @@ reducer boot
         emit identify(currentUser())
 ```
 
-`app.start` reducer の中で emit した effect は **synchronous に dispatcher へ渡される**（reducer の戻り値として）。dispatcher は capability を check し、policy に従って実行する。
+Effects emitted inside the `app.start` reducer are **passed synchronously to the dispatcher** (as the reducer's return value). The dispatcher checks capabilities and executes them according to policy.
 
 ### 7.1.2 app.stop
 
-ブラウザが `beforeunload` を発火したタイミング。短時間で完了する処理のみ実行可能（ブラウザ仕様）。
+The timing at which the browser fires `beforeunload`. Only processing that completes in a short time can be executed (browser specification).
 
 ```strand
 reducer cleanup
     on=app.stop
-    do= emit persist(todos)         ; 同期 storage.write のみ実用的
+    do= emit persist(todos)         ; only synchronous storage.write is practical
 ```
 
 ### 7.1.3 app.visible / app.hidden
 
-`visibilitychange` イベントに対応。タブ切り替えで状態をポーズしたい場合：
+Corresponds to the `visibilitychange` event. When you want to pause state on tab switching:
 
 ```strand
 reducer pause on=app.hidden  do= timerPaused := true
@@ -70,9 +72,9 @@ reducer poll
     do= emit fetchUpdates()
 ```
 
-`timer(d)` は app の mount 時から `d` 間隔で繰り返し発火する。ランタイム実装は `setInterval` ベースで、`app` の `dispose` 時に自動 clear される。`stop-timer(name)` での明示停止は v0.2 で追加予定。
+`timer(d)` fires repeatedly at intervals of `d` from the app's mount time. The runtime implementation is `setInterval`-based and is automatically cleared on the `app`'s `dispose`. Explicit stopping via `stop-timer(name)` is planned for v0.2.
 
-**duration リテラル**: `1ms`, `500ms`, `1s`, `30s`, `5m` のように整数 + 単位 (`ms` / `s` / `m`) で書ける。
+**duration literals**: can be written as an integer + unit (`ms` / `s` / `m`), as in `1ms`, `500ms`, `1s`, `30s`, `5m`.
 
 ```strand
 reducer tick on=timer(1s)   do= elapsed := elapsed + 1
@@ -82,7 +84,7 @@ reducer fast on=timer(100ms) do= emit syncCursor()
 
 ### 7.1.6 tile.mount / tile.unmount
 
-特定の tile が DOM に現れた / 消えたタイミング。
+The timing at which a specific tile appears in / disappears from the DOM.
 
 ```strand
 reducer trackPageView
@@ -90,28 +92,28 @@ reducer trackPageView
     do= emit track({event: "settings_view", props: {}})
 ```
 
-複数の tile を一度に対象にしたい場合は同名の reducer を複数定義する（定義順で実行）。
+When you want to target multiple tiles at once, define multiple reducers with the same name (executed in definition order).
 
 ---
 
-## 7.2 エラー処理
+## 7.2 Error Handling
 
-Strand では **try/catch を許可しない**。エラーは次の経路で扱う：
+Strand **does not permit try/catch**. Errors are handled via the following routes:
 
-### 7.2.1 期待されるエラー
+### 7.2.1 Expected Errors
 
-`Result(T, E)` 型で表現する。effect の戻り値が `Result.Err` の場合は `effect-name.err($e, $k)` reducer に届く。
+Expressed via the `Result(T, E)` type. When an effect's return value is `Result.Err`, it is delivered to the `effect-name.err($e, $k)` reducer.
 
-### 7.2.2 想定外のエラー（panic）
+### 7.2.2 Unexpected Errors (panic)
 
-- reducer 内での `Option.get` で None を取った
-- `List.get(i)` で範囲外
-- `Result.get` で Err
-- `panic(msg)` の明示呼び出し
+- `Option.get` returned None inside a reducer
+- `List.get(i)` was out of range
+- `Result.get` was an Err
+- An explicit call to `panic(msg)`
 
-これらは **panic** と呼ばれる例外。panic は episode log に記録され、現在の reducer は中断される。`slot` の変更は **トランザクション的にロールバック**される。
+These are exceptions called **panics**. A panic is recorded in the episode log, and the current reducer is interrupted. `slot` changes are **transactionally rolled back**.
 
-### 7.2.3 app.error reducer
+### 7.2.3 The app.error reducer
 
 ```strand
 slot lastError : Option(PanicInfo) = None
@@ -123,7 +125,7 @@ reducer onPanic
         emit toast({kind: "error", text: "Something went wrong"})
 ```
 
-`PanicInfo` の型：
+The `PanicInfo` type:
 
 ```strand
 type PanicInfo = {
@@ -136,9 +138,9 @@ type PanicInfo = {
 
 ---
 
-## 7.3 エラー境界（タイル単位）
+## 7.3 Error Boundaries (per tile)
 
-特定の tile 配下の描画エラーを捕捉して fallback を出す：
+Capture rendering errors under a specific tile and show a fallback:
 
 ```strand
 tile UserPage
@@ -156,13 +158,13 @@ tile ErrorFallback
         button(text="Retry", onClick=retryUserPage))
 ```
 
-`error-boundary = X` を tile 定義に書くと、その tile 配下の描画中 panic は X tile を `in=PanicInfo` で呼び出して fallback 表示する。
+When you write `error-boundary = X` in a tile definition, a panic during rendering under that tile calls the X tile with `in=PanicInfo` and shows the fallback.
 
 ---
 
-## 7.4 サスペンス（loading 表示）
+## 7.4 Suspense (loading display)
 
-非同期 effect の結果待ちで loading 表示したい場合。Strand は **明示的に `LoadResult(T)` 型を使う**ことを推奨する：
+When you want to show a loading display while awaiting the result of an async effect. Strand recommends **explicitly using the `LoadResult(T)` type**:
 
 ```strand
 type LoadResult(T) = Idle | Loading | Loaded(T) | Failed(HttpError)
@@ -176,28 +178,28 @@ tile UserView = match user with
                   | Failed(e) -> ErrorView(e)
 ```
 
-専用の `<Suspense>` 機構は持たない（Reactで起こった「どこから何が suspend するか追跡困難」を避けるため）。
+There is no dedicated `<Suspense>` mechanism (to avoid the React problem of "it's hard to track what suspends from where").
 
-### 7.4.1 match 式
+### 7.4.1 The match Expression
 
 ```ebnf
 match-expr ::= 'match' expr 'with' match-arm+
 match-arm  ::= '|' pattern '->' expr
-pattern    ::= identifier                              ; variant 名
-             | identifier '(' bind (',' bind)* ')'     ; variant + 束縛
-             | '_'                                     ; ワイルドカード
+pattern    ::= identifier                              ; variant name
+             | identifier '(' bind (',' bind)* ')'     ; variant + binding
+             | '_'                                     ; wildcard
 bind       ::= identifier
 ```
 
-network コードはほぼ常に `match` で書く。これは Strand における loading/error の正規パターン。
+Network code is almost always written with `match`. This is the canonical pattern for loading/error in Strand.
 
 ---
 
-## 7.5 404 と error ページ
+## 7.5 404 and error Pages
 
 ### 7.5.1 404
 
-`/404` への到達は通常のルートと同じ。ルートマッチに失敗するとランタイムが `nav.replace` で `/404` に飛ばす。
+Reaching `/404` is the same as a normal route. When route matching fails, the runtime sends you to `/404` via `nav.replace`.
 
 ```strand
 tile NotFound = page(
@@ -206,7 +208,7 @@ tile NotFound = page(
                   link(to="/") {text: "Home"})
 ```
 
-### 7.5.2 ルート単位のエラー fallback
+### 7.5.2 Per-Route Error Fallback
 
 ```strand
 reducer onRouteErr
@@ -217,9 +219,9 @@ reducer onRouteErr
 
 ---
 
-## 7.6 確認ダイアログ
+## 7.6 Confirmation Dialogs
 
-Strand は **`window.confirm` 相当を effect として提供**する：
+Strand **provides the equivalent of `window.confirm` as an effect**:
 
 ```strand
 effect confirm cap=notification.show
@@ -229,21 +231,21 @@ effect confirm cap=notification.show
 reducer askDelete
     on=ui.click(DeleteBtn)
     do= emit confirm({
-            title: "削除しますか?",
-            message: "この操作は取り消せません",
+            title: "Delete?",
+            message: "This action cannot be undone",
             onYes: doDelete,
             onNo:  noop
         })
 
-reducer doDelete on=ui.click(_) do= ...     ; ※ 実装上は別名 reducer を作る方が綺麗
+reducer doDelete on=ui.click(_) do= ...     ; Note: in practice it's cleaner to create a separately named reducer
 reducer noop     on=ui.click(_) do= ()
 ```
 
-ランタイム実装ではこれは **モーダルダイアログ tile** として描画される（ネイティブ `confirm` ではない）。これにより UI スタイルが揃い、テストも容易になる。
+In the runtime implementation, this is rendered as a **modal dialog tile** (not the native `confirm`). This keeps the UI style consistent and makes testing easier.
 
 ---
 
-## 7.7 トースト
+## 7.7 Toasts
 
 ```strand
 effect toast cap=notification.show
@@ -255,60 +257,60 @@ reducer notifySave
     do= emit toast({kind: "success", text: "Saved", duration: Some(Duration.s(3))})
 ```
 
-`kind` は `info` / `success` / `warning` / `error` のいずれか。`duration` 未指定なら kind 別のデフォルト（info 3s, success 3s, warning 5s, error 0=手動閉じ）。
+`kind` is one of `info` / `success` / `warning` / `error`. If `duration` is unspecified, the default per kind applies (info 3s, success 3s, warning 5s, error 0 = manual close).
 
-ランタイムは画面右下にトーストスタックを管理する組み込み tile を持つ。
-
----
-
-## 7.8 アクセシビリティの最小規約
-
-| 規約 | 適用 |
-|---|---|
-| `button` には必ず `text` または `aria-label` | コンパイル時警告 |
-| `image` には必ず `alt` | コンパイル時警告 |
-| `link` には必ず内側テキストか `aria-label` | コンパイル時警告 |
-| `form` 内の `input` には対応する `label` | コンパイル時警告 |
-| キーボード操作 (Tab/Enter/Esc) はランタイムが自動 | ランタイム保証 |
-| フォーカス管理: `modal` は trap focus | ランタイム保証 |
-| `aria-live` 領域: `toast` と `error` で自動 | ランタイム保証 |
-
-これらは「警告」レベルで、コンパイルは通る。`--strict-a11y` フラグで警告をエラーに昇格できる。
+The runtime has a built-in tile that manages a toast stack at the bottom-right of the screen.
 
 ---
 
-## 7.9 ホットリロード時の状態
+## 7.8 Minimal Accessibility Conventions
 
-開発時のホットリロードで slot 値を保持するか破棄するか：
-
-| slot 修飾子 | reload 時 |
+| Convention | Application |
 |---|---|
-| なし | 維持 |
-| `transient` | 破棄（初期値に戻る） |
-| `volatile` | 永続化対象から外す（log にも書かれない、reload で破棄） |
+| `button` must always have `text` or `aria-label` | Compile-time warning |
+| `image` must always have `alt` | Compile-time warning |
+| `link` must always have inner text or `aria-label` | Compile-time warning |
+| An `input` within a `form` must have a corresponding `label` | Compile-time warning |
+| Keyboard operations (Tab/Enter/Esc) are automatic in the runtime | Runtime guarantee |
+| Focus management: `modal` traps focus | Runtime guarantee |
+| `aria-live` regions: automatic for `toast` and `error` | Runtime guarantee |
+
+These are at the "warning" level, and compilation passes. The `--strict-a11y` flag can promote warnings to errors.
+
+---
+
+## 7.9 State on Hot Reload
+
+Whether to keep or discard slot values on a development hot reload:
+
+| slot modifier | On reload |
+|---|---|
+| none | Kept |
+| `transient` | Discarded (returns to the initial value) |
+| `volatile` | Excluded from persistence (not written to the log either, discarded on reload) |
 
 ```strand
-slot draft : Text             = ""        ; reload で維持
-slot toast : Option(Toast)    transient = None  ; reload で破棄
-slot password : Text          volatile  = ""    ; episode log にも書かれない
+slot draft : Text             = ""        ; kept on reload
+slot toast : Option(Toast)    transient = None  ; discarded on reload
+slot password : Text          volatile  = ""    ; not written to the episode log either
 ```
 
 ---
 
-## 7.10 設計上の判断記録
+## 7.10 Design Decision Record
 
-| 判断 | 理由 |
+| Decision | Rationale |
 |---|---|
-| try/catch を許さない | エラー伝播が暗黙になる、Result で明示 |
-| panic 時に slot をロールバック | 中途半端な状態を残さない |
-| Suspense 専用機構を持たない | LoadResult 型で明示する方が AI に追跡しやすい |
-| confirm を effect として提供 | UI 一貫性とテスト容易性 |
-| a11y を警告レベルで強制 | 機械的にチェックできる項目は構造で守る |
-| エラー境界を tile 属性に | tile 階層と error 階層を一致させる |
+| Don't permit try/catch | Error propagation becomes implicit; make it explicit with Result |
+| Roll back slots on panic | Don't leave half-finished state |
+| No dedicated Suspense mechanism | Being explicit via the LoadResult type is easier for the AI to track |
+| Provide confirm as an effect | UI consistency and testability |
+| Enforce a11y at the warning level | Items that can be checked mechanically are protected structurally |
+| Make error boundaries a tile attribute | Aligns the tile hierarchy with the error hierarchy |
 
 ---
 
-## 7.11 次
+## 7.11 Next
 
-- テスト書き方 → [./testing.md](./testing.md)
-- AI 編集 API → [./ai-edit.md](./ai-edit.md)
+- How to write tests → [./testing.md](./testing.md)
+- AI editing API → [./ai-edit.md](./ai-edit.md)

@@ -1,12 +1,14 @@
-# ルーティング
+# Routing
 
-Strand のルーティングは **SPA を前提**にしている。ハッシュルーティングではなく **History API** ベース。サーバから静的に同じ HTML を返し、クライアントランタイムがルートを解決する。
+English · [日本語](./routing.ja.md)
+
+Strand routing **assumes an SPA**. It is based on the **History API**, not hash routing. The server statically returns the same HTML, and the client runtime resolves the route.
 
 ---
 
-## 3.1 ルートの宣言
+## 3.1 Declaring Routes
 
-`app` の `routes` フィールドで宣言する。
+Routes are declared in the `routes` field of `app`.
 
 ```strand
 app TodoApp
@@ -22,35 +24,35 @@ app TodoApp
     init   = []
 ```
 
-### 3.1.1 パスセグメントの種類
+### 3.1.1 Path Segment Types
 
-| 構文 | 意味 |
+| Syntax | Meaning |
 |---|---|
-| `/static` | 静的セグメント |
-| `/:name` | パラメータ（1 セグメント） |
-| `/*` | ワイルドカード（残り全部） |
-| `/?query` | ※ クエリは別途。パスには書かない |
+| `/static` | Static segment |
+| `/:name` | Parameter (one segment) |
+| `/*` | Wildcard (everything remaining) |
+| `/?query` | Note: queries are handled separately. Do not write them in the path |
 
-### 3.1.2 マッチ順序
+### 3.1.2 Match Order
 
-1. より具体的なルートが優先（静的 > パラメータ > ワイルドカード）
-2. 同じ具体度なら **定義順**（並列開発で挙動が変わらないように）
+1. More specific routes take precedence (static > parameter > wildcard)
+2. At equal specificity, **definition order** wins (so behavior does not change under parallel development)
 
-### 3.1.3 `/404` は予約
+### 3.1.3 `/404` Is Reserved
 
-`/404` は **どのルートにもマッチしなかった場合**のフォールバック。`app.routes` に `/404 -> X` を含めるのは必須（未指定はコンパイルエラー）。
+`/404` is the fallback used **when no route matches**. Including `/404 -> X` in `app.routes` is mandatory (omitting it is a compile error).
 
 ---
 
-## 3.2 現在のルート状態
+## 3.2 Current Route State
 
-ランタイムは標準 slot `route` を提供する：
+The runtime provides the standard slot `route`:
 
 ```strand
-slot route : Route = Route.empty       ; ランタイムが管理
+slot route : Route = Route.empty       ; managed by the runtime
 ```
 
-`Route` 型は[標準提供](./stdlib.md#213-ドメイン型標準提供)：
+The `Route` type is [provided by the standard library](./stdlib.md#213-domain-types-provided-by-the-standard-library):
 
 ```strand
 type Route = {
@@ -62,7 +64,7 @@ type Route = {
 }
 ```
 
-tile から参照：
+Referencing it from a tile:
 
 ```strand
 tile TodoDetail = column(
@@ -72,9 +74,9 @@ tile TodoDetail = column(
 
 ---
 
-## 3.3 ルート遷移
+## 3.3 Route Transitions
 
-### 3.3.1 link 要素（推奨）
+### 3.3.1 The link Element (recommended)
 
 ```strand
 tile Nav = row(
@@ -83,11 +85,11 @@ tile Nav = row(
              link(to="/settings"){text: "Settings"})
 ```
 
-`link` は自動的に `nav.push` capability を使う（暗黙）。`<a href>` と異なりフルリロードしない。
+`link` automatically uses the `nav.push` capability (implicitly). Unlike `<a href>`, it does not trigger a full reload.
 
-### 3.3.2 effect として書く
+### 3.3.2 Writing It as an effect
 
-reducer から遷移するには effect を emit：
+To transition from a reducer, emit an effect:
 
 ```strand
 reducer save  on=ui.click(SaveBtn)
@@ -95,7 +97,7 @@ reducer save  on=ui.click(SaveBtn)
                   emit navigate({path: "/todos", params: {}})
 ```
 
-ビルトイン effect:
+Built-in effects:
 
 ```strand
 effect navigate         cap=nav.push     in={path: Text, params: Map(Text, Text)}    out=Unit
@@ -103,24 +105,24 @@ effect navigate-replace cap=nav.replace  in={path: Text, params: Map(Text, Text)
 effect navigate-back    cap=nav.back     in=Unit                                     out=Unit
 ```
 
-### 3.3.3 動的パス構築
+### 3.3.3 Dynamic Path Construction
 
 ```strand
 emit navigate({path: "/todos/{id}", params: {"id": todo.id.show}})
 ```
 
-`{name}` は params で置換される。未指定の `{name}` はコンパイル時警告。
+`{name}` is substituted from params. An unspecified `{name}` produces a compile-time warning.
 
 ---
 
-## 3.4 ルートライフサイクル
+## 3.4 Route Lifecycle
 
-ルート切替時に発火するイベント：
+Events fired on route switches:
 
-| イベント | タイミング |
+| Event | Timing |
 |---|---|
-| `route.leave(pattern)` | 旧ルートを離れる直前 |
-| `route.enter(pattern)` | 新ルートに入った直後 |
+| `route.leave(pattern)` | Just before leaving the old route |
+| `route.enter(pattern)` | Just after entering the new route |
 
 ```strand
 reducer loadTodoOnEnter
@@ -133,17 +135,17 @@ reducer cleanupOnLeave
     do= editing := None
 ```
 
-`$route` は新（または旧）ルートを表す bind。
+`$route` is a bind representing the new (or old) route.
 
 ---
 
-## 3.5 ガード
+## 3.5 Guards
 
-ルート遷移を阻止したいケース（未保存変更、未ログインなど）。
+Cases where you want to block a route transition (unsaved changes, not logged in, etc.).
 
-### 3.5.1 enter ガード
+### 3.5.1 enter Guard
 
-`route.enter(pattern)` の reducer 中で `emit navigate-replace(...)` を出すと、リダイレクトとして扱われる。
+Emitting `emit navigate-replace(...)` inside a `route.enter(pattern)` reducer is treated as a redirect.
 
 ```strand
 reducer requireAuth
@@ -153,9 +155,9 @@ reducer requireAuth
         else ()
 ```
 
-### 3.5.2 leave ガード
+### 3.5.2 leave Guard
 
-未保存変更があるなら遷移を止めたい場合：
+When you want to stop a transition if there are unsaved changes:
 
 ```strand
 slot dirty : Bool = false
@@ -163,19 +165,19 @@ slot dirty : Bool = false
 reducer guardEdit
     on=route.leave("/todos/:id/edit")
     do= if dirty
-        then emit confirm({title: "破棄してよい?", onYes: continueLeave, onNo: stayHere})
+        then emit confirm({title: "Discard changes?", onYes: continueLeave, onNo: stayHere})
         else ()
 ```
 
-`confirm` は標準 effect（→ [./stdlib.md](./stdlib.md)）で、回答を別 reducer に届ける。詳細は [./lifecycle.md](./lifecycle.md)。
+`confirm` is a standard effect (→ [./stdlib.md](./stdlib.md)) that delivers the answer to a separate reducer. See [./lifecycle.md](./lifecycle.md) for details.
 
 ---
 
-## 3.6 ネステッドルート
+## 3.6 Nested Routes
 
-`/*` をパターンに使うと、サブルートを別 tile に委譲できる。
+Using `/*` in a pattern lets you delegate sub-routes to a separate tile.
 
-### 3.6.1 親ルート
+### 3.6.1 Parent Route
 
 ```strand
 app App
@@ -186,9 +188,9 @@ app App
     }
 ```
 
-### 3.6.2 子ルートマップ
+### 3.6.2 Child Route Map
 
-子ルートマップは tile 定義に `sub-routes` で書く：
+The child route map is written in the tile definition via `sub-routes`:
 
 ```strand
 tile SettingsLayout
@@ -203,22 +205,22 @@ tile SettingsLayout
           column(
             link(to="/settings/account") {text: "Account"},
             link(to="/settings/billing") {text: "Billing"}),
-          route-outlet()))           ; 子ルートがここに描画される
+          route-outlet()))           ; child routes are rendered here
 ```
 
-`route-outlet()` は親ルート tile 内で子の描画位置を指定するプリミティブ。
+`route-outlet()` is a primitive that specifies where children are rendered within the parent route tile.
 
-### 3.6.3 マッチング規則
+### 3.6.3 Matching Rules
 
-- 子ルートは親パターン `/settings/*` の中で再マッチング
-- 子ルートにマッチしなければ親の `/settings` (デフォルト) を使う
-- それも無ければグローバル `/404` へ
+- Child routes are re-matched within the parent pattern `/settings/*`
+- If no child route matches, the parent's `/settings` (default) is used
+- If that also fails, fall through to the global `/404`
 
 ---
 
-## 3.7 クエリパラメータ
+## 3.7 Query Parameters
 
-クエリは `route.query` から読む。書き込みは `navigate` の `params` には含まれず、別フィールド `query` で渡す。
+Queries are read from `route.query`. For writing, they are not included in `navigate`'s `params` but passed via a separate `query` field.
 
 ```strand
 emit navigate({
@@ -228,7 +230,7 @@ emit navigate({
 })
 ```
 
-`navigate` effect の `in` 型はこれを許す拡張版：
+The `in` type of the `navigate` effect is an extended version that allows this:
 
 ```strand
 effect navigate cap=nav.push
@@ -236,31 +238,31 @@ effect navigate cap=nav.push
                 out=Unit
 ```
 
-`params` と `query` は未指定なら `{}`。
+`params` and `query` default to `{}` when unspecified.
 
 ---
 
-## 3.8 プリフェッチ
+## 3.8 Prefetch
 
-リンクがビューポートに入ったときに先にデータを取りたい：
+When you want to fetch data ahead of time once a link enters the viewport:
 
 ```strand
 link(to="/todos/abc-123") {
     text: "Todo abc-123",
-    prefetch: loadTodo,           ; emit する reducer 名
+    prefetch: loadTodo,           ; name of the reducer to emit
     prefetch-args: {"id": "abc-123"}
 }
 ```
 
-`prefetch` は `IntersectionObserver` を経由してビューポート進入時に発火する標準機能。reducer は `route.enter` のときと同じ引数バインドで呼ばれる。
+`prefetch` is a standard feature that fires on viewport entry via `IntersectionObserver`. The reducer is called with the same argument binding as for `route.enter`.
 
 ---
 
-## 3.9 スクロール復元
+## 3.9 Scroll Restoration
 
-履歴を戻ったときにスクロール位置を復元する。デフォルトで有効。
+Restores the scroll position when navigating back through history. Enabled by default.
 
-無効化したい tile：
+A tile where you want to disable it:
 
 ```strand
 tile Chat
@@ -268,32 +270,32 @@ tile Chat
     = scroll(...)
 ```
 
-特定ルート進入時にトップへ：
+Scroll to the top on entering a specific route:
 
 ```strand
 reducer scrollTop on=route.enter("/*") do= emit scroll-to({x: 0, y: 0})
 ```
 
-`scroll-to` は標準 effect。
+`scroll-to` is a standard effect.
 
 ---
 
-## 3.10 リダイレクト（静的）
+## 3.10 Redirects (static)
 
 ```strand
 app App
     routes = {
-        "/old-path"  ->> "/new-path",     ; ->> はリダイレクト
+        "/old-path"  ->> "/new-path",     ; ->> is a redirect
         "/new-path"  -> NewPage,
         "/404"       -> NotFound
     }
 ```
 
-`->>` は **静的リダイレクト**。マッチした瞬間に `navigate-replace` 相当を実行。
+`->>` is a **static redirect**. The moment it matches, it performs the equivalent of `navigate-replace`.
 
 ---
 
-## 3.11 例: 認証付きルーティング
+## 3.11 Example: Routing with Authentication
 
 ```strand
 type SessionId = nominal Text
@@ -338,22 +340,22 @@ app SecureApp
 
 ---
 
-## 3.12 設計上の判断記録
+## 3.12 Design Decision Record
 
-| 判断 | 理由 |
+| Decision | Rationale |
 |---|---|
-| `/404` を必須にした | 404 未指定で本番に出るバグを構造で防ぐ |
-| マッチ順は具体度→定義順 | 並列開発で hash 順だと挙動が変動する |
-| `link` を要素にした | 「nav.push を emit するボタン」と毎回書かせるのはトークンの無駄 |
-| クエリを path に書かない | パスとクエリの混同を構造で防ぐ |
-| ネステッドルートを tile に書く | ルート構造とビュー階層を一致させる |
-| prefetch を link prop にした | reducer に書くと意図が散る |
-| ガードを reducer で書く | 専用 DSL を増やさない（学習対象を最小化） |
+| Made `/404` mandatory | Structurally prevents the bug of shipping to production without a 404 |
+| Match order is specificity → definition order | With hash order, behavior would vary under parallel development |
+| Made `link` an element | Forcing "a button that emits nav.push" every time wastes tokens |
+| Do not write queries in the path | Structurally prevents confusion between path and query |
+| Write nested routes in the tile | Aligns route structure with the view hierarchy |
+| Made prefetch a link prop | Writing it in a reducer scatters the intent |
+| Write guards in reducers | Avoids adding a dedicated DSL (minimizes what must be learned) |
 
 ---
 
-## 3.13 次
+## 3.13 Next
 
-- フォームの submit ハンドラ → [./forms.md](./forms.md)
+- Form submit handlers → [./forms.md](./forms.md)
 - HTTP fetch → [./http.md](./http.md)
-- エラーページ / suspense → [./lifecycle.md](./lifecycle.md)
+- Error pages / suspense → [./lifecycle.md](./lifecycle.md)

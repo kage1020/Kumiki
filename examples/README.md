@@ -1,33 +1,35 @@
 # Strand Examples
 
-このディレクトリは Strand の**網羅的な実例集**である。運用方針として、質問・issue・バグ報告があるたびにここへ例を追加し、「リポジトリを見れば疑問が解決する」状態を維持する。
+English · [日本語](./README.ja.md)
 
-すべての例は CI でパース・型検査・ビルドが検証される（→ [../tests/](../tests/)）。壊れた例はマージされない。
+This directory is a **comprehensive set of working examples** for Strand. As an operating policy, every time a question, issue, or bug report comes in, an example is added here, keeping the state where "looking at the repository resolves your question".
 
-## 構成
+All examples have parsing, type checking, and build verified in CI (→ [../tests/](../tests/)). Broken examples are not merged.
 
-### `features/` — 機能別ミニマル例
+## Structure
 
-1 ファイル 1 機能。言語の各要素を、それだけに集中した最小のアプリで示す。「この構文どう書くんだっけ」に即答するためのカタログ。
+### `features/` — per-feature minimal examples
 
-### `apps/` — 規模順の完成アプリ
+One feature per file. It shows each element of the language with a minimal app focused on just that. A catalog for instantly answering "how do I write this syntax again?".
 
-小さいものから大きいものへ。実際のアプリで機能がどう組み合わさるかを示す。
+### `apps/` — complete apps ordered by size
 
-| アプリ | 規模 | 主に学べること |
+From small to large. Shows how features combine in real apps.
+
+| App | Size | Main takeaways |
 |---|---|---|
-| [01-counter](./apps/01-counter/) | ~22 行 | slot / reducer / tile / イベント |
-| [02-todomvc](./apps/02-todomvc/) | ~161 行 | リスト・フィルタ・`bind`・localStorage 永続化 |
-| [03-blog](./apps/03-blog/) | ~418 行 | ルーティング・HTTP fetch・サスペンス |
-| [04-issue-tracker](./apps/04-issue-tracker/) | ~726 行 | CRUD・`Map`・`Option` バリアント・フォーム・日付 |
-| [05-project-management](./apps/05-project-management/) | ~1255 行 | 入れ子データ・カンバン・コメント・タグ・テーマ切替 |
+| [01-counter](./apps/01-counter/) | ~22 lines | slot / reducer / tile / events |
+| [02-todomvc](./apps/02-todomvc/) | ~161 lines | lists, filters, `bind`, localStorage persistence |
+| [03-blog](./apps/03-blog/) | ~418 lines | routing, HTTP fetch, suspense |
+| [04-issue-tracker](./apps/04-issue-tracker/) | ~726 lines | CRUD, `Map`, `Option` variants, forms, dates |
+| [05-project-management](./apps/05-project-management/) | ~1255 lines | nested data, kanban, comments, tags, theme switching |
 
-## 実行方法
+## How to run
 
 ```sh
-# 型検査
+# Type check
 pnpm --filter @strand/cli exec tsx src/strand.ts check examples/apps/01-counter/app.strand
 
-# ビルド（index.html / app.js / runtime.js を出力）
+# Build (outputs index.html / app.js / runtime.js)
 pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand ./out
 ```

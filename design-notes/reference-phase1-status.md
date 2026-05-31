@@ -1,21 +1,23 @@
 # Strand Reference Implementation — Phase 1
 
-Phase 1 PoC: 01-counter.strand を入力に **lexer → parser → typecheck → codegen → runtime** が直列で動き、ブラウザ上で Counter SPA が動作する。
+English · [日本語](./reference-phase1-status.ja.md)
 
-## ステータス
+Phase 1 PoC: with 01-counter.strand as input, **lexer → parser → typecheck → codegen → runtime** runs in series, and the Counter SPA works in the browser.
 
-| AC | ステータス |
+## Status
+
+| AC | Status |
 |---|---|
-| AC-Lexer (9 件) | pass |
-| AC-Parser (5 件) | pass |
-| AC-Typecheck (7 件) | pass |
-| AC-Codegen (1 件) | pass |
-| AC-Runtime (5 件) | pass |
-| AC-CLI (1 件) | pass |
-| **合計 28 / 28** | pass |
-| 手動ブラウザ確認 | サーバ起動済み、ユーザー側で目視 |
+| AC-Lexer (9) | pass |
+| AC-Parser (5) | pass |
+| AC-Typecheck (7) | pass |
+| AC-Codegen (1) | pass |
+| AC-Runtime (5) | pass |
+| AC-CLI (1) | pass |
+| **Total 28 / 28** | pass |
+| Manual browser check | server started, visual inspection on the user side |
 
-## ディレクトリ
+## Directory
 
 ```
 reference/
@@ -24,20 +26,20 @@ reference/
 ├── biome.json
 ├── vite.config.ts
 ├── scripts/
-│   └── serve.mjs              静的ファイルサーバ
+│   └── serve.mjs              static file server
 ├── src/
 │   ├── compiler/
-│   │   ├── ast.ts             Phase 1 AST 型
-│   │   ├── lexer.ts           字句解析
-│   │   ├── parser.ts          手書き再帰下降パーサ
-│   │   ├── typecheck.ts       名前解決 + 型確認
+│   │   ├── ast.ts             Phase 1 AST types
+│   │   ├── lexer.ts           lexical analysis
+│   │   ├── parser.ts          hand-written recursive-descent parser
+│   │   ├── typecheck.ts       name resolution + type checking
 │   │   ├── codegen.ts         AST → JS
 │   │   └── compile.ts         lex→parse→check→codegen
 │   ├── runtime/
-│   │   └── index.ts           mount / DOM 描画 / dispatch
+│   │   └── index.ts           mount / DOM rendering / dispatch
 │   └── cli/
-│       ├── strand.ts          strand build コマンド
-│       └── strip-ts.ts        runtime の TS 型を剥がす
+│       ├── strand.ts          strand build command
+│       └── strip-ts.ts        strip the runtime's TS types
 └── test/
     ├── lexer.test.ts
     ├── parser.test.ts
@@ -47,59 +49,59 @@ reference/
     └── cli.test.ts
 ```
 
-## 使い方
+## Usage
 
-### テスト
+### Tests
 
 ```bash
 pnpm install
-pnpm test              # 全 28 件
+pnpm test              # all 28
 pnpm test:watch
 pnpm lint
 ```
 
-### Counter のビルド
+### Building Counter
 
 ```bash
 pnpm strand build ../docs/examples/01-counter.strand ../examples-build/counter
-# → examples-build/counter/ に index.html, app.js, runtime.js が出る
+# → index.html, app.js, runtime.js are emitted to examples-build/counter/
 ```
 
-### ブラウザで動作確認
+### Verifying Operation in the Browser
 
 ```bash
-# reference/ ディレクトリで:
+# in the reference/ directory:
 node scripts/serve.mjs ../examples-build/counter 5174
-# → ブラウザで http://localhost:5174 を開く
+# → open http://localhost:5174 in the browser
 ```
 
-期待される動作:
+Expected behavior:
 
-1. `Count: 0` と 3 ボタン `[-]` `[reset]` `[+]` が表示
-2. `+` を押すたび 1 ずつ増加
-3. 999 で `+` を押しても 999 のまま（refinement `between(0, 999)`）
-4. 0 で `-` を押しても 0 のまま
-5. `reset` で 0 に戻る
+1. `Count: 0` and the 3 buttons `[-]` `[reset]` `[+]` are displayed
+2. each press of `+` increments by 1
+3. pressing `+` at 999 stays at 999 (the refinement `between(0, 999)`)
+4. pressing `-` at 0 stays at 0
+5. `reset` returns to 0
 
-## 既知の制約 (Phase 1 スコープ)
+## Known Limitations (Phase 1 Scope)
 
-- effect / fn / match / for / when / if-then-else 式 / Map / Set / List 未対応
-- ルーティングは AppDef にあるが実行時には解決しない（`/` の tile を描画するだけ）
-- テーマ未対応（簡易のインライン CSS のみ）
-- a11y 検査未対応
-- AI 編集 API 未対応
-- episode log 未対応
+- effect / fn / match / for / when / if-then-else expressions / Map / Set / List unsupported
+- routing is in the AppDef but is not resolved at runtime (it only renders the `/` tile)
+- theme unsupported (simple inline CSS only)
+- a11y checking unsupported
+- AI editing API unsupported
+- episode log unsupported
 
-Phase 2 でこれらを段階的に追加する。
+These are added incrementally in Phase 2.
 
-## 設計判断
+## Design Decisions
 
-Phase 1 で意図的に小さくした点:
+Points intentionally kept small in Phase 1:
 
-| 判断 | 理由 |
+| Decision | Reason |
 |---|---|
-| signal graph 不採用、毎クリック全描画 | DOM diff なしの素朴実装で動作優先 |
-| IR を介さず直接 JS 出力 | Phase 1 で十分動く、Phase 2 で IR を挟む |
-| `strand build` のみ（dev / check は別途） | コア体験に集中 |
-| Vitest jsdom 上で手書き AppShape で runtime をテスト | codegen→runtime の結合は CLI smoke と手動で |
-| `new Function` を使わない | セキュリティ警告に従い、tmp ファイル/dynamic import も避けて分離テストに統一 |
+| no signal graph, full re-render on every click | a naive implementation without DOM diff, prioritizing operation |
+| direct JS output without going through an IR | sufficient for Phase 1; insert an IR in Phase 2 |
+| `strand build` only (dev / check separately) | focus on the core experience |
+| test the runtime with hand-written AppShape on Vitest jsdom | codegen→runtime integration via CLI smoke and manually |
+| do not use `new Function` | following the security warning, also avoiding tmp files / dynamic import, unifying on isolated tests |

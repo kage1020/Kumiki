@@ -1,14 +1,16 @@
 # HTTP / Storage Effects
 
-外部世界とのやりとりはすべて **effect** で行う。ここでは標準提供される effect の詳細仕様を述べる。
+English · [日本語](./http.ja.md)
+
+All interaction with the outside world is done via **effects**. This section describes the detailed specification of the effects provided by the standard library.
 
 ---
 
-## 6.1 HTTP 共通
+## 6.1 HTTP Common
 
 ### 6.1.1 capability
 
-| capability | 対応 HTTP メソッド |
+| capability | Corresponding HTTP method |
 |---|---|
 | `http.get` | GET |
 | `http.post` | POST |
@@ -18,9 +20,9 @@
 | `http.head` | HEAD |
 | `http.options` | OPTIONS |
 
-### 6.1.2 標準 effect
+### 6.1.2 Standard effect
 
-各メソッドに対応する高レベル effect が標準提供される：
+A high-level effect corresponding to each method is provided by the standard library:
 
 ```strand
 effect http-get cap=http.get
@@ -41,12 +43,12 @@ effect http-post cap=http.post
                  }
                  out=Result(Decoded, HttpError)
 
-; put / patch / delete も同じ形
+; put / patch / delete have the same shape
 ```
 
-`http.get` 等は **未指定なら使えない**（capability ガード）。`app.caps` に列挙必須。
+`http.get` and the like **cannot be used unless declared** (capability guard). They must be enumerated in `app.caps`.
 
-### 6.1.3 HttpBody 型
+### 6.1.3 The HttpBody Type
 
 ```strand
 type HttpBody = Json(JsonValue)
@@ -57,31 +59,31 @@ type HttpBody = Json(JsonValue)
               | Empty
 ```
 
-### 6.1.4 Decoder 型
+### 6.1.4 The Decoder Type
 
 ```strand
-type Decoder = Json(TypeRef)        ; JSON を型に decode
-             | Text                  ; 文字列のまま
-             | Bytes                 ; バイト列のまま
-             | None                  ; レスポンス本文を捨てる
+type Decoder = Json(TypeRef)        ; decode JSON into a type
+             | Text                  ; keep as a string
+             | Bytes                 ; keep as a byte sequence
+             | None                  ; discard the response body
 ```
 
-レスポンスの decode は型安全。`Decoder.Json(User)` を指定すれば、レスポンス JSON が `User` 型に decode される。失敗は `HttpError` の `body` に格納される。
+Response decoding is type-safe. If you specify `Decoder.Json(User)`, the response JSON is decoded into the `User` type. Failures are stored in the `body` of `HttpError`.
 
-### 6.1.5 共通 props（自動付与）
+### 6.1.5 Common props (auto-applied)
 
-すべての HTTP effect は次を自動付与：
+All HTTP effects automatically apply the following:
 
-- `Accept: application/json`（Decoder が Json のとき）
-- `Content-Type: application/json`（HttpBody が Json のとき）
-- `Content-Type: multipart/form-data`（Multipart のとき）
+- `Accept: application/json` (when the Decoder is Json)
+- `Content-Type: application/json` (when the HttpBody is Json)
+- `Content-Type: multipart/form-data` (when Multipart)
 - `User-Agent: Strand/0.1`
 
-ユーザー指定の headers が優先される。
+User-specified headers take precedence.
 
 ---
 
-## 6.2 HTTP 利用例
+## 6.2 HTTP Usage Examples
 
 ### 6.2.1 GET
 
@@ -104,7 +106,7 @@ reducer fetchUser
         emit loadUser($el.userId)
 ```
 
-実装時、Strand コンパイラは `loadUser` を以下に展開する：
+At implementation time, the Strand compiler expands `loadUser` into the following:
 
 ```strand
 emit http-get({
@@ -115,7 +117,7 @@ emit http-get({
 })
 ```
 
-→ 高レベル effect 名（`loadUser`）が URL テンプレートを内蔵することは**できない**。テンプレート機構は別途 [6.6 高レベルラッパ](#66-高レベルラッパ) を参照。
+→ A high-level effect name (`loadUser`) **cannot** embed a URL template. For the templating mechanism, see [6.6 High-Level Wrappers](#66-high-level-wrappers) separately.
 
 ### 6.2.2 POST
 
@@ -139,11 +141,11 @@ reducer added
 
 ---
 
-## 6.3 認証
+## 6.3 Authentication
 
-### 6.3.1 グローバル header の注入
+### 6.3.1 Injecting Global Headers
 
-`app.http` で全 HTTP effect に自動付与する header を宣言できる：
+In `app.http` you can declare headers that are automatically applied to all HTTP effects:
 
 ```strand
 app App
@@ -159,16 +161,16 @@ app App
     }
 ```
 
-| http フィールド | 意味 |
+| http field | Meaning |
 |---|---|
-| `base-url` | 相対 URL のベース |
-| `headers` | 全リクエストに付与（式可、slot 参照可） |
-| `on-401` | 401 を受けた reducer |
-| `on-403` | 403 を受けた reducer |
-| `on-5xx` | 5xx を受けた reducer |
-| `timeout` | デフォルトタイムアウト（duration） |
+| `base-url` | Base for relative URLs |
+| `headers` | Applied to all requests (expressions allowed, slot references allowed) |
+| `on-401` | Reducer that receives a 401 |
+| `on-403` | Reducer that receives a 403 |
+| `on-5xx` | Reducer that receives a 5xx |
+| `timeout` | Default timeout (duration) |
 
-### 6.3.2 401 のグローバル処理
+### 6.3.2 Global Handling of 401
 
 ```strand
 reducer handleUnauthorized
@@ -177,13 +179,13 @@ reducer handleUnauthorized
         emit navigate({path: "/login", params: {}, query: {}})
 ```
 
-`app.http-401` は `app.http.on-401` で指定した reducer に**自動でルーティング**される。
+`app.http-401` is **automatically routed** to the reducer specified by `app.http.on-401`.
 
 ---
 
-## 6.4 キャンセル
+## 6.4 Cancellation
 
-`policy=latest` または `policy=latest-per-key(...)` で自動キャンセルされる。手動キャンセルは：
+It is automatically canceled by `policy=latest` or `policy=latest-per-key(...)`. Manual cancellation is:
 
 ```strand
 effect cancel cap=http.cancel in=EffectId out=Unit
@@ -193,11 +195,11 @@ reducer cancelSearch
     do= emit cancel(searchEffectId)
 ```
 
-`EffectId` は `emit` 時に返される（v0.2 で実装）。v0.1 では policy 任せ。
+`EffectId` is returned at `emit` time (implemented in v0.2). In v0.1, it is left to the policy.
 
 ---
 
-## 6.5 リトライ
+## 6.5 Retry
 
 ```strand
 effect loadCritical cap=http.get
@@ -206,19 +208,19 @@ effect loadCritical cap=http.get
                     retry=exponential(5, 500ms, 2.0)
 ```
 
-| retry | 振る舞い |
+| retry | Behavior |
 |---|---|
-| `none` | リトライしない（デフォルト） |
-| `linear(N, ms)` | N 回まで、ms 間隔で再試行 |
-| `exponential(N, initial-ms, factor)` | N 回まで、初回 initial-ms、毎回 factor 倍 |
+| `none` | Do not retry (default) |
+| `linear(N, ms)` | Up to N times, retried at ms intervals |
+| `exponential(N, initial-ms, factor)` | Up to N times, initial-ms the first time, multiplied by factor each time |
 
-リトライは **5xx と接続エラーのみ**対象。4xx はリトライしない（仕様）。
+Retries only target **5xx and connection errors**. 4xx is not retried (by specification).
 
 ---
 
-## 6.6 高レベルラッパ
+## 6.6 High-Level Wrappers
 
-URL テンプレートや path パラメータを書きたい場合は、ユーザーがラッパ effect を宣言する：
+When you want to write URL templates or path parameters, the user declares a wrapper effect:
 
 ```strand
 slot apiBase : Url = "https://api.example.com"
@@ -235,7 +237,7 @@ effect loadUser cap=http.get
                 }
 ```
 
-`map-request` はビルトイン effect の入力に変換する純粋関数（式断片）。これにより、高レベル effect 名と実 HTTP リクエストの関係が **1 箇所に集中**する。
+`map-request` is a pure function (expression fragment) that transforms into the input of the built-in effect. This **concentrates in one place** the relationship between the high-level effect name and the actual HTTP request.
 
 ---
 
@@ -243,13 +245,13 @@ effect loadUser cap=http.get
 
 ### 6.7.1 capability
 
-| capability | 対応 |
+| capability | Corresponds to |
 |---|---|
 | `storage.read`, `storage.write` | localStorage |
 | `session.read`, `session.write` | sessionStorage |
 | `indexed.read`, `indexed.write`, `indexed.delete` | IndexedDB |
 
-### 6.7.2 標準 effect (localStorage)
+### 6.7.2 Standard effect (localStorage)
 
 ```strand
 effect storage-read   cap=storage.read
@@ -269,7 +271,7 @@ effect storage-clear  cap=storage.write
                       out=Result(Unit, Text)
 ```
 
-### 6.7.3 例
+### 6.7.3 Example
 
 ```strand
 slot todos : Map(TodoId, Todo) = {}
@@ -302,7 +304,7 @@ reducer onChange
 
 ### 6.7.4 sessionStorage / IndexedDB
 
-`session-*` も同じ形。`indexed-*` はキー指定が `{store: Text, key: Text}` になる以外は同じ。
+`session-*` has the same shape. `indexed-*` is the same except that the key specification becomes `{store: Text, key: Text}`.
 
 ```strand
 effect indexed-read cap=indexed.read
@@ -318,7 +320,7 @@ effect indexed-query cap=indexed.read
                      out=Result(List(JsonValue), Text)
 ```
 
-IndexedDB の `store` は `app.indexed-db` で宣言：
+The IndexedDB `store` is declared via `app.indexed-db`:
 
 ```strand
 app App
@@ -335,16 +337,16 @@ app App
 
 ---
 
-## 6.8 永続化のパターン
+## 6.8 Persistence Patterns
 
-### 6.8.1 起動時ロード
+### 6.8.1 Load on Startup
 
 ```strand
 reducer boot on=app.start do= emit loadAll()
 reducer loaded on=loadAll.ok($data, _) do= state := $data
 ```
 
-### 6.8.2 変更を debounce で保存
+### 6.8.2 Save Changes with debounce
 
 ```strand
 effect save cap=storage.write
@@ -358,7 +360,7 @@ reducer afterChange
         emit save(todos)
 ```
 
-### 6.8.3 楽観的更新 + サーバ同期
+### 6.8.3 Optimistic Update + Server Sync
 
 ```strand
 reducer addOptimistic
@@ -381,38 +383,38 @@ reducer addErr
 
 ---
 
-## 6.9 デフォルト設定
+## 6.9 Default Settings
 
-すべての HTTP effect のデフォルト：
+Defaults for all HTTP effects:
 
-| 設定 | 値 |
+| Setting | Value |
 |---|---|
-| `timeout` | 30 秒 |
+| `timeout` | 30 seconds |
 | `retry` | `none` |
 | `Accept` | `application/json` |
-| `Content-Type` (Json body 時) | `application/json` |
+| `Content-Type` (with Json body) | `application/json` |
 | `User-Agent` | `Strand/0.1` |
 | `credentials` | `same-origin` |
 
-ストレージ effect のデフォルト：
+Defaults for storage effects:
 
-| 設定 | 値 |
+| Setting | Value |
 |---|---|
-| `policy` | 並列実行（指定なし） |
+| `policy` | Parallel execution (unspecified) |
 | `retry` | `none` |
-| エラー時の挙動 | `Result.Err` を返す（throw しない） |
+| Behavior on error | Returns `Result.Err` (does not throw) |
 
 ---
 
-## 6.10 セキュリティ
+## 6.10 Security
 
 ### 6.10.1 CSP / CORS
 
-Strand ランタイムは standard fetch を使うので、CORS の挙動はブラウザの fetch と同じ。CSP はサーバ側で設定する（Strand は関与しない）。
+Since the Strand runtime uses standard fetch, CORS behavior is the same as the browser's fetch. CSP is configured on the server side (Strand is not involved).
 
-### 6.10.2 トークンの保存
+### 6.10.2 Storing Tokens
 
-`localStorage` にアクセストークンを保存するのは XSS 脆弱性のリスク。Strand のドキュメントとしては **HTTP-only cookie + `credentials: "include"`** を推奨する。
+Storing an access token in `localStorage` is an XSS vulnerability risk. As Strand documentation, we recommend **HTTP-only cookies + `credentials: "include"`**.
 
 ```strand
 app App
@@ -423,33 +425,33 @@ app App
     }
 ```
 
-### 6.10.3 機微情報の slot 注意
+### 6.10.3 Caution for Sensitive Information in slots
 
-slot は episode log に**含まれる**。パスワード等を slot に置く場合は `volatile=true` を指定する：
+slots **are included** in the episode log. When placing a password or the like in a slot, specify `volatile=true`:
 
 ```strand
 slot password : Text = ""
-    volatile = true        ; episode log に書き込まれない、リロードでも消える
+    volatile = true        ; not written to the episode log, cleared on reload too
 ```
 
-`volatile` slot は永続化対象から外れる。
+A `volatile` slot is excluded from persistence.
 
 ---
 
-## 6.11 設計上の判断記録
+## 6.11 Design Decision Record
 
-| 判断 | 理由 |
+| Decision | Rationale |
 |---|---|
-| HTTP は標準 effect として提供 | 全アプリで再発明されないように |
-| capability で許可制 | `http.delete` を持たないアプリで `delete` が呼ばれるのを構造で防ぐ |
-| Decoder で型安全 decode | JSON.parse → as でキャストする慣習を排除 |
-| 4xx はリトライしない | 4xx はクライアント側の問題なので無意味な再試行を避ける |
-| HTTP-only cookie 推奨 | XSS リスクを構造で減らす |
-| `volatile` slot | パスワードが log に残るバグを構造で防ぐ |
+| Provide HTTP as a standard effect | So it isn't reinvented in every app |
+| Allow-list via capability | Structurally prevents `delete` from being called in an app that lacks `http.delete` |
+| Type-safe decode via Decoder | Eliminates the JSON.parse → as cast convention |
+| Don't retry 4xx | 4xx is a client-side problem, so avoid pointless retries |
+| Recommend HTTP-only cookies | Structurally reduces XSS risk |
+| `volatile` slot | Structurally prevents the bug of a password remaining in the log |
 
 ---
 
-## 6.12 次
+## 6.12 Next
 
-- 永続化のライフサイクル → [./lifecycle.md](./lifecycle.md)
-- replay でのモック → [./testing.md](./testing.md)
+- Persistence lifecycle → [./lifecycle.md](./lifecycle.md)
+- Mocking in replay → [./testing.md](./testing.md)

@@ -1,0 +1,63 @@
+# Contributing to Strand
+
+[English](./CONTRIBUTING.md) · 日本語
+
+Strand は experimental OSS であり、運用方針がやや特殊です。読んでから手を動かしてください。
+
+## 基本方針：質問・バグには example と test で答える
+
+このリポジトリのゴールは「**見れば疑問が解決する**」ことです。そのため:
+
+- **質問が来たら** → 該当する最小例を `examples/features/` に足す（無ければ）。
+- **バグ報告が来たら** → 最小再現例を `examples/` に足し、`tests/` に回帰テストを足してから直す。
+- **新機能を入れたら** → `spec/` を更新し、`examples/` に動く例を足す。
+
+仕様（`spec/`）が正、実装（`packages/`）がそれに従う。食い違いを見つけたら、どちらを直すかを設計判断として [`design-notes/`](./design-notes/) に残す。
+
+## 開発フロー（TDD）
+
+1. **設計** — 要件と方針を固める
+2. **受け入れ基準（AC）** — テストケースを AC として書き出す（コードはまだ）
+3. **テスト実装** — AC からテストコードを書く
+4. **実装** — テストを通す production コードを書く
+5. **反復** — 全テストが緑になるまで
+
+実装からいきなり始めない。
+
+## セットアップ
+
+```sh
+pnpm install
+pnpm build
+pnpm test
+```
+
+ツール: パッケージマネージャは **pnpm**、ビルドは **Turborepo** + **tsc/esbuild**、テストは **Vitest**、Lint/Format は **Biome**。
+
+## 提出前チェック
+
+```sh
+pnpm exec turbo run typecheck test lint build
+```
+
+すべて緑であること。特に:
+
+- **新しい example は必ず check + build + smoke が通る**（`tests/` が自動検証する）。`check`/`build` は構文・型・codegen までしか保証しない。**実際に mount して操作して落ちないか**は `strand smoke <file>`（= `tests/` の runtime smoke）で検証する。「コンパイルは通るが動かすとエラー/何も描画されない」バグはここで捕まえる。
+- **lint の inline 抑制（`@biome-ignore` 等）は禁止**。足したくなったら設計を直す。
+- **依存バージョンを直書きしない**。`pnpm add` で最新を入れ、共通バージョンは `pnpm-workspace.yaml` の catalog に置く。
+
+## Git
+
+- `main` / `dev` へ直接コミットしない。feature ブランチを切る。
+- こまめにコミットする。
+
+## ディレクトリ別の置き場所
+
+| 変更内容 | 置き場所 |
+|---|---|
+| 言語/ランタイムの仕様 | `spec/` |
+| 使い方・チュートリアル | `guide/` |
+| 動く例 | `examples/features/` または `examples/apps/` |
+| 実装 | `packages/*/src/` |
+| テスト | パッケージ内 `test/`、横断は `tests/` |
+| 設計の経緯・実測 | `design-notes/` |

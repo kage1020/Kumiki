@@ -1,12 +1,14 @@
-# フォームとバリデーション
+# Forms and Validation
 
-Strand のフォームは「個別入力の `bind` で slot に直接束縛」する形と「専用 tile に `ui.submit` で受ける」形の 2 通りを提供する。前者はリアクティブな逐次反映、後者はトランザクション的な確定送信向け。
+English · [日本語](./forms.ja.md)
 
-イベントセレクタは **常に tile 名**で書く（CSS 属性セレクタは廃止）。組み込み要素 (`form`, `input` 等) に直接イベントを受けたい場合は、その要素をラップする小さな tile を作る。
+Strand forms come in two styles: "bind individual inputs directly to a slot via `bind`," and "receive via `ui.submit` on a dedicated tile." The former is for reactive, incremental reflection; the latter is for transactional, committed submission.
+
+Event selectors are **always written as tile names** (CSS attribute selectors are abolished). If you want to receive events directly on a built-in element (`form`, `input`, etc.), create a small tile that wraps that element.
 
 ---
 
-## 5.1 個別入力の双方向束縛
+## 5.1 Two-Way Binding of Individual Inputs
 
 ```strand
 slot draft : Text where len-lt(280) = ""
@@ -17,27 +19,27 @@ tile Compose = column(
                  button(text="Post", onClick=post) {disabled: draft.is-empty})
 ```
 
-- `bind=draft` は slot `draft` を双方向束縛する
-- ユーザー入力で slot が更新 → tile が再描画
-- 型と refinement は **入力ごとに検査**される
+- `bind=draft` two-way binds the slot `draft`
+- User input updates the slot → the tile re-renders
+- Type and refinement are **checked on each input**
 
-### 5.1.1 `bind` の対応要素
+### 5.1.1 Elements That Support `bind`
 
-| 要素 | 受け取れる型 |
+| Element | Acceptable types |
 |---|---|
 | `input` | `Text` (`type=text/email/password/url/search/tel`), `Int`/`Float` (`type=number`), `Time` (`type=date/datetime`) |
 | `textarea` | `Text` |
-| `select` | 任意（`options` の `value` と同型） |
+| `select` | Any (same type as the `value` of `options`) |
 | `slider` | `Int` / `Float` |
 | `check` / `switch` | `Bool` |
-| `radio` | union 型のいずれか |
+| `radio` | One of a union type |
 
-### 5.1.2 refinement の扱い
+### 5.1.2 Handling of refinement
 
-`slot draft : Text where len-lt(280)` の場合、入力が 280 文字を超えると：
+For `slot draft : Text where len-lt(280)`, when the input exceeds 280 characters:
 
-- **デフォルト**: 入力を弾く（slot は更新されない）
-- **`strict=false`**: slot は更新するが、フォームの `valid` フラグが false になる
+- **Default**: the input is rejected (the slot is not updated)
+- **`strict=false`**: the slot is updated, but the form's `valid` flag becomes false
 
 ```strand
 input(bind=draft, strict=false)
@@ -45,9 +47,9 @@ input(bind=draft, strict=false)
 
 ---
 
-## 5.2 フォーム要素
+## 5.2 Form Elements
 
-複数の入力をまとめて確定送信したい場合は、**form をラップする tile** を作る：
+When you want to commit-submit multiple inputs together, create a **tile that wraps the form**:
 
 ```strand
 slot loginEmail    : Text                = ""
@@ -84,40 +86,40 @@ effect login    cap=http.post
 
 ### 5.2.1 form props
 
-| prop | 型 | 意味 |
+| prop | Type | Meaning |
 |---|---|---|
-| `auto-complete` | `Bool` | ブラウザのオートコンプリート |
-| `novalidate` | `Bool` | HTML5 標準バリデーションを抑制 |
+| `auto-complete` | `Bool` | Browser autocomplete |
+| `novalidate` | `Bool` | Suppress HTML5 standard validation |
 
-form 自体には `onSubmit` を書かない。submit ハンドラは **その form をラップする tile 名**で `ui.submit(WrapperTile)` を reducer の `on=` に書く。
+Do not write `onSubmit` on the form itself. For the submit handler, write `ui.submit(WrapperTile)` in the reducer's `on=`, using **the name of the tile that wraps the form**.
 
-### 5.2.2 submit の挙動
+### 5.2.2 Submit Behavior
 
-- すべての `bind` された slot がバリデーションを通過していれば `ui.submit(WrapperTile)` reducer が呼ばれる
-- 1 つでも失敗していれば呼ばれない（個別の error 表示は出る）
-- 厳密モード切替が必要なら `strict=false` を該当入力に
-- `button(type="submit")` をクリックするか、`input` で Enter キーで発火
+- If all `bind`ed slots pass validation, the `ui.submit(WrapperTile)` reducer is called
+- If even one fails, it is not called (individual error displays do appear)
+- If strict-mode switching is needed, apply `strict=false` to the relevant input
+- Fires by clicking `button(type="submit")`, or by pressing the Enter key in an `input`
 
 ---
 
-## 5.3 入力要素の共通 props
+## 5.3 Common props for Input Elements
 
-| prop | 型 | 意味 |
+| prop | Type | Meaning |
 |---|---|---|
-| `bind` | slot name | 双方向束縛 |
-| `value` | expr | 単方向値（`bind` の代わりに、reducer で更新） |
-| `onChange` | reducer name | 値変更時に呼ばれる reducer |
-| `onInput` | reducer name | input イベントで呼ばれる（onChange より高頻度） |
-| `placeholder` | `Text` | プレースホルダ |
-| `disabled` | `Bool` | 無効化 |
-| `readonly` | `Bool` | 読み取り専用 |
-| `required` | `Bool` | 必須 |
-| `auto-focus` | `Bool` | マウント時にフォーカス |
-| `auto-complete` | `Text` | `email` / `current-password` / `new-password` / `off` 等 |
-| `strict` | `Bool` | refinement 違反時に入力を弾くか（デフォルト true） |
-| `id` | `Text` | HTML id（label の `for` で参照） |
+| `bind` | slot name | Two-way binding |
+| `value` | expr | One-way value (instead of `bind`; updated in a reducer) |
+| `onChange` | reducer name | Reducer called when the value changes |
+| `onInput` | reducer name | Called on the input event (more frequent than onChange) |
+| `placeholder` | `Text` | Placeholder |
+| `disabled` | `Bool` | Disable |
+| `readonly` | `Bool` | Read-only |
+| `required` | `Bool` | Required |
+| `auto-focus` | `Bool` | Focus on mount |
+| `auto-complete` | `Text` | `email` / `current-password` / `new-password` / `off`, etc. |
+| `strict` | `Bool` | Whether to reject input on a refinement violation (default true) |
+| `id` | `Text` | HTML id (referenced by a label's `for`) |
 
-### 5.3.1 input type 別
+### 5.3.1 By input type
 
 ```strand
 input(bind=email, type="email", auto-complete="email")
@@ -130,9 +132,9 @@ input(bind=phone, type="tel", pattern="[0-9-]+")
 
 ---
 
-## 5.4 個別入力イベントを reducer に届ける
+## 5.4 Delivering Individual Input Events to a reducer
 
-`bind` で十分足りない（例：入力の都度カスタム処理を走らせたい）場合は、その入力を**専用の小 tile**でラップして `ui.input` / `ui.change` を受ける：
+When `bind` is not enough (e.g., you want to run custom processing on every input), wrap that input in a **dedicated small tile** and receive `ui.input` / `ui.change`:
 
 ```strand
 slot pw  : Text                   = ""
@@ -147,7 +149,7 @@ reducer validatePw
     do= pwError := if pw == pw2 then None else Some("Passwords don't match")
 ```
 
-`ui.input(TileName)` は TileName tile が描画する**ルート要素**のイベントを受け取る。複合 tile の場合、ルート要素以外を狙うには更に細かい tile に分割する。
+`ui.input(TileName)` receives events from the **root element** rendered by the TileName tile. For a composite tile, to target something other than the root element, split it into finer tiles.
 
 ---
 
@@ -169,15 +171,15 @@ tile FilterSelect = select(
                       placeholder="Filter")
 ```
 
-#### 3 つの value/state バインディング形式
+#### Three value/state Binding Forms
 
-| 形式 | 例 | 用途 |
+| Form | Example | Purpose |
 |---|---|---|
-| `bind=<slot>` | `bind=filter` | 単一 slot に直結。change で slot を自動更新 |
-| `bind=<slot.field>` | `bind=draft.priority` | record の field path に bind。`_setPath` で immutable update |
-| `value=<expr>` | `value=issues[id].status` | **read-only 表示**。change は `ui.change(SelectTile)` reducer で自分でハンドル |
+| `bind=<slot>` | `bind=filter` | Directly tied to a single slot. Updates the slot automatically on change |
+| `bind=<slot.field>` | `bind=draft.priority` | Bind to a record's field path. Immutable update via `_setPath` |
+| `value=<expr>` | `value=issues[id].status` | **Read-only display**. Handle change yourself in a `ui.change(SelectTile)` reducer |
 
-`value=` 形式の場合、change イベントで `ui.change(<SelectTile>)` を購読する reducer が呼ばれ、`$event.value` で選択された variant 値を受け取れる：
+In the `value=` form, on a change event the reducer subscribing to `ui.change(<SelectTile>)` is called, and you can receive the selected variant value via `$event.value`:
 
 ```strand
 tile StatusSelect = select(value=issues[iid].status,
@@ -192,13 +194,13 @@ reducer updateStatus
           | None      -> ()
 ```
 
-#### `input` / `textarea` の変更検出
+#### Change Detection for `input` / `textarea`
 
-input/textarea も `bind=` で slot を更新するほか、`ui.change(InputTile)` / `ui.input(InputTile)` reducer で fire できる。`$event.value` に現在の text が入る。
+In addition to updating a slot via `bind=`, input/textarea can also fire via the `ui.change(InputTile)` / `ui.input(InputTile)` reducers. `$event.value` holds the current text.
 
 ### 5.5.2 radio
 
-radio はグループ化のため `group` prop を持つ（CSS の `name` 属性に対応）：
+radio has a `group` prop for grouping (corresponding to CSS's `name` attribute):
 
 ```strand
 tile FilterRadioAll    = radio(group="filter", value=All,    selected=(filter == All))    {label: "All"}
@@ -212,7 +214,7 @@ reducer setFilterActive on=ui.change(FilterRadioActive) do= filter := Active
 reducer setFilterDone   on=ui.change(FilterRadioDone)   do= filter := Done
 ```
 
-または、`bind` で union 型を直接受ければ単一 reducer 不要：
+Alternatively, if you receive a union type directly via `bind`, a single reducer is unnecessary:
 
 ```strand
 tile FilterRadioGroup = column(
@@ -221,21 +223,21 @@ tile FilterRadioGroup = column(
                           radio(group="filter", bind=filter, value=Done)   {label: "Done"})
 ```
 
-こちらが推奨。
+This is the recommended approach.
 
 ---
 
-## 5.6 バリデーション戦略
+## 5.6 Validation Strategy
 
-Strand のバリデーションは **3 層**：
+Strand validation has **three layers**:
 
-| 層 | 担当 | 例 |
+| Layer | Responsible for | Example |
 |---|---|---|
-| 型 | コンパイラ | `slot age : Int` には文字列を入れられない |
-| refinement | ランタイム | `age : Int where between(0, 120)` |
-| フォーム横断 | reducer / fn | 「password と password-confirm が一致」 |
+| Type | Compiler | You cannot put a string into `slot age : Int` |
+| refinement | Runtime | `age : Int where between(0, 120)` |
+| Cross-form | reducer / fn | "password and password-confirm match" |
 
-### 5.6.1 フォーム横断の例
+### 5.6.1 Cross-Form Example
 
 ```strand
 slot pw  : Text  = ""
@@ -265,22 +267,22 @@ reducer doSignup on=ui.submit(SignupForm) do= ...
 
 ---
 
-## 5.7 エラー表示
+## 5.7 Error Display
 
-### 5.7.1 個別フィールドの refinement 違反
+### 5.7.1 refinement Violation of an Individual Field
 
-`error` 要素で表示：
+Display via the `error` element:
 
 ```strand
 input(bind=email, type="email")
 error(field=email)
 ```
 
-`error(field=...)` は対象 slot の現在の検査エラーをレンダリングする組み込み tile。
+`error(field=...)` is a built-in tile that renders the target slot's current validation error.
 
-### 5.7.2 標準メッセージ
+### 5.7.2 Standard Messages
 
-| 述語 | デフォルト |
+| Predicate | Default |
 |---|---|
 | `email` | "Invalid email format" |
 | `url` | "Invalid URL" |
@@ -291,21 +293,21 @@ error(field=email)
 | `regex(P)` | "Does not match pattern" |
 | `one-of(...)` | "Must be one of: ..." |
 
-カスタムメッセージは `theme.errors` で上書き：
+Override custom messages via `theme.errors`:
 
 ```strand
 theme MyTheme = {
     ...,
     errors: {
-        email: "正しいメールアドレスを入力してください",
-        nonempty: "入力してください"
+        email: "Please enter a valid email address",
+        nonempty: "This field is required"
     }
 }
 ```
 
 ---
 
-## 5.8 サブミット中の UI
+## 5.8 UI During Submission
 
 ```strand
 slot loginPending : Bool = false
@@ -327,11 +329,11 @@ reducer loginErr
         loginError := Some($e)
 ```
 
-`button.loading` で自動的にスピナー表示・無効化。
+`button.loading` automatically shows a spinner and disables the button.
 
 ---
 
-## 5.9 multi-step フォーム
+## 5.9 Multi-step Forms
 
 ```strand
 type Step = Account | Profile | Confirm
@@ -358,11 +360,11 @@ tile Wizard = column(
                 row(PrevBtn, NextBtn) {gap: "sm"})
 ```
 
-各ステップは独立した tile に分割すれば AI も追跡しやすい。
+Splitting each step into an independent tile makes it easier for the AI to track as well.
 
 ---
 
-## 5.10 ファイルアップロード
+## 5.10 File Upload
 
 ```strand
 slot avatar : Option(File) = None
@@ -394,26 +396,26 @@ effect uploadFile  cap=http.post
                    map-request={url: "/api/upload", body: Multipart({file: FileV($1.file)}), decode: Decoder.Json({url: Url})}
 ```
 
-`file-url(file)` は `URL.createObjectURL` 相当の組み込み（自動解放）。
+`file-url(file)` is a built-in equivalent to `URL.createObjectURL` (with automatic release).
 
 ---
 
-## 5.11 設計上の判断記録
+## 5.11 Design Decision Record
 
-| 判断 | 理由 |
+| Decision | Rationale |
 |---|---|
-| `bind` で slot 直結 | controlled/uncontrolled の二重モデルを排除 |
-| イベントセレクタは tile 名のみ | CSS 知識依存を排除、Strand のレイヤ分離と整合 |
-| form の submit ハンドラは form 自体ではなくラッパ tile に bind | 「どの reducer で受けるか」が tile ツリー上で 1 箇所に見える |
-| refinement で型レベルバリデーション | 「型が通れば値が妥当」 |
-| エラーメッセージを theme で集中管理 | i18n と一貫性 |
-| multi-step は slot で表現 | 専用 wizard DSL を増やさない |
-| ファイルは `Bytes` ではなく `File` 型 | サイズ・MIME・名前を構造化 |
-| `radio` の `group` prop | HTML name 属性をラップ、Strand 内で完結 |
+| Tie slots directly via `bind` | Eliminates the dual controlled/uncontrolled model |
+| Event selectors are tile names only | Removes dependence on CSS knowledge; consistent with Strand's layer separation |
+| Bind the form's submit handler to the wrapper tile, not the form itself | "Which reducer receives it" is visible in one place in the tile tree |
+| Type-level validation via refinement | "If the type passes, the value is valid" |
+| Centralize error messages in the theme | i18n and consistency |
+| Express multi-step via slots | Avoids adding a dedicated wizard DSL |
+| Files are a `File` type rather than `Bytes` | Structures size, MIME, and name |
+| `radio`'s `group` prop | Wraps the HTML name attribute, kept self-contained within Strand |
 
 ---
 
-## 5.12 次
+## 5.12 Next
 
-- HTTP の詳細 → [./http.md](./http.md)
-- ライフサイクル → [./lifecycle.md](./lifecycle.md)
+- HTTP details → [./http.md](./http.md)
+- Lifecycle → [./lifecycle.md](./lifecycle.md)

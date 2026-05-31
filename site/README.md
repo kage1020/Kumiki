@@ -1,32 +1,34 @@
 # @strand/site
 
-Strand ドキュメントサイト（VitePress）。`spec/` `guide/` `examples/` `design-notes/` を単一ソースとして配信し、ブラウザ内 **Playground**（コンパイラ + ランタイムをブラウザで実行）と **WebMCP** ツールを備える。
+English · [日本語](./README.ja.md)
 
-## 仕組み
+The Strand documentation site (VitePress). It serves `spec/`, `guide/`, `examples/`, and `design-notes/` as a single source, and includes an in-browser **Playground** (running the compiler + runtime in the browser) and **WebMCP** tools.
 
-正規ソースはリポジトリルートの `spec/` 等にある。ビルド前に `scripts/sync-docs.mjs` がそれらを `site/` 内へコピーする（コピー先は gitignore）。これにより VitePress は通常の in-project 構成のまま、単一ソースを保てる。
+## How it works
 
-## 開発
+The normative source lives at the repository root in `spec/` etc. Before the build, `scripts/sync-docs.mjs` copies them into `site/` (the copy destination is gitignored). This lets VitePress keep a single source while staying in its usual in-project layout.
+
+## Development
 
 ```sh
-pnpm --filter @strand/site dev      # 同期 + dev サーバ
-pnpm --filter @strand/site build    # 同期 + 本番ビルド → site/dist
+pnpm --filter @strand/site dev      # sync + dev server
+pnpm --filter @strand/site build    # sync + production build → site/dist
 pnpm --filter @strand/site preview
 ```
 
-Playground は `@strand/runtime/bundle?raw` を取り込むため、ビルド前に runtime バンドルが必要。`pnpm exec turbo run build --filter=@strand/site` を使えば依存（runtime/compiler）が自動で先にビルドされる。
+The Playground imports `@strand/runtime/bundle?raw`, so the runtime bundle is required before building. Using `pnpm exec turbo run build --filter=@strand/site` builds the dependencies (runtime/compiler) first automatically.
 
-## デプロイ（Cloudflare Pages → strand.kage1020.com）
+## Deploy (Cloudflare Pages → strand.kage1020.com)
 
-CI（[`.github/workflows/deploy-site.yml`](../.github/workflows/deploy-site.yml)）が `main` への push で自動デプロイする。事前に以下が必要:
+CI ([`.github/workflows/deploy-site.yml`](../.github/workflows/deploy-site.yml)) deploys automatically on push to `main`. The following is required beforehand:
 
-1. Cloudflare で Pages プロジェクト `strand` を作成。
-2. リポジトリの GitHub Secrets に `CLOUDFLARE_API_TOKEN`（Pages 編集権限）と `CLOUDFLARE_ACCOUNT_ID` を登録。
-3. Pages プロジェクトの **Custom domains** に `strand.kage1020.com` を追加（DNS は Cloudflare 側で CNAME を自動設定）。
+1. Create a Pages project `strand` in Cloudflare.
+2. Register `CLOUDFLARE_API_TOKEN` (Pages edit permission) and `CLOUDFLARE_ACCOUNT_ID` in the repository's GitHub Secrets.
+3. Add `strand.kage1020.com` to the Pages project's **Custom domains** (DNS sets up the CNAME automatically on the Cloudflare side).
 
-手動デプロイは:
+For a manual deploy:
 
 ```sh
 pnpm exec turbo run build --filter=@strand/site
-cd site && wrangler pages deploy   # wrangler.jsonc の pages_build_output_dir=dist を使用
+cd site && wrangler pages deploy   # uses pages_build_output_dir=dist from wrangler.jsonc
 ```

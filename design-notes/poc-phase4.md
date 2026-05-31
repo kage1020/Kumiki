@@ -1,90 +1,92 @@
-# PoC Phase 4 — テーマ・スタイル・a11y・エラー境界
+# PoC Phase 4 — Theme, Styling, a11y, Error Boundary
 
-## 14.1 ゴール
+English · [日本語](./poc-phase4.ja.md)
 
-Phase 1〜3 で「動く SPA」までを通したので、Phase 4 では **見た目** と **堅牢さ** を仕上げる。
+## 14.1 Goal
 
-サンプルは Counter / TodoMVC / Blog SPA をそのまま使い、追加機能でビジュアル / a11y / 例外耐性を改善する。
+Since Phases 1–3 carried us through to a "working SPA," Phase 4 finishes off the **appearance** and **robustness**.
 
-## 14.2 スコープ
+The samples reuse Counter / TodoMVC / Blog SPA as-is, and additional features improve the visuals / a11y / exception resilience.
 
-| カバー | 詳細 |
+## 14.2 Scope
+
+| Covered | Details |
 |---|---|
-| Theme | `theme X = {...}` を parse + AST + codegen + runtime に通し、`@colors.primary` 形式・短縮 prop 形式（`bg: "primary"`）の両方が theme から解決される。slot 経由でテーマ切替（ダークモード）も可能 |
-| 状態スタイル | `hover: {...}` / `focus: {...}` / `disabled: {...}` を pseudo-class 動的 CSS で適用 |
-| Responsive | スタイル prop に `{base, sm, md, lg, xl}` 形式を受けて media query で切替 |
-| a11y 静的検査 | typecheck で `button` に `text`/`aria-label`、`image` に `alt`、`link` に内側テキスト、`form` 内 `input` に `label` を警告。`--strict-a11y` でエラー化 |
-| エラー境界 | `tile X error-boundary = Fallback` を runtime が捕捉。配下 render で例外発生時に `Fallback(panicInfo)` を描画 |
-| アニメーション | `transition: "fade" / "slide-up" / "slide-down"`、`transition-duration: "fast" / "normal" / "slow"` を `when` 切替に自動適用 |
+| Theme | Run `theme X = {...}` through parse + AST + codegen + runtime; both the `@colors.primary` form and the shorthand prop form (`bg: "primary"`) resolve from the theme. Theme switching (dark mode) via a slot is also possible |
+| State styling | Apply `hover: {...}` / `focus: {...}` / `disabled: {...}` via dynamic pseudo-class CSS |
+| Responsive | Style props accept the `{base, sm, md, lg, xl}` form and switch via media queries |
+| a11y static checks | typecheck warns when `button` lacks `text`/`aria-label`, `image` lacks `alt`, `link` lacks inner text, and `input` inside a `form` lacks a `label`. `--strict-a11y` turns these into errors |
+| Error boundary | The runtime captures `tile X error-boundary = Fallback`. When an exception occurs in a descendant render, it draws `Fallback(panicInfo)` |
+| Animation | Automatically apply `transition: "fade" / "slide-up" / "slide-down"` and `transition-duration: "fast" / "normal" / "slow"` to a `when` toggle |
 
-Phase 4 で **扱わない**：
-- 任意 CSS の自由書き
-- カスタム keyframes
-- Web Animations API への低レベル access
-- focus trap / a11y-tree の動的計算
+**Not handled** in Phase 4:
+- Free-form arbitrary CSS
+- Custom keyframes
+- Low-level access to the Web Animations API
+- Dynamic computation of focus trap / a11y-tree
 
-## 14.3 受け入れ基準（AC）
+## 14.3 Acceptance Criteria (AC)
 
 ### AC-Theme
-- `theme Dark = {...}` を parse、codegen が `_theme = {...}` として runtime に渡す
-- `box(...) {bg: "primary"}` で `box` の background が `theme.colors.primary` の値になる
-- `app.theme = Dark` 指定で全体に Dark テーマが適用
-- `slot themeName : Text = "Light"` + `app.theme = themeName` で slot 切替で再テーマ
-- `prefers-dark()` 関数で OS 設定の検出（reducer 内で呼べる）
+- Parse `theme Dark = {...}`, and codegen passes it to the runtime as `_theme = {...}`
+- With `box(...) {bg: "primary"}`, the `box` background becomes the value of `theme.colors.primary`
+- Specifying `app.theme = Dark` applies the Dark theme globally
+- `slot themeName : Text = "Light"` + `app.theme = themeName` re-themes via slot switching
+- The `prefers-dark()` function detects the OS setting (callable inside a reducer)
 
-### AC-状態スタイル
-- `button(text="X") {bg: "primary", hover: {bg: "primary-dark"}}` で hover 時に背景色が変わる
-- `disabled` 状態の自動 styling
-- `focus` 状態の outline 反映
+### AC-State styling
+- `button(text="X") {bg: "primary", hover: {bg: "primary-dark"}}` changes the background color on hover
+- Automatic styling of the `disabled` state
+- Outline reflection of the `focus` state
 
 ### AC-Responsive
-- `column(...) {gap: {base: "sm", md: "lg"}}` で viewport 幅で gap が変わる
-- breakpoint はテーマの `breakpoints` から取る
+- `column(...) {gap: {base: "sm", md: "lg"}}` changes the gap with the viewport width
+- Breakpoints are taken from the theme's `breakpoints`
 
 ### AC-a11y
-- `button(text="")` → 警告 E0701
-- `image(src="x")` で alt なし → 警告 E0702
-- `link(to="/x")` の内側テキストなし → 警告 E0703
-- `--strict-a11y` でこれらがエラーになりビルド失敗
+- `button(text="")` → warning E0701
+- `image(src="x")` without alt → warning E0702
+- `link(to="/x")` without inner text → warning E0703
+- `--strict-a11y` turns these into errors and fails the build
 
-### AC-エラー境界
-- 任意 tile の描画で `panic("oops")` 相当が起きると `Fallback(PanicInfo)` が描画される
-- 境界外の他 tile は影響なく描画される
+### AC-Error boundary
+- When something equivalent to `panic("oops")` occurs in the render of any tile, `Fallback(PanicInfo)` is drawn
+- Other tiles outside the boundary render unaffected
 
-### AC-アニメーション
-- `when(modalOpen, Modal() {transition: "slide-up"})` が表示時にスライドアップ
-- duration の 3 段階（fast=150ms, normal=300ms, slow=600ms）
+### AC-Animation
+- `when(modalOpen, Modal() {transition: "slide-up"})` slides up on display
+- The 3 duration levels (fast=150ms, normal=300ms, slow=600ms)
 
 ### AC-E2E
-- jsdom 上で navigate / fetch mock の Blog SPA E2E 動作
-- Counter / TodoMVC に theme を適用してブラウザで目視
+- Blog SPA E2E operation with navigate / fetch mock on jsdom
+- Apply a theme to Counter / TodoMVC and verify visually in the browser
 
-## 14.4 実装順序
+## 14.4 Implementation Order
 
-| step | 内容 | 検証 |
+| step | Content | Validation |
 |---|---|---|
-| 1 | Theme parse + AST + codegen + runtime | snapshot + ブラウザ |
-| 2 | 短縮 prop の theme 解決 | snapshot |
-| 3 | 状態スタイル (hover/focus/disabled) | ブラウザ |
-| 4 | Responsive breakpoints | ブラウザ |
-| 5 | a11y 検査 | typecheck test |
+| 1 | Theme parse + AST + codegen + runtime | snapshot + browser |
+| 2 | Theme resolution of shorthand props | snapshot |
+| 3 | State styling (hover/focus/disabled) | browser |
+| 4 | Responsive breakpoints | browser |
+| 5 | a11y checks | typecheck test |
 | 6 | Error boundary runtime | runtime test + jsdom |
-| 7 | アニメーション | ブラウザ |
-| 8 | Blog SPA E2E + 既存例 theme 化 | jsdom |
+| 7 | Animation | browser |
+| 8 | Blog SPA E2E + theming the existing examples | jsdom |
 
-## 14.5 設計上の判断
+## 14.5 Design Decisions
 
-| 判断 | 理由 |
+| Decision | Reason |
 |---|---|
-| Theme tokens は **コンパイル時** に展開しない | slot 切替でテーマ切換できるよう runtime resolve |
-| 状態スタイルは動的 CSS 注入 (data-strand-id + pseudo-class) | inline style で hover を書く方法はないので |
-| Responsive は viewport size を watch しない | `matchMedia` でブレークポイント別 class を切替 |
-| a11y は警告のデフォルト | 既存例の互換性のため。`--strict-a11y` でエラー化 |
-| エラー境界は try/catch ベース | render 中の例外を捕捉、tile 階層単位 |
-| アニメーション 3 種固定 | カスタムを Phase 5 へ |
+| Theme tokens are not expanded at **compile time** | Runtime resolve so the theme can be switched via a slot |
+| State styling is dynamic CSS injection (data-strand-id + pseudo-class) | There is no way to write hover with inline styles |
+| Responsive does not watch the viewport size | Switch per-breakpoint classes with `matchMedia` |
+| a11y defaults to warnings | For compatibility with the existing examples. `--strict-a11y` turns them into errors |
+| The error boundary is try/catch-based | Captures exceptions during render, per tile hierarchy |
+| 3 fixed animations | Custom ones are deferred to Phase 5 |
 
-## 14.6 完了の定義
+## 14.6 Definition of Done
 
-- AC すべて pass
-- 既存 46 件 + Phase 4 で追加するテスト (theme/state/responsive/a11y/error-boundary/animation) も全部 pass
-- ブラウザで Counter / TodoMVC / Blog SPA の見た目が改善されているのを目視
+- All AC pass
+- The existing 46 tests + the tests added in Phase 4 (theme/state/responsive/a11y/error-boundary/animation) all pass
+- Verify visually in the browser that Counter / TodoMVC / Blog SPA look improved

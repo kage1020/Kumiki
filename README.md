@@ -1,6 +1,8 @@
 # Strand
 
-**AI が書き・直し・並列に触ることを最優先に設計した、宣言的 Web アプリ言語とランタイム（experimental, v0.1）**
+English · [日本語](./README.ja.md)
+
+**A declarative web app language and runtime designed first and foremost for AI to write, edit, and touch in parallel (experimental, v0.1)**
 
 ```strand
 slot count : Int = 0
@@ -16,52 +18,52 @@ app Counter
     init   = []
 ```
 
-Strand は JSX・Hooks・依存配列・Provider といった「人間の認知に最適化された」装置を持たない。代わりに **7 レイヤ**（type / slot / effect / reducer / tile / fn / app）の独立した定義の集合としてアプリを表す。構文オーバーヘッドが小さく、定義同士の依存が明示的で、AI が安全に部分編集できる。
+Strand has none of the "optimized for human cognition" machinery like JSX, Hooks, dependency arrays, or Providers. Instead, it represents an app as a set of independent definitions across **7 layers** (type / slot / effect / reducer / tile / fn / app). Syntax overhead is small, dependencies between definitions are explicit, and AI can safely edit parts of it.
 
-> ⚠️ **experimental**。言語・ランタイム・ツールは変わりうる。本番利用は想定していない。
+> ⚠️ **experimental**. The language, runtime, and tools may change. Production use is not intended.
 
-## なぜ Strand か
+## Why Strand
 
-クロスベンダーの実測で、LLM は仕様書だけを与えられた状態から Strand アプリを 1300 行規模まで書けることを確認している（[design-notes/learning-cost-v4.md](./design-notes/learning-cost-v4.md)）。React 比でトークン効率も高い（[design-notes/benchmark.md](./design-notes/benchmark.md)）。
+Cross-vendor measurements confirm that LLMs can write Strand apps up to a scale of 1300 lines from the specification alone ([design-notes/learning-cost-v4.md](./design-notes/learning-cost-v4.md)). Token efficiency is also high compared to React ([design-notes/benchmark.md](./design-notes/benchmark.md)).
 
-## リポジトリ構成
+## Repository layout
 
-| ディレクトリ | 役割 |
+| Directory | Role |
 |---|---|
-| [`spec/`](./spec/) | **正規仕様**（normative）。言語・stdlib・routing・style・forms・http・lifecycle・runtime・ai-edit・errors |
-| [`guide/`](./guide/) | チュートリアルと how-to（はじめに / 最初のアプリ / 考え方 / レシピ） |
-| [`examples/`](./examples/) | 網羅的な実例。`features/`（機能別ミニマル）+ `apps/`（規模順の完成アプリ） |
-| [`packages/`](./packages/) | 実装。`compiler` / `runtime` / `cli` / `mcp` |
-| [`tests/`](./tests/) | 横断テスト。全 example のパース・型検査・ビルドを保証 |
-| [`design-notes/`](./design-notes/) | 設計の経緯とベンチマーク記録 |
+| [`spec/`](./spec/) | **Normative spec**. language, stdlib, routing, style, forms, http, lifecycle, runtime, ai-edit, errors |
+| [`guide/`](./guide/) | Tutorials and how-tos (getting started / first app / mental model / recipes) |
+| [`examples/`](./examples/) | Comprehensive examples. `features/` (per-feature minimal) + `apps/` (complete apps ordered by size) |
+| [`packages/`](./packages/) | Implementation. `compiler` / `runtime` / `cli` / `mcp` |
+| [`tests/`](./tests/) | Cross-cutting tests. Guarantee parsing, type checking, and build for all examples |
+| [`design-notes/`](./design-notes/) | Design rationale and benchmark records |
 
-## クイックスタート
+## Quick Start
 
 ```sh
 pnpm install
-pnpm build          # 全パッケージをビルド
-pnpm test           # 全テスト
+pnpm build          # build all packages
+pnpm test           # all tests
 
-# Strand プログラムを検査・ビルド
+# Check and build a Strand program
 pnpm --filter @strand/cli exec tsx src/strand.ts check examples/apps/01-counter/app.strand
 pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand ./out
 ```
 
-はじめての人は [guide/getting-started.md](./guide/getting-started.md) → [guide/your-first-app.md](./guide/your-first-app.md) へ。
+If you're new, go to [guide/getting-started.md](./guide/getting-started.md) → [guide/your-first-app.md](./guide/your-first-app.md).
 
-## パッケージ
+## Packages
 
-| パッケージ | 内容 |
+| Package | Contents |
 |---|---|
-| [`@strand/compiler`](./packages/compiler/) | lexer・parser・typechecker・codegen |
-| [`@strand/runtime`](./packages/runtime/) | DOM ランタイム（signal graph・mount・dispatch） |
-| [`@strand/cli`](./packages/cli/) | `strand` コマンド（build / check / list / view / add / replace / remove / rename / fix） |
-| [`@strand/mcp`](./packages/mcp/) | MCP サーバー。コンパイラと AI 編集・仕様検索を MCP ツールとして公開 |
+| [`@strand/compiler`](./packages/compiler/) | lexer, parser, typechecker, codegen |
+| [`@strand/runtime`](./packages/runtime/) | DOM runtime (signal graph, mount, dispatch) |
+| [`@strand/cli`](./packages/cli/) | `strand` command (build / check / list / view / add / replace / remove / rename / fix) |
+| [`@strand/mcp`](./packages/mcp/) | MCP server. Exposes the compiler, AI editing, and spec search as MCP tools |
 
-## 運用モデル
+## Operating model
 
-このリポジトリは「**見ればすべての疑問が解決する**」状態を目指す。質問・issue・バグ報告には、原則として **examples と tests を足すことで答える**。壊れた例は CI で弾かれる（[tests/](./tests/)）。詳しくは [CONTRIBUTING.md](./CONTRIBUTING.md)。
+This repository aims for a state where "**looking at it resolves every question**". Questions, issues, and bug reports are, as a rule, **answered by adding examples and tests**. Broken examples are rejected by CI ([tests/](./tests/)). See [CONTRIBUTING.md](./CONTRIBUTING.md) for details.
 
-## ライセンス
+## License
 
-[Apache-2.0](./LICENSE)。著作権表示は [NOTICE](./NOTICE) を参照。
+[Apache-2.0](./LICENSE). See [NOTICE](./NOTICE) for the copyright notice.

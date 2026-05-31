@@ -1,52 +1,51 @@
-# PoC Phase 5 — AI 編集 API / CRDT op
+# PoC Phase 5 — AI Editing API / CRDT op
 
-`docs../spec/ai-edit.md` で書いた CLI を実装し、Strand の "AI 専用" 思想の中核
-である **構造化編集 + 参照整合性 + op-log** を動作させる。
+English · [日本語](./poc-ai-edit.ja.md)
 
-CRDT graph store の本格実装はせず、`.strand` ファイル単位の **read-parse-mutate-write** で
-動かす。並列 op の収束は本格 CRDT ではなく「op を順序付け、parse 失敗・
-ref-integrity 違反を検出して reject」のレベル。
+Implement the CLI described in `docs../spec/ai-edit.md` and bring to life the core of Strand's "AI-only" philosophy: **structured editing + referential integrity + op-log**.
 
-## 16.1 ゴール
+We do not build a full CRDT graph store; instead it runs on a per-`.strand`-file **read-parse-mutate-write**. Convergence of parallel ops is not a full CRDT but at the level of "order the ops, detect parse failures and ref-integrity violations, and reject them."
+
+## 16.1 Goals
 
 ```bash
-strand list                                    # 全定義名
-strand list slot                               # 特定レイヤ
-strand view slot.todos                         # 単一定義
-strand view --with-deps reducer.add            # 依存込み
-strand refs slot.todos                         # 参照元
-strand check                                   # 型・参照・effect 全部
-strand check --strict-a11y                     # a11y warning もエラー扱い
-strand add slot users 'Map(UserId, User) = {}' # 新規追加
+strand list                                    # all definition names
+strand list slot                               # a specific layer
+strand view slot.todos                         # a single definition
+strand view --with-deps reducer.add            # including dependencies
+strand refs slot.todos                         # referrers
+strand check                                   # types, references, effects, all of them
+strand check --strict-a11y                     # treat a11y warnings as errors too
+strand add slot users 'Map(UserId, User) = {}' # add new
 strand replace slot.todos 'Map(TodoId, Todo) = {}'
-strand remove slot.draft                       # 参照があれば --cascade なしならエラー
-strand remove slot.draft --cascade             # 参照箇所も削除
-strand rename slot.draft newTodoText           # リネーム + 参照書き換え
-strand fix                                     # 検出した修復可能エラーを自動修正
-strand fix --apply E0103                       # 特定コードだけ
+strand remove slot.draft                       # error without --cascade if referenced
+strand remove slot.draft --cascade             # also delete referring spots
+strand rename slot.draft newTodoText           # rename + rewrite references
+strand fix                                     # auto-fix detected repairable errors
+strand fix --apply E0103                       # only a specific code
 ```
 
-全 op は `<file>.strand-ops.jsonl` に追記される（git でレビュー可能）。
+Every op is appended to `<file>.strand-ops.jsonl` (reviewable in git).
 
-## 16.2 スコープ
+## 16.2 Scope
 
-| 機能 | 実装 | 備考 |
+| Feature | Implemented | Notes |
 |---|---|---|
-| `list [layer]` | ✓ | 全定義 or レイヤ別 |
-| `view <qname>` | ✓ | source-range を覚えて切り出す |
-| `view --with-deps <qname>` | ✓ | 推移依存も含む |
-| `refs <qname>` | ✓ | 参照元一覧 (file + line) |
-| `check [--strict-a11y] [--json]` | ✓ | typecheck の結果を表示 |
-| `add <layer> <name> <body>` | ✓ | ファイル末尾に追記 |
-| `replace <qname> <body>` | ✓ | 該当 def を新本体で置換 |
-| `remove <qname> [--cascade]` | ✓ | dependent ops も自動生成 |
-| `rename <qname> <new>` | ✓ | 名前変更 + 参照箇所の置換 |
-| `fix [--apply] [<code>]` | ✓ | did-you-mean、欠落 /404、ほか |
+| `list [layer]` | ✓ | all definitions or by layer |
+| `view <qname>` | ✓ | remembers source-range and slices it out |
+| `view --with-deps <qname>` | ✓ | includes transitive dependencies |
+| `refs <qname>` | ✓ | list of referrers (file + line) |
+| `check [--strict-a11y] [--json]` | ✓ | displays typecheck results |
+| `add <layer> <name> <body>` | ✓ | appends to the end of the file |
+| `replace <qname> <body>` | ✓ | replaces the target def with a new body |
+| `remove <qname> [--cascade]` | ✓ | also auto-generates dependent ops |
+| `rename <qname> <new>` | ✓ | rename + replacement of referring spots |
+| `fix [--apply] [<code>]` | ✓ | did-you-mean, missing /404, etc. |
 | op-log JSONL | ✓ | `<file>.strand-ops.jsonl` |
-| MCP server | × | Phase 6 へ |
-| 真の CRDT 並列 merge | × | parse + ref-integrity だけで近似 |
+| MCP server | × | deferred to Phase 6 |
+| true CRDT parallel merge | × | approximated by parse + ref-integrity only |
 
-## 16.3 op-log フォーマット
+## 16.3 op-log Format
 
 ```jsonl
 {"op":"add","layer":"slot","name":"users","body":"Map(UserId, User) = {}","ts":1779000000000,"opId":"op_01..."}
@@ -54,42 +53,42 @@ strand fix --apply E0103                       # 特定コードだけ
 {"op":"remove","layer":"slot","name":"obsolete","cascade":false,"ts":1779000000002,"opId":"op_03..."}
 ```
 
-`opId` は ULID 風の単調増加 ID。`parent-ops` は単純化のため省略（直前 commit hash で代替）。
+`opId` is a ULID-like monotonically increasing ID. `parent-ops` is omitted for simplicity (substituted by the immediately preceding commit hash).
 
-## 16.4 受け入れ基準
+## 16.4 Acceptance Criteria
 
 ### AC-list/view
-- `pnpm strand list` で 02-todomvc.strand の全 35 定義（type/slot/effect/reducer/fn/tile/app/theme 合計）を表示
-- `pnpm strand view slot.todos` で `slot todos : Map(TodoId, Todo) = {}` を返す
-- `pnpm strand view --with-deps reducer.addTodo` で関連 fn / slot も同梱
+- `pnpm strand list` displays all 35 definitions of 02-todomvc.strand (the total of type/slot/effect/reducer/fn/tile/app/theme)
+- `pnpm strand view slot.todos` returns `slot todos : Map(TodoId, Todo) = {}`
+- `pnpm strand view --with-deps reducer.addTodo` also bundles the related fn / slot
 
 ### AC-refs
-- `pnpm strand refs slot.todos` で todos を参照する reducer / tile / fn の (name, file, line) を列挙
+- `pnpm strand refs slot.todos` enumerates the (name, file, line) of the reducer / tile / fn that reference todos
 
 ### AC-mutate
-- `pnpm strand add slot foo 'Int = 0'` でファイル末尾に slot 追加、op-log に記録
-- `pnpm strand replace slot.draft 'Text = ""'` で該当 slot だけ書き換え
-- `pnpm strand remove slot.draft` で参照ありなら exit code 1 + エラー、`--cascade` でカスケード削除
-- `pnpm strand rename slot.draft newTodoText` で定義 + 全参照を rename
+- `pnpm strand add slot foo 'Int = 0'` adds a slot at the end of the file and records it in the op-log
+- `pnpm strand replace slot.draft 'Text = ""'` rewrites only the target slot
+- `pnpm strand remove slot.draft` exits with code 1 + an error if referenced; `--cascade` performs a cascade delete
+- `pnpm strand rename slot.draft newTodoText` renames the definition + all references
 
 ### AC-fix
-- 04-todomvc.strand に `slot usres : Int = 0; reducer r on=ui.click(B) do= usres := 1` のような typo を入れて `strand fix` がパッチ提案
-- `--apply` で実適用
+- Insert a typo such as `slot usres : Int = 0; reducer r on=ui.click(B) do= usres := 1` into 04-todomvc.strand and have `strand fix` propose a patch
+- Actually apply it with `--apply`
 
-### AC-並列 op
-- 2 つのエージェントが独立に op を JSONL に書き、片方ずつ replay しても収束する例
+### AC-parallel op
+- An example where 2 agents independently write ops to JSONL, and replaying them one at a time still converges
 
-## 16.5 実装順序
+## 16.5 Implementation Order
 
-1. **Definition store**: `.strand` を parse して `Map<qname, { def, fileRange }>` を作る
-2. **list/view/refs/check**: read-only コマンド
+1. **Definition store**: parse `.strand` and build `Map<qname, { def, fileRange }>`
+2. **list/view/refs/check**: read-only commands
 3. **add/replace/remove/rename**: write-back
-4. **op-log**: 各 mutate op で JSONL append
-5. **fix**: 既存の typecheck エラーから auto-patch を生成
-6. **並列 op 検証**: vitest で 2 ops を別順序で apply して同じ結果
+4. **op-log**: append JSONL on each mutate op
+5. **fix**: generate auto-patches from existing typecheck errors
+6. **Parallel op validation**: apply 2 ops in different orders with vitest and get the same result
 
-## 16.6 設計メモ
+## 16.6 Design Notes
 
-- "本物の CRDT" は graph + content-hash + Add-Wins LWW-Map が必要。今回は **op 単位の commit** だけで近似
-- ファイルベースのため、書き換えはテキスト単位（parse 単位ではない）。これで Git diff も人間が読める
-- リネームは「定義行の名前変更」+「参照箇所の単純置換」（言語スコープを考慮しない）。スコープが破れる場合は後続の `check` で検出
+- "Real CRDT" requires graph + content-hash + an Add-Wins LWW-Map. This time we approximate with **per-op commits** only
+- Because it is file-based, rewriting is at the text level (not the parse level). This keeps the Git diff human-readable too
+- Renaming is "renaming the definition line" + "simple replacement of referring spots" (it does not consider language scope). If a scope breaks, it is detected by a subsequent `check`

@@ -1,28 +1,30 @@
 # Contributing to Strand
 
-Strand は experimental OSS であり、運用方針がやや特殊です。読んでから手を動かしてください。
+English · [日本語](./CONTRIBUTING.ja.md)
 
-## 基本方針：質問・バグには example と test で答える
+Strand is experimental OSS, and its operating policy is somewhat unusual. Please read this before getting your hands dirty.
 
-このリポジトリのゴールは「**見れば疑問が解決する**」ことです。そのため:
+## Core policy: answer questions and bugs with examples and tests
 
-- **質問が来たら** → 該当する最小例を `examples/features/` に足す（無ければ）。
-- **バグ報告が来たら** → 最小再現例を `examples/` に足し、`tests/` に回帰テストを足してから直す。
-- **新機能を入れたら** → `spec/` を更新し、`examples/` に動く例を足す。
+The goal of this repository is that "**looking at it resolves your question**". Therefore:
 
-仕様（`spec/`）が正、実装（`packages/`）がそれに従う。食い違いを見つけたら、どちらを直すかを設計判断として [`design-notes/`](./design-notes/) に残す。
+- **When a question comes in** → add the relevant minimal example to `examples/features/` (if it doesn't exist).
+- **When a bug report comes in** → add a minimal reproduction to `examples/`, add a regression test to `tests/`, and then fix it.
+- **When you add a new feature** → update `spec/` and add a working example to `examples/`.
 
-## 開発フロー（TDD）
+The spec (`spec/`) is authoritative, and the implementation (`packages/`) follows it. When you find a discrepancy, record the design decision of which to fix in [`design-notes/`](./design-notes/).
 
-1. **設計** — 要件と方針を固める
-2. **受け入れ基準（AC）** — テストケースを AC として書き出す（コードはまだ）
-3. **テスト実装** — AC からテストコードを書く
-4. **実装** — テストを通す production コードを書く
-5. **反復** — 全テストが緑になるまで
+## Development flow (TDD)
 
-実装からいきなり始めない。
+1. **Design** — settle the requirements and approach
+2. **Acceptance Criteria (AC)** — write out test cases as AC (no code yet)
+3. **Test implementation** — write test code from the AC
+4. **Implementation** — write production code to pass the tests
+5. **Iterate** — until all tests are green
 
-## セットアップ
+Don't start straight from implementation.
+
+## Setup
 
 ```sh
 pnpm install
@@ -30,32 +32,32 @@ pnpm build
 pnpm test
 ```
 
-ツール: パッケージマネージャは **pnpm**、ビルドは **Turborepo** + **tsc/esbuild**、テストは **Vitest**、Lint/Format は **Biome**。
+Tooling: the package manager is **pnpm**, the build is **Turborepo** + **tsc/esbuild**, the test runner is **Vitest**, and the linter/formatter is **Biome**.
 
-## 提出前チェック
+## Pre-submission check
 
 ```sh
 pnpm exec turbo run typecheck test lint build
 ```
 
-すべて緑であること。特に:
+Everything must be green. In particular:
 
-- **新しい example は必ず check + build + smoke が通る**（`tests/` が自動検証する）。`check`/`build` は構文・型・codegen までしか保証しない。**実際に mount して操作して落ちないか**は `strand smoke <file>`（= `tests/` の runtime smoke）で検証する。「コンパイルは通るが動かすとエラー/何も描画されない」バグはここで捕まえる。
-- **lint の inline 抑制（`@biome-ignore` 等）は禁止**。足したくなったら設計を直す。
-- **依存バージョンを直書きしない**。`pnpm add` で最新を入れ、共通バージョンは `pnpm-workspace.yaml` の catalog に置く。
+- **Every new example must pass check + build + smoke** (`tests/` verifies this automatically). `check`/`build` only guarantee syntax, types, and codegen. Whether it **actually mounts and survives interaction** is verified by `strand smoke <file>` (= the runtime smoke in `tests/`). "Compiles but errors / renders nothing when run" bugs are caught here.
+- **Inline lint suppression (`@biome-ignore`, etc.) is forbidden**. If you want to add one, fix the design instead.
+- **Don't hardcode dependency versions**. Install the latest with `pnpm add`, and put shared versions in the catalog of `pnpm-workspace.yaml`.
 
 ## Git
 
-- `main` / `dev` へ直接コミットしない。feature ブランチを切る。
-- こまめにコミットする。
+- Don't commit directly to `main` / `dev`. Create a feature branch.
+- Commit frequently.
 
-## ディレクトリ別の置き場所
+## Where things go, by directory
 
-| 変更内容 | 置き場所 |
+| Change | Location |
 |---|---|
-| 言語/ランタイムの仕様 | `spec/` |
-| 使い方・チュートリアル | `guide/` |
-| 動く例 | `examples/features/` または `examples/apps/` |
-| 実装 | `packages/*/src/` |
-| テスト | パッケージ内 `test/`、横断は `tests/` |
-| 設計の経緯・実測 | `design-notes/` |
+| Language/runtime spec | `spec/` |
+| Usage / tutorials | `guide/` |
+| Working examples | `examples/features/` or `examples/apps/` |
+| Implementation | `packages/*/src/` |
+| Tests | per-package `test/`, cross-cutting in `tests/` |
+| Design rationale / measurements | `design-notes/` |

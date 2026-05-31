@@ -4,6 +4,9 @@
 /examples
 /design-notes
 
+# Generated Japanese locale tree (built from *.ja.md by scripts/sync-docs.mjs)
+/ja
+
 # VitePress build output / cache
 /dist
 /.vitepress/dist

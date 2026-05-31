@@ -1,29 +1,31 @@
 # @strand/mcp
 
-Strand コンパイラと AI 編集ツールチェインを **MCP（Model Context Protocol）サーバー**として公開する。エディタや AI エージェントから、Strand プログラムの検査・ビルド・ナビゲーション・編集・仕様参照を行える。
+English · [日本語](./README.ja.md)
 
-## ツール
+Exposes the Strand compiler and the AI editing toolchain as an **MCP (Model Context Protocol) server**. From editors or AI agents, you can check, build, navigate, edit, and look up the spec for Strand programs.
 
-| ツール | 用途 |
+## Tools
+
+| Tool | Purpose |
 |---|---|
-| `strand_check` | `source` または `path` をパース + 型検査し、診断を返す |
-| `strand_build` | 自己完結 JS モジュールへコンパイル（runtime インライン） |
-| `strand_smoke` | headless DOM に mount して UI を操作し、ランタイム例外・空描画・未処理 rejection を検出（check/build では捕まらない層） |
-| `strand_run_scenario` | シナリオ（操作列 + 状態アサーション）でアプリを駆動し、毎ステップの slot 状態・DOM・エラー・emit を trace として返す。人を介さない生成→実行→観測→修正ループの土台 |
-| `strand_list` | ファイル内の定義一覧（layer で絞り込み可） |
-| `strand_view` | 定義 1 件の表示（`withDeps` で依存も） |
-| `strand_refs` | 定義への参照箇所を検索 |
-| `strand_add` / `strand_replace` / `strand_remove` / `strand_rename` | 定義の編集 |
-| `strand_fix` | 修復可能な診断の自動パッチ案を提示 |
-| `strand_spec_search` / `strand_spec_list` / `strand_spec_get` | 正規仕様（spec/）の検索・一覧・取得 |
+| `strand_check` | Parse + type-check `source` or `path` and return diagnostics |
+| `strand_build` | Compile to a self-contained JS module (runtime inlined) |
+| `strand_smoke` | Mount to a headless DOM and operate the UI to detect runtime exceptions, empty rendering, and unhandled rejections (the layer check/build don't catch) |
+| `strand_run_scenario` | Drive the app with a scenario (operation sequence + state assertions), returning per-step slot state, DOM, errors, and emits as a trace. The substrate for the human-free generate → run → observe → fix loop |
+| `strand_list` | List definitions in a file (filterable by layer) |
+| `strand_view` | Show a single definition (with dependencies via `withDeps`) |
+| `strand_refs` | Search for references to a definition |
+| `strand_add` / `strand_replace` / `strand_remove` / `strand_rename` | Edit definitions |
+| `strand_fix` | Propose auto-patches for fixable diagnostics |
+| `strand_spec_search` / `strand_spec_list` / `strand_spec_get` | Search, list, and retrieve the normative spec (spec/) |
 
-## 起動
+## Startup
 
 ```sh
 pnpm --filter @strand/mcp start
 ```
 
-MCP クライアント（例: Claude Code）の設定例:
+Example configuration for an MCP client (e.g. Claude Code):
 
 ```json
 {
@@ -36,4 +38,4 @@ MCP クライアント（例: Claude Code）の設定例:
 }
 ```
 
-`spec/` の場所は通常リポジトリ構成から自動解決される。別配置の場合は環境変数 `STRAND_SPEC_DIR` で上書きする。
+The location of `spec/` is auto-resolved from the usual repository layout. For a different location, override it with the `STRAND_SPEC_DIR` environment variable.

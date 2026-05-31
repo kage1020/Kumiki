@@ -1,23 +1,25 @@
-# スタイル・レイアウト・テーマ
+# Style, Layout, and Theme
 
-## 4.1 方針
+English · [日本語](./style.ja.md)
 
-Strand は **CSS を直接書かせない**。CSS のカスケード・特異度・継承は AI にとって最大の隠れた依存源で、Strand の「副作用静的追跡」原則と相反する。
+## 4.1 Policy
 
-代わりに：
+Strand **does not let you write CSS directly**. CSS cascade, specificity, and inheritance are the biggest source of hidden dependencies for an AI, and they conflict with Strand's "statically trackable side effects" principle.
 
-1. **デザイントークン** をテーマで宣言
-2. **意味タグ** にトークンを参照させる
-3. **レイアウトはタイルプリミティブ**（`row` / `column` / `grid`）の props で表現
-4. **どうしても必要なときだけ** `class` / `style` props で素通し
+Instead:
 
-これで普通の SPA に必要な見た目はカバーできる。複雑なアニメーションや凝った装飾は v0.2 で `motion` レイヤを追加予定。
+1. Declare **design tokens** in the theme
+2. Have **semantic tags** reference those tokens
+3. Express **layout via tile primitives** (`row` / `column` / `grid`) props
+4. Pass through with `class` / `style` props **only when absolutely necessary**
+
+This covers the visual needs of an ordinary SPA. Complex animations and elaborate decoration are planned as a `motion` layer in v0.2.
 
 ---
 
-## 4.2 デザイントークン
+## 4.2 Design Tokens
 
-`theme` 定義で宣言する：
+Declared in a `theme` definition:
 
 ```strand
 theme DefaultTheme = {
@@ -63,7 +65,7 @@ theme DefaultTheme = {
 }
 ```
 
-### 4.2.1 構文
+### 4.2.1 Syntax
 
 ```ebnf
 theme-def ::= 'theme' identifier '=' '{' theme-section (',' theme-section)* '}'
@@ -71,9 +73,9 @@ theme-section ::= identifier ':' '{' theme-entry (',' theme-entry)* '}'
 theme-entry ::= identifier ':' (string | '{' theme-entry (',' theme-entry)* '}')
 ```
 
-`theme` は型 `Theme` の単一値。複数 theme を定義してダーク/ライトを切り替えられる。
+`theme` is a single value of type `Theme`. You can define multiple themes to switch between dark/light.
 
-### 4.2.2 app への適用
+### 4.2.2 Applying It to an app
 
 ```strand
 app TodoApp
@@ -85,9 +87,9 @@ app TodoApp
 
 ---
 
-## 4.3 トークン参照
+## 4.3 Token References
 
-tile prop の中でトークンを参照する場合、`@` 接頭辞を使う：
+To reference a token inside a tile prop, use the `@` prefix:
 
 ```strand
 tile Card = box(
@@ -103,13 +105,13 @@ tile Card = box(
             }
 ```
 
-`@colors.surface` は theme から解決される。テーマ切り替え時に自動で再描画される。
+`@colors.surface` is resolved from the theme. It is automatically re-rendered when the theme is switched.
 
-### 4.3.1 短縮プロパティ
+### 4.3.1 Shorthand Properties
 
-頻出のスタイル props は **共通 props** として提供され、`@` を書かなくても解決される：
+Frequently used style props are provided as **common props** and are resolved without writing `@`:
 
-| prop | 型 | 例 |
+| prop | Type | Example |
 |---|---|---|
 | `bg` | color token name | `bg: "surface"` → `@colors.surface` |
 | `color` | color token name | `color: "muted"` |
@@ -134,13 +136,13 @@ tile Card = box(
             }
 ```
 
-これにより、AI が書く UI のトークン消費が大幅に減る。
+This dramatically reduces token consumption in the UI an AI writes.
 
 ---
 
-## 4.4 レイアウト
+## 4.4 Layout
 
-レイアウトは CSS ではなく **タイルの構造**で表現する。
+Layout is expressed via **tile structure**, not CSS.
 
 ### 4.4.1 row / column
 
@@ -149,7 +151,7 @@ row(A, B, C) {gap: "md", align: "center", justify: "between"}
 column(A, B, C) {gap: "sm", align: "stretch"}
 ```
 
-| prop | 値 |
+| prop | Value |
 |---|---|
 | `gap` | spacing token name |
 | `align` | `start` / `center` / `end` / `stretch` / `baseline` |
@@ -160,34 +162,34 @@ column(A, B, C) {gap: "sm", align: "stretch"}
 
 ```strand
 grid(A, B, C, D) {cols: 2, gap: "md"}
-grid(A, B, C) {cols: [1, "auto", 1], gap: "sm"}     ; 数値 or 配列
+grid(A, B, C) {cols: [1, "auto", 1], gap: "sm"}     ; number or array
 ```
 
-| prop | 値 |
+| prop | Value |
 |---|---|
-| `cols` | 数値（等分） or `List(Text)`（CSS grid-template-columns 風） |
-| `rows` | 同上 |
+| `cols` | number (equal division) or `List(Text)` (CSS grid-template-columns style) |
+| `rows` | same as above |
 | `gap` | spacing token name |
-| `gap-x`, `gap-y` | 個別指定 |
+| `gap-x`, `gap-y` | individual specification |
 
 ### 4.4.3 stack
 
-`stack` は **vertical stack** — `column` と意味的に同等のレイアウト（子を縦並びに積む）。視覚的な「積み重ね」のニュアンスがほしい時に使う。
+`stack` is a **vertical stack** — a layout semantically equivalent to `column` (stacking children vertically). Use it when you want the visual nuance of "stacking."
 
 ```strand
 stack(Card1, Card2, Card3) {gap: "md"}
 ```
 
-> z 軸方向の重ね配置（オーバーレイ）は `box` に `position` を直接 prop で指定する方法、または将来追加予定の `overlay` builtin を使う。
+> For z-axis stacking (overlays), specify `position` directly as a prop on `box`, or use the `overlay` builtin planned for the future.
 
 ### 4.4.4 panel / region / scroll / fieldset
 
-| builtin | 用途 |
+| builtin | Purpose |
 |---|---|
-| `panel` | グループ化ボックス。視覚的な境界 (border) や見出しを持つ |
-| `region` | a11y 上の名前付き領域。スクリーンリーダー向け landmark |
-| `scroll` | overflow auto なコンテナ。`h` 指定で固定高スクロール |
-| `fieldset` | form 内のフィールドグループ。`<fieldset>` 相当 |
+| `panel` | A grouping box. Has a visual boundary (border) or heading |
+| `region` | A named a11y region. A landmark for screen readers |
+| `scroll` | A container with overflow auto. Specify `h` for fixed-height scrolling |
+| `fieldset` | A field group within a form. Equivalent to `<fieldset>` |
 
 ```strand
 panel(heading("Settings"), settingsForm) {bg: "surface", pad: "md"}
@@ -197,7 +199,7 @@ scroll(longList) {h: 400}
 
 ### 4.4.5 divider
 
-水平線（`<hr>`）。区切り用：
+A horizontal line (`<hr>`). For separators:
 
 ```strand
 column(A, divider(), B)
@@ -205,7 +207,7 @@ column(A, divider(), B)
 
 ### 4.4.6 box
 
-汎用コンテナ。pad/bg/radius/shadow などで装飾する：
+A general-purpose container. Decorate it with pad/bg/radius/shadow and so on:
 
 ```strand
 box(content) {
@@ -216,14 +218,14 @@ box(content) {
 }
 ```
 
-### 4.4.7 サイズ
+### 4.4.7 Sizing
 
-| prop | 意味 |
+| prop | Meaning |
 |---|---|
-| `w` | width。`"full"` / `"auto"` / `"sm"` / 数値（px） |
+| `w` | width. `"full"` / `"auto"` / `"sm"` / number (px) |
 | `h` | height |
 | `min-w`, `min-h`, `max-w`, `max-h` | min/max |
-| `aspect` | `"1/1"` / `"16/9"` 等 |
+| `aspect` | `"1/1"` / `"16/9"`, etc. |
 
 ```strand
 image(src=url) {w: "full", max-w: 600, aspect: "16/9"}
@@ -231,9 +233,9 @@ image(src=url) {w: "full", max-w: 600, aspect: "16/9"}
 
 ---
 
-## 4.5 レスポンシブ
+## 4.5 Responsive
 
-スタイル props はオブジェクトでブレイクポイント分岐できる：
+Style props can branch by breakpoint via an object:
 
 ```strand
 column(A, B, C) {
@@ -246,13 +248,13 @@ grid(A, B, C, D) {
 }
 ```
 
-キーは `base` + theme.breakpoints のキー（`sm`, `md`, `lg`, `xl`）。
+The keys are `base` plus the keys of theme.breakpoints (`sm`, `md`, `lg`, `xl`).
 
 ---
 
-## 4.6 ダークモード
+## 4.6 Dark Mode
 
-複数 theme を定義し、`slot theme-name` を切り替える：
+Define multiple themes and switch a `slot theme-name`:
 
 ```strand
 theme Light = {colors: {bg: "#fff", fg: "#000", ...}, ...}
@@ -268,12 +270,12 @@ app App
     caps   = []
     routes = {"/" -> Home, "/404" -> NotFound}
     init   = []
-    theme  = themeName        ; slot を直接指す
+    theme  = themeName        ; points directly at a slot
 ```
 
-`theme = themeName` のように slot を指定すると、その値が変わるたびにテーマが切り替わる。`themeName` の値は宣言された theme 名のいずれか（コンパイラがチェック）。
+When you specify a slot as in `theme = themeName`, the theme switches whenever that value changes. The value of `themeName` must be one of the declared theme names (checked by the compiler).
 
-### 4.6.1 OS 設定への追従
+### 4.6.1 Following OS Settings
 
 ```strand
 reducer initTheme
@@ -281,37 +283,37 @@ reducer initTheme
     do= themeName := if prefers-dark() then "Dark" else "Light"
 ```
 
-`prefers-dark()` は組み込みヘルパ（`prefers-color-scheme: dark` を読む）。
+`prefers-dark()` is a built-in helper (it reads `prefers-color-scheme: dark`).
 
 ---
 
-## 4.7 状態スタイル（hover, focus, etc.）
+## 4.7 State Styles (hover, focus, etc.)
 
-タイルプリミティブは状態別 props を持つ：
+Tile primitives have per-state props:
 
 ```strand
 button(text="Save") {
     bg: "primary",
     color: "bg",
-    hover: {bg: "primary-dark"},      ; トークン未定義なら警告
+    hover: {bg: "primary-dark"},      ; warns if the token is undefined
     focus: {shadow: "md"},
     disabled: {bg: "muted", color: "border"}
 }
 ```
 
-サポートされる状態キー：`hover` / `focus` / `active` / `disabled` / `selected` / `checked`。
+Supported state keys: `hover` / `focus` / `active` / `disabled` / `selected` / `checked`.
 
 ---
 
-## 4.8 アイコン
+## 4.8 Icons
 
-`icon` 要素は名前で参照する：
+The `icon` element is referenced by name:
 
 ```strand
 icon(name="check") {size: "md", color: "success"}
 ```
 
-組み込みアイコンセットを v0.1 で 100 個程度提供する予定（リストは後日）。カスタムアイコンは `theme.icons` でパス登録：
+We plan to provide a built-in icon set of around 100 icons in v0.1 (the list comes later). Custom icons are registered by path in `theme.icons`:
 
 ```strand
 theme MyTheme = {
@@ -324,34 +326,34 @@ theme MyTheme = {
 
 ---
 
-## 4.9 アニメーション (v0.1 では限定)
+## 4.9 Animation (limited in v0.1)
 
-v0.1 では以下のみ：
+In v0.1, only the following:
 
-| prop | 効果 |
+| prop | Effect |
 |---|---|
-| `transition: "fade"` | フェードイン/アウト |
-| `transition: "slide-up"` | 下からスライド |
-| `transition: "slide-down"` | 上からスライド |
-| `transition-duration: "fast"` / `"normal"` / `"slow"` | 速度 |
+| `transition: "fade"` | Fade in/out |
+| `transition: "slide-up"` | Slide from the bottom |
+| `transition: "slide-down"` | Slide from the top |
+| `transition-duration: "fast"` / `"normal"` / `"slow"` | Speed |
 
-`when` で表示切替したタイルに自動適用される：
+Applied automatically to tiles whose visibility is toggled with `when`:
 
 ```strand
 when(modalOpen, Modal() {transition: "slide-up", transition-duration: "normal"})
 ```
 
-任意の CSS transition / keyframe は v0.2 の `motion` レイヤで導入。
+Arbitrary CSS transitions / keyframes will be introduced in the v0.2 `motion` layer.
 
 ---
 
-## 4.10 グローバル CSS / リセット
+## 4.10 Global CSS / Reset
 
-ランタイムは最小リセット CSS を埋め込む。アプリ側からの追加は **意図的に不可能**。
+The runtime embeds a minimal reset CSS. Adding to it from the app side is **intentionally impossible**.
 
-理由：グローバル CSS は AI が追跡できない暗黙依存になる。すべての装飾はタイル props で完結させる。
+Rationale: global CSS becomes an implicit dependency the AI cannot track. All decoration is kept self-contained in tile props.
 
-例外：`<head>` への meta タグ・OG 画像などは `app.meta` で宣言：
+Exception: meta tags and OG images in `<head>` are declared via `app.meta`:
 
 ```strand
 app TodoApp
@@ -366,20 +368,20 @@ app TodoApp
 
 ---
 
-## 4.11 設計上の判断記録
+## 4.11 Design Decision Record
 
-| 判断 | 理由 |
+| Decision | Rationale |
 |---|---|
-| CSS を直接書かせない | カスケードと特異度が AI に追跡不能な暗黙依存を生む |
-| デザイントークンを theme に集約 | スタイル値の散逸を構造で防ぐ |
-| 短縮 props (`bg`, `pad` 等) を提供 | トークン消費を削減 |
-| レイアウトはタイル構造で表現 | レイアウト用 CSS を AI が学ぶ必要をなくす |
-| グローバル CSS 禁止 | 「どこから来たスタイルか」を必ず親 tile に紐付ける |
-| アニメーション v0.1 は限定 | 多すぎる選択肢は AI の判断を不安定にする |
+| Don't let users write CSS directly | Cascade and specificity create implicit dependencies the AI cannot track |
+| Consolidate design tokens in the theme | Structurally prevents style values from scattering |
+| Provide shorthand props (`bg`, `pad`, etc.) | Reduces token consumption |
+| Express layout via tile structure | Eliminates the need for the AI to learn layout CSS |
+| Ban global CSS | Always ties "where a style came from" to the parent tile |
+| Limit animation in v0.1 | Too many choices destabilize the AI's decisions |
 
 ---
 
-## 4.12 次
+## 4.12 Next
 
-- フォームのスタイル → [./forms.md](./forms.md)
-- アクセシビリティ → [./lifecycle.md](./lifecycle.md)
+- Form styling → [./forms.md](./forms.md)
+- Accessibility → [./lifecycle.md](./lifecycle.md)

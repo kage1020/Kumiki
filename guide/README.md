@@ -1,10 +1,12 @@
-# Strand ガイド
+# Strand Guide
 
-仕様（[../spec/](../spec/)）が「何が正しいか」を定めるのに対し、ここは「どう使うか」を示す。
+English · [日本語](./README.ja.md)
 
-1. [getting-started.md](./getting-started.md) — 環境構築と最初の check / build
-2. [your-first-app.md](./your-first-app.md) — Counter を一から組み立てる
-3. [thinking-in-strand.md](./thinking-in-strand.md) — 7 レイヤの考え方と React との対比
-4. [recipes.md](./recipes.md) — よくあるパターンの逆引き
+While the specification ([../spec/](../spec/)) defines "what is correct," this guide shows "how to use it."
 
-動く実例は [../examples/](../examples/) を併読すること。
+1. [getting-started.md](./getting-started.md) — Setup and your first check / build
+2. [your-first-app.md](./your-first-app.md) — Build a Counter from scratch
+3. [thinking-in-strand.md](./thinking-in-strand.md) — The 7 layers and a comparison with React
+4. [recipes.md](./recipes.md) — Reverse lookup for common patterns
+
+Read alongside the working examples in [../examples/](../examples/).

@@ -1,24 +1,26 @@
 # 06 — Expense Tracker
 
-支出を追加・削除し、合計と「大きい支出のみ」フィルタを持つ小さなアプリ。`Map` + `fold` による集計と数値パースを扱う。
+English · [日本語](./README.ja.md)
 
-このアプリは **autonomous iterate ループのデモ**として作られ、その過程で 2 つのフレームワークバグを検出・修正した:
+A small app that adds and removes expenses and has a total plus a "large expenses only" filter. It covers aggregation with `Map` + `fold` and numeric parsing.
 
-- `List.fold` の codegen 未実装（`_d_1 is not defined`）— smoke 層で検出。
-- `Int.parse` が数値変換せず文字列を返していた（合計が文字列連結で壊れる、非例外バグ）— scenario 層の状態/DOM アサーションで検出。
+This app was built as a **demo of the autonomous iterate loop**, and in the process it detected and fixed two framework bugs:
 
-## 学べること
+- `List.fold` codegen was unimplemented (`_d_1 is not defined`) — caught at the smoke layer.
+- `Int.parse` returned a string instead of converting to a number (the total broke via string concatenation, a non-exception bug) — caught by state/DOM assertions at the scenario layer.
 
-- `Map(Id, V)` の CRUD と `.values.fold(0, $1 + $2.amount)` による合計
-- `Int.parse(text).get-or(0)` による入力のパース
-- フィルタトグルと、フィルタに影響されない合計
-- 追加後の入力欄クリア
+## What you'll learn
 
-## 検証
+- CRUD on `Map(Id, V)` and computing a total with `.values.fold(0, $1 + $2.amount)`
+- Parsing input with `Int.parse(text).get-or(0)`
+- A filter toggle and a total that is unaffected by the filter
+- Clearing the input field after adding
+
+## Validation
 
 ```sh
 pnpm --filter @strand/cli exec tsx src/strand.ts smoke examples/apps/06-expenses/app.strand
 pnpm --filter @strand/cli exec tsx src/strand.ts run   examples/apps/06-expenses/app.strand examples/apps/06-expenses/scenario.json
 ```
 
-`scenario.json` は要件を実行可能な受け入れ基準（AC）に落としたもの。`tests/` が CI で実行する。
+`scenario.json` distills the requirements into executable acceptance criteria (AC). `tests/` runs them in CI.

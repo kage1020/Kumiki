@@ -1,125 +1,127 @@
-# 設計理念
+# Design Rationale
 
-## 0.1 動機
+English · [日本語](./rationale.ja.md)
 
-React は人間中心の最適点である。Hooks / Context / JSX は人が読み書きするうえで自然に感じる慣用句であり、20 年近い試行錯誤の到達点でもある。しかしコードを書くのが AI に移っていくにつれ、次のような特性が摩擦になる。
+## 0.1 Motivation
 
-| 摩擦点 | 内容 |
+React is a human-centered optimum. Hooks / Context / JSX are idioms that feel natural for humans to read and write, and are also the culmination of nearly 20 years of trial and error. But as code writing shifts to AI, the following characteristics become friction.
+
+| Friction point | Content |
 |---|---|
-| 構文オーバーヘッド | JSX/TSX は閉じタグ・キャメル属性・式埋め込みでトークンが嵩む |
-| 暗黙の副作用 | `useEffect` の依存配列、クロージャの stale capture、cleanup 忘れ |
-| 順序依存ルール | Hooks の呼び出し順、条件分岐内禁止、リスト内禁止 |
-| 暗黙スコープ | Provider 階層、Context の解決、子孫からの参照 |
-| 非局所的レンダリング | 親の再レンダーが子に波及、`memo` で部分的に抑制する複雑性 |
+| Syntactic overhead | JSX/TSX inflates tokens with closing tags, camelCase attributes, and expression embedding |
+| Implicit side effects | `useEffect` dependency arrays, stale capture in closures, forgotten cleanup |
+| Order-dependent rules | Hooks call order, prohibition inside conditionals, prohibition inside lists |
+| Implicit scope | Provider hierarchies, Context resolution, references from descendants |
+| Non-local rendering | A parent re-render propagates to children; the complexity of partially suppressing it with `memo` |
 
-これらは「AI が書く分には書ける」が「**AI が直す・並列で触る**」と急激に難しくなる。バグの原因がプログラム外（実行履歴・依存配列・stale closure）にあると、AI はコンテキスト窓に履歴を全部詰めないと推論できない。
+These are "writable when the AI writes them," but become sharply harder "**when the AI fixes them or touches them in parallel**." When the cause of a bug lies outside the program (execution history, dependency arrays, stale closures), the AI cannot reason about it without cramming the entire history into the context window.
 
-Strand はこの摩擦を構造で消す。
+Strand eliminates this friction structurally.
 
-## 0.2 設計要件
+## 0.2 Design Requirements
 
-1. **トークン効率**: 同じ UI を React より少ないトークンで表現できる
-2. **副作用の静的追跡可能性**: どの副作用がどの状態に依存し、どこから発火するかが構文から自明
-3. **アーキテクチャの予測可能性**: バグ箇所が局所化される、エラーメッセージが機械可読
-4. **並列開発耐性**: 数十のエージェントが同時に編集してもセマンティックに壊れない
-5. **可読性の放棄を許容**: 人間が読めるかは二次目標。一次目標は AI が正確に書ける・直せる
+1. **Token efficiency**: The same UI can be expressed with fewer tokens than React
+2. **Static traceability of side effects**: Which side effect depends on which state and where it fires is self-evident from the syntax
+3. **Architectural predictability**: Bug locations are localized; error messages are machine-readable
+4. **Resilience to parallel development**: It does not break semantically even when dozens of agents edit simultaneously
+5. **Allowing readability to be sacrificed**: Whether humans can read it is a secondary goal. The primary goal is that the AI can write and fix it accurately
 
-## 0.3 先行研究のレッスン
+## 0.3 Lessons from Prior Work
 
-設計に至るまでに参照した試みと、そこから取り入れた / 避けた要素：
+The attempts referenced on the way to the design, and the elements adopted / avoided from them:
 
-| 試み | 取り入れた | 避けた |
+| Attempt | Adopted | Avoided |
 |---|---|---|
-| Elm | 完全な副作用分離、Result/Option 型 | ボイラープレートの膨張、ローカル状態禁止の硬直さ |
-| Unison | content-addressable な定義、ハッシュベース参照 | テキスト/Git エコシステムからの完全分断 |
-| Eve / Differential Dataflow | データフローとしての UI、宣言的クエリ | 高頻度更新ツリーでの IVM 計算爆発 |
-| Hazel / Subtext | typed holes、構文エラーゼロ | 入力摩擦による開発体験の悪化 |
-| Dark | trace 駆動のデプロイ、UI と実行の融合 | エコシステムロックイン |
-| SolidJS | fine-grained reactivity、コンパイル時依存解析 | シグナルの stale 問題、隠れた追跡範囲 |
-| Qwik | resumability、SSR 後の O(1) 起動 | 学習コストとデバッグの複雑さ |
-| Hyperscript | DOM 局所性、コンテキストスイッチゼロ | 大規模化での密結合スパゲティ |
-| Datomic | append-only fact log、時間旅行クエリ | 高頻度更新には向かない |
+| Elm | Complete side-effect isolation, Result/Option types | Boilerplate bloat, the rigidity of prohibiting local state |
+| Unison | Content-addressable definitions, hash-based references | Complete disconnection from the text/Git ecosystem |
+| Eve / Differential Dataflow | UI as dataflow, declarative queries | IVM computation explosion in high-frequency update trees |
+| Hazel / Subtext | Typed holes, zero syntax errors | Worsened developer experience from input friction |
+| Dark | Trace-driven deployment, fusion of UI and execution | Ecosystem lock-in |
+| SolidJS | Fine-grained reactivity, compile-time dependency analysis | Signal stale problems, hidden tracking scope |
+| Qwik | Resumability, O(1) startup after SSR | Learning cost and debugging complexity |
+| Hyperscript | DOM locality, zero context switching | Tightly-coupled spaghetti at scale |
+| Datomic | Append-only fact log, time-travel queries | Not suited to high-frequency updates |
 
-## 0.4 4 案ブレストの収束点
+## 0.4 Convergence Point of the 4-Proposal Brainstorm
 
-設計検討で 4 つの独立案を出した：
+In the design study, 4 independent proposals were produced:
 
-| 案 | 出所 | 一言 |
+| Proposal | Origin | One-liner |
 |---|---|---|
-| **IR + Actor + Effect descriptor** | Codex 1 回目 | S 式 IR、Elm Architecture、capability 付き effect、compile-to-DOM |
-| **Loom: Episode-oriented Runtime** | Codex 2 回目 | Episode / Intent / Capability / Projection / Trace |
-| **Pyramid: Effect-Typed Tile Language** | Claude | TSV 1 行 1 宣言、5 層分離、グローバル slot |
-| **Nexus: CRDT-Native Triple-Graph** | Gemini | グラフ DB、Triple op、Reactive Datalog |
+| **IR + Actor + Effect descriptor** | Codex, 1st round | S-expression IR, Elm Architecture, capability-bearing effects, compile-to-DOM |
+| **Loom: Episode-oriented Runtime** | Codex, 2nd round | Episode / Intent / Capability / Projection / Trace |
+| **Pyramid: Effect-Typed Tile Language** | Claude | TSV one declaration per line, 5-layer separation, global slot |
+| **Nexus: CRDT-Native Triple-Graph** | Gemini | Graph DB, Triple op, Reactive Datalog |
 
-4 案を批判的に比較した結果、**表面の表現は違っても全員が同じ 4 点に収束**していることが判明した。
+As a result of critically comparing the 4 proposals, it turned out that **even though the surface expression differs, everyone converged on the same 4 points**.
 
-### 収束した 4 つの核
+### The 4 Cores They Converged On
 
-1. **副作用は明示 descriptor**（関数呼び出しではない）
-2. **ローカル状態の禁止 / 最小化**（全状態が静的に位置特定可能）
-3. **source ≠ runtime**（IR とコンパイルを必須化）
-4. **append-only causal log**（debug/replay/audit を一つの基盤に統合）
+1. **Side effects are explicit descriptors** (not function calls)
+2. **Prohibition / minimization of local state** (all state is statically locatable)
+3. **source ≠ runtime** (IR and compilation are mandatory)
+4. **append-only causal log** (debug/replay/audit unified onto one foundation)
 
-残った論点は **ソース表現の物理形式だけ** だった。
+The only remaining point of contention was **the physical form of the source representation**.
 
-## 0.5 Strand のポジション
+## 0.5 Strand's Position
 
-Strand は 4 案のハイブリッドである。各案の強い部分を取り、弱い部分を別の案で補う。
+Strand is a hybrid of the 4 proposals. It takes the strong parts of each and covers the weak parts with another proposal.
 
-| 採用 | 出所 |
+| Adopted | Origin |
 |---|---|
-| 7 レイヤ強制分離（type / slot / effect / reducer / tile / fn / app） | Pyramid + Strand 拡張 |
-| capability 付き effect descriptor | IR+Actor / Pyramid |
+| Forced 7-layer separation (type / slot / effect / reducer / tile / fn / app) | Pyramid + Strand extension |
+| Capability-bearing effect descriptor | IR+Actor / Pyramid |
 | episode log + replay | Loom |
-| content-addressable な定義ストア | IR+Actor / Nexus |
-| 名前付き slot（opaque ID ではなく可読名） | Pyramid |
-| CRDT op による並列編集 | Nexus |
-| 局所ネスト許容（tile 内のみ S 式風） | IR+Actor |
-| グラフコンパイラ（参照整合性を静的検査） | Nexus |
-| `--ai-fix` モード（エラー→自動修復ループ） | Strand 新規 |
+| Content-addressable definition store | IR+Actor / Nexus |
+| Named slots (readable names, not opaque IDs) | Pyramid |
+| Parallel editing via CRDT op | Nexus |
+| Local nesting allowed (S-expression-like only inside tiles) | IR+Actor |
+| Graph compiler (statically checks referential integrity) | Nexus |
+| `--ai-fix` mode (error → auto-repair loop) | Strand new |
 
-### 各案の弱点を Strand がどう避けるか
+### How Strand Avoids Each Proposal's Weakness
 
-| 弱点 | 由来 | Strand での回避 |
+| Weakness | Origin | Avoidance in Strand |
 |---|---|---|
-| S 式の括弧地獄 | IR+Actor | tile 内のみネスト許容、それ以外は 1 行 1 宣言 |
-| Effect type 伝搬地獄 | IR+Actor | effect は descriptor、伝搬は capability 集合のみ |
-| Projection の IVM 計算爆発 | Loom | signal graph による局所更新（projection を全体再構築しない） |
-| trace スキーマ進化非互換 | Loom | content-hash と episode の versioning で過去 trace は immutable |
-| TSV の表現力限界 | Pyramid | tile 内ネスト許容、reducer の `do=` は複数文 |
-| アセンブリ退化 | Pyramid | 名前付き slot + コンパイラが命名強制 |
-| CRDT の意味的衝突 | Nexus | コンパイラが ref-integrity を CRDT op レベルで検査 |
-| opaque ID の長距離参照 | Nexus | 表面は名前、内部は hash、参照は CLI が解決 |
-| Reactive Datalog の計算コスト | Nexus | Datalog ではなく compiled signal graph |
+| S-expression parenthesis hell | IR+Actor | Nesting allowed only inside tiles, otherwise one declaration per line |
+| Effect type propagation hell | IR+Actor | Effects are descriptors; propagation is only the capability set |
+| IVM computation explosion in Projection | Loom | Local updates via signal graph (no full rebuild of the projection) |
+| trace schema-evolution incompatibility | Loom | Content-hash and episode versioning keep past traces immutable |
+| Expressiveness limit of TSV | Pyramid | Nesting allowed inside tiles; a reducer's `do=` allows multiple statements |
+| Degeneration into assembly | Pyramid | Named slots + the compiler enforces naming |
+| Semantic conflicts in CRDT | Nexus | The compiler checks ref-integrity at the CRDT op level |
+| Long-distance references with opaque IDs | Nexus | Names on the surface, hashes internally; references resolved by the CLI |
+| Computation cost of Reactive Datalog | Nexus | A compiled signal graph rather than Datalog |
 
-## 0.6 用語
+## 0.6 Terminology
 
-| 用語 | 意味 |
+| Term | Meaning |
 |---|---|
-| **definition** | type / slot / effect / reducer / tile / fn / app のいずれか 1 件 |
-| **layer** | 7 種の定義カテゴリ |
-| **fn** | 補助の純粋関数（slot 読み書き禁止、effect emit 禁止） |
-| **content-hash** | 定義の本体と推移依存をハッシュした 256bit 識別子 |
-| **slot** | 名前付きグローバル状態 |
-| **effect** | 副作用を表す純粋なレコード値（実行ではない） |
-| **emit** | reducer から effect 値を放出する操作 |
-| **reducer** | event → state 変更 + effect emit の純粋関数 |
-| **tile** | slot から DOM 投影への純粋関数 |
-| **episode** | 1 つのトリガから派生した因果列（reducer 実行・effect 実行・状態変化の集合） |
-| **capability** | アプリ起動時に宣言する副作用許可の集合 |
-| **CRDT op** | AI エージェントが definition store に対して行う編集操作 |
+| **definition** | A single instance of type / slot / effect / reducer / tile / fn / app |
+| **layer** | One of the 7 definition categories |
+| **fn** | An auxiliary pure function (slot read/write prohibited, effect emit prohibited) |
+| **content-hash** | A 256-bit identifier hashing a definition's body and its transitive dependencies |
+| **slot** | Named global state |
+| **effect** | A pure record value representing a side effect (not execution) |
+| **emit** | The operation of emitting an effect value from a reducer |
+| **reducer** | A pure function of event → state change + effect emit |
+| **tile** | A pure function from slots to a DOM projection |
+| **episode** | A causal sequence derived from a single trigger (the set of reducer executions, effect executions, and state changes) |
+| **capability** | The set of side-effect permissions declared at app startup |
+| **CRDT op** | An editing operation an AI agent performs against the definition store |
 
-## 0.7 非目標
+## 0.7 Non-Goals
 
-Strand は次のものを目指さない。
+Strand does not aim for the following.
 
-- **既存 React コードの段階移行**: 互換性ゼロでよい。新規アプリ専用
-- **人間によるフルスクラッチ開発**: 人間も書けるが快適ではない
-- **任意の DSL/言語拡張**: マクロ・プラグインを許さない（AI の学習対象を 1 つに保つため）
-- **動的型・実行時型生成**: すべて静的
-- **複数のレンダリングターゲット**: DOM のみ（Native / Canvas は別言語）
+- **Incremental migration of existing React code**: Zero compatibility is fine. New apps only
+- **From-scratch development by humans**: Humans can write it, but it is not comfortable
+- **Arbitrary DSL/language extensions**: Macros and plugins are not allowed (to keep the AI's learning target single)
+- **Dynamic types / runtime type generation**: Everything is static
+- **Multiple rendering targets**: DOM only (Native / Canvas are separate languages)
 
-## 0.8 次に読む
+## 0.8 What to Read Next
 
-- 言語の全体像 → [../spec/language.md](../spec/language.md)
-- すぐ例を見たい → [examples/01-counter.strand](./examples/01-counter.strand)
+- Overall view of the language → [../spec/language.md](../spec/language.md)
+- Want to see an example right away → [examples/01-counter.strand](./examples/01-counter.strand)

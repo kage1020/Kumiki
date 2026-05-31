@@ -1,10 +1,12 @@
-# PoC Phase 1 — Counter が動く実装の仕様
+# PoC Phase 1 — Specification of a Working Counter Implementation
 
-## 11.1 ゴール
+English · [日本語](./poc-phase1.ja.md)
 
-`docs/examples/01-counter.strand` を入力に `strand build` を実行すると、ブラウザで開いて `+` / `−` / `reset` ボタンが機能する単一の SPA がビルドされる。
+## 11.1 Goal
 
-人間が編集する流れ：
+Running `strand build` with `docs/examples/01-counter.strand` as input builds a single SPA that, when opened in the browser, has working `+` / `−` / `reset` buttons.
+
+The flow for a human editor:
 
 ```bash
 cd reference
@@ -13,106 +15,106 @@ pnpm strand build ../docs/examples/01-counter.strand ../examples-build/counter
 pnpm vite preview --root ../examples-build/counter --open
 ```
 
-→ ブラウザに「Count: 0」+ 3 ボタン。`+` で 1 ずつ加算、`reset` で 0、`−` で減算（refinement で 0 未満は拒否）。
+→ In the browser, "Count: 0" + 3 buttons. `+` increments by 1, `reset` sets to 0, `−` decrements (the refinement rejects values below 0).
 
-## 11.2 サポート範囲（Phase 1）
+## 11.2 Support Scope (Phase 1)
 
-| カバー | 詳細 |
+| Covered | Details |
 |---|---|
 | `type` | `Int` / `Text` / `Bool` / `Unit` / `nominal T where refinement` |
-| 述語 | `between(A,B)` のみ |
-| `slot` | `slot name : T = init` の単純形 |
-| `reducer` | `on=ui.click(TileName)` と `do=` で1〜複数の `slot := expr` |
-| `tile` | `column`, `row`, `heading`, `text`, `button` の組み込み 5 要素 |
-| 式 | リテラル、識別子、`+`/`-`、`==`/`!=`、文字列連結 |
+| Predicates | `between(A,B)` only |
+| `slot` | The simple form `slot name : T = init` |
+| `reducer` | `on=ui.click(TileName)` and `do=` with one or more `slot := expr` |
+| `tile` | The 5 built-in elements `column`, `row`, `heading`, `text`, `button` |
+| Expressions | Literals, identifiers, `+`/`-`, `==`/`!=`, string concatenation |
 | `app` | `caps=[] routes={"/" -> App, "/404" -> App} init=[]` |
-| ランタイム | DOM 描画、event handler、slot 変更時の dirty 伝播と再描画 |
+| Runtime | DOM rendering, event handlers, dirty propagation and re-rendering on slot change |
 
-**Phase 1 で扱わない**: `effect`, `fn`, `match`, `for`, `when`, `if-then-else` 式, `Map`/`Set`/`List`, refinement の他述語, route 解決, テーマ, a11y, AI 編集 API, episode log。
+**Not handled in Phase 1**: `effect`, `fn`, `match`, `for`, `when`, `if-then-else` expressions, `Map`/`Set`/`List`, other refinement predicates, route resolution, themes, a11y, the AI editing API, the episode log.
 
-## 11.3 ディレクトリ構成
+## 11.3 Directory Layout
 
 ```
 new-js-framework/
-├── docs/                      ← 仕様文書（既存）
-├── reference/                 ← PoC 実装
+├── docs/                      ← specification documents (existing)
+├── reference/                 ← PoC implementation
 │   ├── package.json
 │   ├── tsconfig.json
 │   ├── biome.json
 │   ├── vite.config.ts
 │   ├── src/
 │   │   ├── compiler/
-│   │   │   ├── ast.ts         ← AST 型
-│   │   │   ├── lexer.ts       ← トークナイザ
-│   │   │   ├── parser.ts      ← 構文解析
-│   │   │   ├── typecheck.ts   ← 名前解決 + 型確認
-│   │   │   ├── codegen.ts     ← AST → JS コード
-│   │   │   └── compile.ts     ← lex→parse→check→codegen 統合
+│   │   │   ├── ast.ts         ← AST types
+│   │   │   ├── lexer.ts       ← tokenizer
+│   │   │   ├── parser.ts      ← syntax analysis
+│   │   │   ├── typecheck.ts   ← name resolution + type checking
+│   │   │   ├── codegen.ts     ← AST → JS code
+│   │   │   └── compile.ts     ← lex→parse→check→codegen integration
 │   │   ├── runtime/
-│   │   │   ├── index.ts       ← ランタイムエントリ（mount）
-│   │   │   ├── slots.ts       ← slot ストア + dirty tracking
-│   │   │   └── dom.ts         ← 仮想 tile → DOM 反映
+│   │   │   ├── index.ts       ← runtime entry (mount)
+│   │   │   ├── slots.ts       ← slot store + dirty tracking
+│   │   │   └── dom.ts         ← virtual tile → DOM reflection
 │   │   └── cli/
-│   │       └── strand.ts      ← strand build コマンド
+│   │       └── strand.ts      ← strand build command
 │   └── test/
 │       ├── lexer.test.ts
 │       ├── parser.test.ts
 │       ├── typecheck.test.ts
 │       ├── codegen.test.ts
-│       └── e2e.test.ts        ← counter.strand を end-to-end でビルド
-└── examples-build/            ← strand build の出力先
+│       └── e2e.test.ts        ← builds counter.strand end-to-end
+└── examples-build/            ← output directory of strand build
     └── counter/
         ├── index.html
         └── app.js
 ```
 
-## 11.4 受け入れ基準（AC）
+## 11.4 Acceptance Criteria (AC)
 
-TDD で先に固める。
+Locked down first with TDD.
 
 ### AC-Lexer
 
-| 入力 | 期待トークン列 |
+| Input | Expected token sequence |
 |---|---|
 | `slot count : N = 0` | `[KW(slot), IDENT(count), OP(:), IDENT(N), OP(=), NUM(0)]` |
-| `# hello\nx` | `[IDENT(x)]`（コメントは無視） |
+| `# hello\nx` | `[IDENT(x)]` (comments are ignored) |
 | `"hi" + "world"` | `[STR(hi), OP(+), STR(world)]` |
 | `nominal Int where between(0, 999)` | `[KW(nominal), IDENT(Int), KW(where), IDENT(between), OP("("), NUM(0), OP(","), NUM(999), OP(")")]` |
 | `do= count := count + 1` | `[KW(do), OP(=), IDENT(count), OP(:=), IDENT(count), OP(+), NUM(1)]` |
-| 32 文字を超える識別子 | エラー：identifier too long |
+| An identifier longer than 32 characters | Error: identifier too long |
 
 ### AC-Parser
 
-01-counter.strand 全体を入力して、AST の以下のノード数：
+Feeding all of 01-counter.strand, the following AST node counts:
 
-- TypeDef: 1（N）
-- SlotDef: 1（count）
-- ReducerDef: 3（inc / dec / reset）
-- TileDef: 4（IncBtn / DecBtn / ResetBtn / App）
-- AppDef: 1（Counter）
+- TypeDef: 1 (N)
+- SlotDef: 1 (count)
+- ReducerDef: 3 (inc / dec / reset)
+- TileDef: 4 (IncBtn / DecBtn / ResetBtn / App)
+- AppDef: 1 (Counter)
 
-各 reducer に対し `on.kind === "ui.click"` で selector が tile-ref であること、`do[0]` が SlotAssign であること。
+For each reducer, `on.kind === "ui.click"` with the selector being a tile-ref, and `do[0]` being a SlotAssign.
 
 ### AC-Typecheck
 
-- `count := count + 1` の右辺が `N` 型と適合（Int に refinement）
-- `column(heading("Count: " + count), row(DecBtn, ResetBtn, IncBtn))` の全 tile 参照が解決される
-- `app.routes` の `"/" -> App` の `App` が定義済み tile であること
-- 未定義の `usres` を書いたら E0103 が返る
-- 未定義の `FooBtn` を tile body に書いたら E0105 が返る
-- 同一 reducer 内で `count := count + 1; count := 0` のように同 slot を 2 回書くと E0601
+- The right-hand side of `count := count + 1` conforms to type `N` (Int with a refinement)
+- All tile references in `column(heading("Count: " + count), row(DecBtn, ResetBtn, IncBtn))` resolve
+- `App` in `"/" -> App` of `app.routes` is a defined tile
+- Writing an undefined `usres` returns E0103
+- Writing an undefined `FooBtn` in a tile body returns E0105
+- Writing the same slot twice within one reducer, like `count := count + 1; count := 0`, gives E0601
 
 ### AC-Codegen + Runtime
 
-生成された JS をブラウザ上の DOM にマウントしたとき：
+When the generated JS is mounted onto the DOM in the browser:
 
-- 初期表示で「Count: 0」と 3 ボタンが描画される
-- `+` クリックで「Count: 1」に更新される
-- 100 回 `+` クリックで「Count: 100」
-- 999 で `+` をクリックしても 999 のまま（refinement: between(0,999)）
-- `−` を 0 でクリックしても 0 のまま
-- `reset` で 0 に戻る
-- 副作用は emit されず（Phase 1 では effect 未対応）
+- The initial display renders "Count: 0" and 3 buttons
+- Clicking `+` updates to "Count: 1"
+- Clicking `+` 100 times gives "Count: 100"
+- Clicking `+` at 999 stays at 999 (refinement: between(0,999))
+- Clicking `−` at 0 stays at 0
+- `reset` returns to 0
+- No side effects are emitted (effects are unsupported in Phase 1)
 
 ### AC-CLI
 
@@ -120,45 +122,45 @@ TDD で先に固める。
 pnpm strand build ../docs/examples/01-counter.strand ../examples-build/counter
 ```
 
-- 終了コード 0
-- `examples-build/counter/index.html` と `app.js` が作られる
-- HTML をブラウザで開くと AC-Runtime の通りに動く
+- Exit code 0
+- `examples-build/counter/index.html` and `app.js` are created
+- Opening the HTML in the browser works as in AC-Runtime
 
 ### AC-E2E
 
-`test/e2e.test.ts` で：
-- 01-counter.strand を読んで build
-- 出力された JS を eval / dynamic import
-- jsdom 上で mount
-- `+` イベント dispatch → DOM テキストが "Count: 1" に変わる
+In `test/e2e.test.ts`:
+- Read 01-counter.strand and build
+- eval / dynamic-import the output JS
+- Mount on jsdom
+- Dispatch a `+` event → the DOM text changes to "Count: 1"
 
-## 11.5 実装順序（TDD）
+## 11.5 Implementation Order (TDD)
 
-| step | 内容 | テスト |
+| step | Content | Test |
 |---|---|---|
-| 1 | プロジェクトセットアップ | `pnpm test` で 0 件成功 |
-| 2 | AST 型 + Lexer | `lexer.test.ts` の全例 |
-| 3 | Parser | `parser.test.ts` で 01-counter.strand パース成功 |
-| 4 | Typecheck | `typecheck.test.ts` で AC-Typecheck の正常/異常各ケース |
-| 5 | Codegen | `codegen.test.ts` で生成 JS が期待形に近い構造 |
-| 6 | Runtime | `runtime.test.ts` で jsdom 上のマウント・更新が確認 |
-| 7 | CLI | `cli.test.ts` で build コマンドが index.html を作る |
-| 8 | E2E + 手動ブラウザ確認 | スクリーンショット |
+| 1 | Project setup | `pnpm test` succeeds with 0 cases |
+| 2 | AST types + Lexer | all examples in `lexer.test.ts` |
+| 3 | Parser | `parser.test.ts` parses 01-counter.strand successfully |
+| 4 | Typecheck | `typecheck.test.ts` covers each normal/abnormal case of AC-Typecheck |
+| 5 | Codegen | `codegen.test.ts` checks the generated JS has a structure close to the expected form |
+| 6 | Runtime | `runtime.test.ts` confirms mounting and updating on jsdom |
+| 7 | CLI | `cli.test.ts` checks the build command creates index.html |
+| 8 | E2E + manual browser check | Screenshots |
 
-## 11.6 設計上の判断（PoC スコープ）
+## 11.6 Design Decisions (PoC Scope)
 
-| 判断 | 理由 |
+| Decision | Reason |
 |---|---|
-| PoC は単一パッケージにする | monorepo は次フェーズ。Phase 1 は速度優先 |
-| 手書き再帰下降パーサ | 依存追加（acorn/peggy 等）を避け、Strand の構文だけで動く |
-| ランタイムは「全 tile 再描画 + DOM diff なし」 | Phase 1 では性能より動作優先。初回描画後は dirty 検知→該当 tile のみ再生成 |
-| IR は省略、直接 JS にコード生成 | Phase 1 は IR を介さず短絡。Phase 2 で IR を挟む |
-| 開発サーバは vite が直接 examples-build を配信 | strand dev は Phase 2 |
-| signal graph も Phase 1 では実装せず | 全 slot 変更時に該当 tile を再描画する素朴な実装 |
+| Make the PoC a single package | A monorepo is for the next phase. Phase 1 prioritizes speed |
+| Hand-written recursive-descent parser | Avoids adding dependencies (acorn/peggy, etc.) and runs on Strand's syntax alone |
+| Runtime is "re-render all tiles + no DOM diff" | Phase 1 prioritizes operation over performance. After the initial render, dirty detection → regenerate only the affected tile |
+| Omit the IR, generate JS code directly | Phase 1 short-circuits without going through an IR. Phase 2 inserts an IR |
+| The dev server is vite serving examples-build directly | strand dev is for Phase 2 |
+| The signal graph is also not implemented in Phase 1 | A naive implementation that re-renders the affected tile whenever any slot changes |
 
-## 11.7 完了の定義
+## 11.7 Definition of Done
 
-- 上記 AC がすべて通る
-- `examples-build/counter/index.html` をブラウザで開いて手動確認できる
-- スクリーンショットが残る
-- 既知の制約は README に記載
+- All of the above AC pass
+- `examples-build/counter/index.html` can be opened in the browser and manually verified
+- Screenshots are kept
+- Known constraints are documented in the README

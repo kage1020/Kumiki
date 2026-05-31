@@ -44,9 +44,9 @@ pnpm install
 pnpm build          # 全パッケージをビルド
 pnpm test           # 全テスト
 
-# Kumiki プログラムを検査・ビルド
-pnpm --filter @kumiki/cli exec tsx src/kumiki.ts check examples/apps/01-counter/app.kumiki
-pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki ./out
+# Kumiki プログラムを検査・ビルド（リポジトリルートで実行）
+pnpm kumiki check examples/apps/01-counter/app.kumiki
+pnpm kumiki build examples/apps/01-counter/app.kumiki ./out
 ```
 
 はじめての人は [guide/getting-started.md](./guide/getting-started.md) → [guide/your-first-app.md](./guide/your-first-app.md) へ。

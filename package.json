@@ -12,10 +12,12 @@
     "check": "turbo run check",
     "typecheck": "turbo run typecheck",
     "lint": "biome check .",
-    "format": "biome format --write ."
+    "format": "biome format --write .",
+    "kumiki": "tsx packages/cli/src/kumiki.ts"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "tsx": "catalog:",
     "turbo": "^2.9.16"
   }
 }

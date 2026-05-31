@@ -4,6 +4,10 @@
 
 ここは Kumiki の**経緯と判断の記録**である。仕様そのものではなく、「なぜ今この形なのか」を残す。現在の正規仕様は [Kumiki Specification](../spec/) を参照すること。本ディレクトリの記述は、書かれた時点のスナップショットであり、現在のコードと食い違うことがある。
 
+## ロードマップ
+
+- [v0.2 ロードマップ](./roadmap-v0.2.ja.md) — v0.2 マイルストーンのスコープ・設計・受け入れ基準（stop-timer / overlay / プラグイン capability / `fix --auto-patch` / `motion` レイヤー）
+
 ## 設計理念
 
 - [Rationale](./rationale.md) — Kumiki の設計理念と前提

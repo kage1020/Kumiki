@@ -6,6 +6,16 @@
 
 ## [Unreleased]
 
+### Planned — v0.2
+
+スコープ・設計・受け入れ基準：[design-notes/roadmap-v0.2.ja.md](./design-notes/roadmap-v0.2.ja.md)。spec が既に「planned for v0.2」と明記している 5 項目を、独立したマイルストーン（M1–M5）として出荷する：
+
+- **M1 — `stop-timer(name)`**：名前付きタイマーと reducer からの明示停止（`spec/lifecycle.md §7.1.5`）。
+- **M2 — `overlay` builtin**：モーダル / トースト / ドロップダウン用の z 軸重ね（`spec/style.md §4.4.3`）。
+- **M3 — プラグインによる capability 登録**：コンパイラを fork せず独自 capability + effect を登録する宣言的マニフェスト（`spec/stdlib.md §2.5`）。
+- **M4 — `kumiki fix --auto-patch <test-name>`**：`fix` を typecheck エラーからテスト失敗まで拡張し、ソースパッチを提案・適用（`spec/testing.md §8.7.1`）。
+- **M5 — `motion` レイヤー**：グローバル CSS の抜け穴のない、宣言的でスコープされた transition / keyframes（`spec/style.md §4.9`）。
+
 ### Added
 
 - pnpm + Turborepo モノレポ構成（`@kumiki/compiler` / `@kumiki/runtime` / `@kumiki/cli` / `@kumiki/mcp`）。

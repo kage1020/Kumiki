@@ -1,17 +1,17 @@
-# TodoMVC — Strand v0.1
+# TodoMVC — Kumiki v0.1
 # Demonstrates: types, slots, effects, reducers, tiles, fns, theme, app
 
 # ====== Types ======
 
 type TodoId = nominal Text where uuid
-type Todo   = {id: TodoId, text: Text where nonempty, done: Bool, priority: Int, createdAt: Time}
+type Todo   = {id: TodoId, text: Text where nonempty, done: Bool, createdAt: Time}
 type Filter = All | Active | Done
 
 # ====== Slots ======
 
 slot todos  : Map(TodoId, Todo)              = {}
 slot filter : Filter                         = All
-slot draft  : Text where len-lt(280)         = ""
+slot draft  : Text where len-lt(100)         = ""
 slot ready  : Bool                           = false
 
 # ====== Effects ======
@@ -40,7 +40,7 @@ fn itemsLeft(ts: Map(TodoId, Todo)) -> Int
    = ts.filter(not $2.done).size
 
 fn sortedIds(ts: Map(TodoId, Todo)) -> List(TodoId)
-   = ts.keys.sort-by(ts.get($1).get.priority * 1000000 - ts.get($1).get.createdAt.to-ms)
+   = ts.keys.sort-by(-ts.get($1).get.createdAt.to-ms)
 
 fn isFilterActive(current: Filter, f: Filter) -> Text
    = if current == f then "primary" else "ghost"
@@ -57,9 +57,12 @@ reducer todosFailed  on=loadTodos.err(_, _)  do= ready := true
 reducer addTodo
     on=ui.submit(NewTodoForm)
     do= let id = TodoId.fresh()
-        todos[id] := {id, text=draft, done=false, priority=1, createdAt=now}
-        draft := ""
-        emit saveTodos(todos)
+        let trimmed = draft.trim
+        if trimmed.length > 0 then {
+          todos[id] := {id, text=trimmed, done=false, createdAt=now};
+          draft := "";
+          emit saveTodos(todos)
+        } else { () }
 
 reducer toggle
     on=ui.click(TodoRow)
@@ -89,7 +92,7 @@ tile TodoRow
     in=TodoId
     = row(
         check(value=todos[$1].done, onClick=toggle) {todoId: $1},
-        text("[P" + todos[$1].priority.show + "] " + todos[$1].text) {
+        text(todos[$1].text) {
           strike: todos[$1].done,
           color:  if todos[$1].done then "muted" else "fg"
         },
@@ -158,4 +161,4 @@ app TodoApp
     routes = {"/" -> App, "/404" -> NotFound}
     init   = []
     theme  = DefaultTheme
-    meta   = {title: "Strand TodoMVC", description: "Demo"}
+    meta   = {title: "Kumiki TodoMVC", description: "Demo"}

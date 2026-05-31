@@ -1,6 +1,6 @@
 // Walk benchmarks/scenarios/* and report patch statistics for each one.
 // Each scenario directory must contain:
-//   - strand-modified.strand
+//   - kumiki-modified.kumiki
 //   - react-modified.tsx
 // They are diffed against the baseline files at the project root.
 
@@ -12,7 +12,7 @@ import { encode as encodeO200k } from "gpt-tokenizer/encoding/o200k_base";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(here, "../../benchmarks");
-const STRAND_BASE = resolve(ROOT, "../docs/examples/02-todomvc.strand");
+const KUMIKI_BASE = resolve(ROOT, "../docs/examples/02-todomvc.kumiki");
 const REACT_BASE = resolve(ROOT, "todomvc-react/src/App.tsx");
 
 function readSplit(p) {
@@ -69,7 +69,7 @@ function diffStats(baseLines, modLines) {
   };
 }
 
-const baseStrand = readSplit(STRAND_BASE);
+const baseKumiki = readSplit(KUMIKI_BASE);
 const baseReact = readSplit(REACT_BASE);
 
 const scenarios = readdirSync(resolve(ROOT, "scenarios"))
@@ -79,11 +79,11 @@ const scenarios = readdirSync(resolve(ROOT, "scenarios"))
 const rows = [];
 for (const sc of scenarios) {
   const dir = resolve(ROOT, "scenarios", sc);
-  const strandMod = readSplit(join(dir, "strand-modified.strand"));
+  const kumikiMod = readSplit(join(dir, "kumiki-modified.kumiki"));
   const reactMod = readSplit(join(dir, "react-modified.tsx"));
-  const strand = diffStats(baseStrand, strandMod);
+  const kumiki = diffStats(baseKumiki, kumikiMod);
   const react = diffStats(baseReact, reactMod);
-  rows.push({ sc, strand, react });
+  rows.push({ sc, kumiki, react });
 }
 
 const fmt = (n) => String(n).padStart(7);
@@ -96,7 +96,7 @@ console.log(
 console.log("-".repeat(78));
 for (const r of rows) {
   console.log(
-    `${r.sc.padEnd(24)} ${"strand".padEnd(7)}  ${fmt(r.strand.added)}  ${fmt(r.strand.removed)}  ${fmt(r.strand.chars)}  ${fmt(r.strand.cl100k)}  ${fmt(r.strand.o200k)}`,
+    `${r.sc.padEnd(24)} ${"kumiki".padEnd(7)}  ${fmt(r.kumiki.added)}  ${fmt(r.kumiki.removed)}  ${fmt(r.kumiki.chars)}  ${fmt(r.kumiki.cl100k)}  ${fmt(r.kumiki.o200k)}`,
   );
   console.log(
     `${"".padEnd(24)} ${"react".padEnd(7)}  ${fmt(r.react.added)}  ${fmt(r.react.removed)}  ${fmt(r.react.chars)}  ${fmt(r.react.cl100k)}  ${fmt(r.react.o200k)}`,
@@ -107,21 +107,21 @@ for (const r of rows) {
 const totals = rows.reduce(
   (acc, r) => {
     for (const k of ["added", "removed", "chars", "cl100k", "o200k"]) {
-      acc.strand[k] = (acc.strand[k] ?? 0) + r.strand[k];
+      acc.kumiki[k] = (acc.kumiki[k] ?? 0) + r.kumiki[k];
       acc.react[k] = (acc.react[k] ?? 0) + r.react[k];
     }
     return acc;
   },
-  { strand: {}, react: {} },
+  { kumiki: {}, react: {} },
 );
 
 console.log("");
 console.log("Totals across scenarios");
-console.log(`  strand : +${totals.strand.added}/-${totals.strand.removed}  chars=${totals.strand.chars}  cl100k=${totals.strand.cl100k}  o200k=${totals.strand.o200k}`);
+console.log(`  kumiki : +${totals.kumiki.added}/-${totals.kumiki.removed}  chars=${totals.kumiki.chars}  cl100k=${totals.kumiki.cl100k}  o200k=${totals.kumiki.o200k}`);
 console.log(`  react  : +${totals.react.added}/-${totals.react.removed}  chars=${totals.react.chars}  cl100k=${totals.react.cl100k}  o200k=${totals.react.o200k}`);
 console.log("");
-console.log("React / Strand ratios (totals)");
-console.log(`  +lines : ${(totals.react.added / totals.strand.added).toFixed(2)}x`);
-console.log(`  chars  : ${(totals.react.chars / totals.strand.chars).toFixed(2)}x`);
-console.log(`  cl100k : ${(totals.react.cl100k / totals.strand.cl100k).toFixed(2)}x`);
-console.log(`  o200k  : ${(totals.react.o200k / totals.strand.o200k).toFixed(2)}x`);
+console.log("React / Kumiki ratios (totals)");
+console.log(`  +lines : ${(totals.react.added / totals.kumiki.added).toFixed(2)}x`);
+console.log(`  chars  : ${(totals.react.chars / totals.kumiki.chars).toFixed(2)}x`);
+console.log(`  cl100k : ${(totals.react.cl100k / totals.kumiki.cl100k).toFixed(2)}x`);
+console.log(`  o200k  : ${(totals.react.o200k / totals.kumiki.o200k).toFixed(2)}x`);

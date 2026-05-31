@@ -1,4 +1,4 @@
-// Evaluate a single .strand file written by an LLM:
+// Evaluate a single .kumiki file written by an LLM:
 //   - parse?
 //   - typecheck?
 //   - build?
@@ -95,7 +95,7 @@ function evalFile(path) {
 
 const targets = process.argv.slice(2);
 if (targets.length === 0) {
-  console.error("Usage: tsx eval.mjs <file.strand> [file2.strand ...]");
+  console.error("Usage: tsx eval.mjs <file.kumiki> [file2.kumiki ...]");
   process.exit(2);
 }
 

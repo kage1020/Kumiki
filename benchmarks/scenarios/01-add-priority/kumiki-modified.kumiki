@@ -1,11 +1,11 @@
-# TodoMVC — Strand v0.1
+# TodoMVC — Kumiki v0.1
 # Demonstrates: types, slots, effects, reducers, tiles, fns, theme, app
 
 # ====== Types ======
 
 type TodoId = nominal Text where uuid
-type Todo   = {id: TodoId, text: Text where nonempty, done: Bool, archived: Bool, createdAt: Time}
-type Filter = All | Active | Done | Archived
+type Todo   = {id: TodoId, text: Text where nonempty, done: Bool, priority: Int, createdAt: Time}
+type Filter = All | Active | Done
 
 # ====== Slots ======
 
@@ -32,16 +32,15 @@ effect saveTodos cap=storage.write
 
 fn matchFilter(t: Todo, f: Filter) -> Bool
    = match f with
-       | All       -> not t.archived
-       | Active    -> not t.done && not t.archived
-       | Done      -> t.done && not t.archived
-       | Archived  -> t.archived
+       | All     -> true
+       | Active  -> not t.done
+       | Done    -> t.done
 
 fn itemsLeft(ts: Map(TodoId, Todo)) -> Int
-   = ts.filter(not $2.done && not $2.archived).size
+   = ts.filter(not $2.done).size
 
 fn sortedIds(ts: Map(TodoId, Todo)) -> List(TodoId)
-   = ts.keys.sort-by(-ts.get($1).get.createdAt.to-ms)
+   = ts.keys.sort-by(ts.get($1).get.priority * 1000000 - ts.get($1).get.createdAt.to-ms)
 
 fn isFilterActive(current: Filter, f: Filter) -> Text
    = if current == f then "primary" else "ghost"
@@ -58,18 +57,13 @@ reducer todosFailed  on=loadTodos.err(_, _)  do= ready := true
 reducer addTodo
     on=ui.submit(NewTodoForm)
     do= let id = TodoId.fresh()
-        todos[id] := {id, text=draft, done=false, archived=false, createdAt=now}
+        todos[id] := {id, text=draft, done=false, priority=1, createdAt=now}
         draft := ""
         emit saveTodos(todos)
 
 reducer toggle
     on=ui.click(TodoRow)
     do= todos[$el.todoId].done := not todos[$el.todoId].done
-        emit saveTodos(todos)
-
-reducer archive
-    on=ui.click(ArchiveBtn)
-    do= todos[$el.todoId].archived := not todos[$el.todoId].archived
         emit saveTodos(todos)
 
 reducer remove
@@ -88,20 +82,18 @@ reducer setFilter
 
 # ====== Tiles ======
 
-tile RemoveBtn  = button(text="x") {variant: "ghost"}
-tile ArchiveBtn = button(text="a") {variant: "ghost"}
-tile ClearBtn   = button(text="Clear completed", onClick=clearDone) {variant: "ghost"}
+tile RemoveBtn = button(text="x") {variant: "ghost"}
+tile ClearBtn  = button(text="Clear completed", onClick=clearDone) {variant: "ghost"}
 
 tile TodoRow
     in=TodoId
     = row(
         check(value=todos[$1].done, onClick=toggle) {todoId: $1},
-        text(todos[$1].text) {
+        text("[P" + todos[$1].priority.show + "] " + todos[$1].text) {
           strike: todos[$1].done,
           color:  if todos[$1].done then "muted" else "fg"
         },
-        ArchiveBtn {todoId: $1, onClick: archive},
-        RemoveBtn  {todoId: $1, onClick: remove})
+        RemoveBtn {todoId: $1, onClick: remove})
       {gap: "sm", align: "center"}
 
 tile FilterTab
@@ -123,7 +115,7 @@ tile NewTodoForm
         input(bind=draft, placeholder="What needs to be done?", auto-focus=true))
 
 tile FilterBar
-    = row(FilterTab(All), FilterTab(Active), FilterTab(Done), FilterTab(Archived)) {gap: "xs"}
+    = row(FilterTab(All), FilterTab(Active), FilterTab(Done)) {gap: "xs"}
 
 tile Footer
     = row(
@@ -166,4 +158,4 @@ app TodoApp
     routes = {"/" -> App, "/404" -> NotFound}
     init   = []
     theme  = DefaultTheme
-    meta   = {title: "Strand TodoMVC", description: "Demo"}
+    meta   = {title: "Kumiki TodoMVC", description: "Demo"}

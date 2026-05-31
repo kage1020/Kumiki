@@ -1,8 +1,8 @@
-# Issue Tracker — Strand 学習コスト測定タスク v3
+# Issue Tracker — Kumiki 学習コスト測定タスク v3
 
 [English](./task-spec.md) · 日本語
 
-大規模 SPA (500+ LOC 想定) で LLM がスケール時にも Strand を正確に書けるかを測る。
+大規模 SPA (500+ LOC 想定) で LLM がスケール時にも Kumiki を正確に書けるかを測る。
 Pomodoro (90 LOC) / Kanban (200 LOC) より複雑な構造、複数 routes、フィルタリング、永続化を含む。
 
 ## 機能要件
@@ -80,16 +80,16 @@ GitHub Issues 風の Issue Tracker SPA:
 
 ## 制約
 
-- 出力は 1 つの `.strand` ファイル
+- 出力は 1 つの `.kumiki` ファイル
 - TypeScript / JSX / React syntax を一切使わない
 - 副作用は effect で表現
 - `app` 宣言の `caps` に必要な capability を含める
 
 ## 出力
 
-指定された path に `.strand` ファイルとして書き出すこと。**ファイル末尾に余計な XML/markdown fence を残さない**。
+指定された path に `.kumiki` ファイルとして書き出すこと。**ファイル末尾に余計な XML/markdown fence を残さない**。
 
 ## 評価
 
 `benchmarks/scripts/learning-cost-eval.mjs` で parse / typecheck / build を採点。
-さらにベスト版は `strand build` + ブラウザでの動作確認まで。
+さらにベスト版は `kumiki build` + ブラウザでの動作確認まで。

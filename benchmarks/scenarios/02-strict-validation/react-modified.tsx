@@ -1,5 +1,5 @@
-// React TodoMVC — equivalent feature set to Strand examples/02-todomvc.strand.
-// Single file so the comparison is apples-to-apples with the single .strand file.
+// React TodoMVC — equivalent feature set to Kumiki examples/02-todomvc.kumiki.
+// Single file so the comparison is apples-to-apples with the single .kumiki file.
 
 import { useEffect, useMemo, useRef, useState } from "react";
 

@@ -1,8 +1,8 @@
-You are participating in an experiment to measure how accurately an LLM can write code in a brand-new DSL called "Strand" given only the specification documents. You have NO prior knowledge of Strand — its syntax does not exist in your training data.
+You are participating in an experiment to measure how accurately an LLM can write code in a brand-new DSL called "Kumiki" given only the specification documents. You have NO prior knowledge of Kumiki — its syntax does not exist in your training data.
 
 ## Task
 
-Implement a Kanban Board SPA in Strand. The full requirements are in:
+Implement a Kanban Board SPA in Kumiki. The full requirements are in:
   C:\Users\delta\repositories\demo\new-js-framework\benchmarks\learning-cost-v2\task-spec.md
 
 Please read that file first.
@@ -20,20 +20,20 @@ Specification docs:
   C:\Users\delta\repositories\demo\new-js-framework\docs\10-runtime.md
 
 Working examples:
-  C:\Users\delta\repositories\demo\new-js-framework\docs\examples\01-counter.strand
-  C:\Users\delta\repositories\demo\new-js-framework\docs\examples\02-todomvc.strand
-  C:\Users\delta\repositories\demo\new-js-framework\docs\examples\03-blog-spa.strand
+  C:\Users\delta\repositories\demo\new-js-framework\docs\examples\01-counter.kumiki
+  C:\Users\delta\repositories\demo\new-js-framework\docs\examples\02-todomvc.kumiki
+  C:\Users\delta\repositories\demo\new-js-framework\docs\examples\03-blog-spa.kumiki
 
 ## Rules
 
-- Write the Strand code in a SINGLE pass. Do not loop with strand check.
+- Write the Kumiki code in a SINGLE pass. Do not loop with kumiki check.
 - Do not use JSX or TypeScript syntax.
-- Output must be pure Strand code with NO markdown fences, NO XML tags, NO commentary at the end.
+- Output must be pure Kumiki code with NO markdown fences, NO XML tags, NO commentary at the end.
 
 ## Output
 
-Write the final Strand code to this file:
-  C:\Users\delta\repositories\demo\new-js-framework\benchmarks\learning-cost-v2\results\K-Gemini\output.strand
+Write the final Kumiki code to this file:
+  C:\Users\delta\repositories\demo\new-js-framework\benchmarks\learning-cost-v2\results\K-Gemini\output.kumiki
 
 Also write a short report.json to:
   C:\Users\delta\repositories\demo\new-js-framework\benchmarks\learning-cost-v2\results\K-Gemini\report.json

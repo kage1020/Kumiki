@@ -6,6 +6,16 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and adopts [S
 
 ## [Unreleased]
 
+### Planned — v0.2
+
+Scope, design, and acceptance criteria: [design-notes/roadmap-v0.2.md](./design-notes/roadmap-v0.2.md). Five items the spec already marks "planned for v0.2", shipped as independent milestones (M1–M5):
+
+- **M1 — `stop-timer(name)`**: named timers and explicit stop from a reducer (`spec/lifecycle.md §7.1.5`).
+- **M2 — `overlay` builtin**: z-axis stacking for modals / toasts / dropdowns (`spec/style.md §4.4.3`).
+- **M3 — Plugin capability registration**: a declarative manifest to register custom capabilities + effects without forking the compiler (`spec/stdlib.md §2.5`).
+- **M4 — `kumiki fix --auto-patch <test-name>`**: extend `fix` from typecheck errors to test failures, proposing and applying source patches (`spec/testing.md §8.7.1`).
+- **M5 — `motion` layer**: declarative, scoped transitions / keyframes with no global-CSS escape hatch (`spec/style.md §4.9`).
+
 ### Added
 
 - pnpm + Turborepo monorepo structure (`@kumiki/compiler` / `@kumiki/runtime` / `@kumiki/cli` / `@kumiki/mcp`).

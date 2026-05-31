@@ -4,6 +4,10 @@ English · [日本語](./README.ja.md)
 
 This is the **record of Kumiki's history and decisions**. Rather than the specification itself, it preserves "why it has its current shape." For the current canonical specification, refer to [Kumiki Specification](../spec/). The descriptions in this directory are snapshots from the time they were written, and may diverge from the current code.
 
+## Roadmap
+
+- [v0.2 Roadmap](./roadmap-v0.2.md) — scope, design, and acceptance criteria for the v0.2 milestone (stop-timer / overlay / plugin capabilities / `fix --auto-patch` / `motion` layer)
+
 ## Design Rationale
 
 - [Rationale](./rationale.md) — Kumiki's design rationale and premises

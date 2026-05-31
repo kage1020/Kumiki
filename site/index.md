@@ -26,5 +26,3 @@ features:
   - title: Answers everything with working examples
     details: Comprehensive per-feature minimal examples and apps ordered by size. Questions and bugs are answered by adding an example and a test.
 ---
-
-English · [日本語](./index.ja.md)

@@ -8,13 +8,13 @@ hero:
   actions:
     - theme: brand
       text: はじめる
-      link: /guide/getting-started
+      link: /ja/guide/getting-started
     - theme: alt
       text: Playground
-      link: /guide/playground
+      link: /ja/guide/playground
     - theme: alt
       text: 仕様
-      link: /spec/
+      link: /ja/spec/
 
 features:
   - title: 7 レイヤ

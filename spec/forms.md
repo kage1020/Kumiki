@@ -2,7 +2,7 @@
 
 English · [日本語](./forms.ja.md)
 
-Strand forms come in two styles: "bind individual inputs directly to a slot via `bind`," and "receive via `ui.submit` on a dedicated tile." The former is for reactive, incremental reflection; the latter is for transactional, committed submission.
+Kumiki forms come in two styles: "bind individual inputs directly to a slot via `bind`," and "receive via `ui.submit` on a dedicated tile." The former is for reactive, incremental reflection; the latter is for transactional, committed submission.
 
 Event selectors are **always written as tile names** (CSS attribute selectors are abolished). If you want to receive events directly on a built-in element (`form`, `input`, etc.), create a small tile that wraps that element.
 
@@ -10,7 +10,7 @@ Event selectors are **always written as tile names** (CSS attribute selectors ar
 
 ## 5.1 Two-Way Binding of Individual Inputs
 
-```strand
+```kumiki
 slot draft : Text where len-lt(280) = ""
 
 tile Compose = column(
@@ -41,7 +41,7 @@ For `slot draft : Text where len-lt(280)`, when the input exceeds 280 characters
 - **Default**: the input is rejected (the slot is not updated)
 - **`strict=false`**: the slot is updated, but the form's `valid` flag becomes false
 
-```strand
+```kumiki
 input(bind=draft, strict=false)
 ```
 
@@ -51,7 +51,7 @@ input(bind=draft, strict=false)
 
 When you want to commit-submit multiple inputs together, create a **tile that wraps the form**:
 
-```strand
+```kumiki
 slot loginEmail    : Text                = ""
 slot loginPassword : Text     volatile   = ""
 slot loginError    : Option(HttpError)   = None
@@ -121,7 +121,7 @@ Do not write `onSubmit` on the form itself. For the submit handler, write `ui.su
 
 ### 5.3.1 By input type
 
-```strand
+```kumiki
 input(bind=email, type="email", auto-complete="email")
 input(bind=password, type="password", auto-complete="current-password")
 input(bind=age, type="number", min=0, max=120)
@@ -136,7 +136,7 @@ input(bind=phone, type="tel", pattern="[0-9-]+")
 
 When `bind` is not enough (e.g., you want to run custom processing on every input), wrap that input in a **dedicated small tile** and receive `ui.input` / `ui.change`:
 
-```strand
+```kumiki
 slot pw  : Text                   = ""
 slot pw2 : Text                   = ""
 slot pwError : Option(Text)       = None
@@ -157,7 +157,7 @@ reducer validatePw
 
 ### 5.5.1 select
 
-```strand
+```kumiki
 type Filter = All | Active | Done
 slot filter : Filter = All
 
@@ -181,7 +181,7 @@ tile FilterSelect = select(
 
 In the `value=` form, on a change event the reducer subscribing to `ui.change(<SelectTile>)` is called, and you can receive the selected variant value via `$event.value`:
 
-```strand
+```kumiki
 tile StatusSelect = select(value=issues[iid].status,
                            options=statusOptions(),
                            placeholder="Status")
@@ -202,7 +202,7 @@ In addition to updating a slot via `bind=`, input/textarea can also fire via the
 
 radio has a `group` prop for grouping (corresponding to CSS's `name` attribute):
 
-```strand
+```kumiki
 tile FilterRadioAll    = radio(group="filter", value=All,    selected=(filter == All))    {label: "All"}
 tile FilterRadioActive = radio(group="filter", value=Active, selected=(filter == Active)) {label: "Active"}
 tile FilterRadioDone   = radio(group="filter", value=Done,   selected=(filter == Done))   {label: "Done"}
@@ -216,7 +216,7 @@ reducer setFilterDone   on=ui.change(FilterRadioDone)   do= filter := Done
 
 Alternatively, if you receive a union type directly via `bind`, a single reducer is unnecessary:
 
-```strand
+```kumiki
 tile FilterRadioGroup = column(
                           radio(group="filter", bind=filter, value=All)    {label: "All"},
                           radio(group="filter", bind=filter, value=Active) {label: "Active"},
@@ -229,7 +229,7 @@ This is the recommended approach.
 
 ## 5.6 Validation Strategy
 
-Strand validation has **three layers**:
+Kumiki validation has **three layers**:
 
 | Layer | Responsible for | Example |
 |---|---|---|
@@ -239,7 +239,7 @@ Strand validation has **three layers**:
 
 ### 5.6.1 Cross-Form Example
 
-```strand
+```kumiki
 slot pw  : Text  = ""
 slot pw2 : Text  = ""
 slot pwError : Option(Text) = None
@@ -273,7 +273,7 @@ reducer doSignup on=ui.submit(SignupForm) do= ...
 
 Display via the `error` element:
 
-```strand
+```kumiki
 input(bind=email, type="email")
 error(field=email)
 ```
@@ -295,7 +295,7 @@ error(field=email)
 
 Override custom messages via `theme.errors`:
 
-```strand
+```kumiki
 theme MyTheme = {
     ...,
     errors: {
@@ -309,7 +309,7 @@ theme MyTheme = {
 
 ## 5.8 UI During Submission
 
-```strand
+```kumiki
 slot loginPending : Bool = false
 
 reducer doLogin
@@ -335,7 +335,7 @@ reducer loginErr
 
 ## 5.9 Multi-step Forms
 
-```strand
+```kumiki
 type Step = Account | Profile | Confirm
 
 slot step : Step = Account
@@ -366,7 +366,7 @@ Splitting each step into an independent tile makes it easier for the AI to track
 
 ## 5.10 File Upload
 
-```strand
+```kumiki
 slot avatar : Option(File) = None
 
 tile AvatarPicker = input(type="file", accept="image/*")
@@ -405,13 +405,13 @@ effect uploadFile  cap=http.post
 | Decision | Rationale |
 |---|---|
 | Tie slots directly via `bind` | Eliminates the dual controlled/uncontrolled model |
-| Event selectors are tile names only | Removes dependence on CSS knowledge; consistent with Strand's layer separation |
+| Event selectors are tile names only | Removes dependence on CSS knowledge; consistent with Kumiki's layer separation |
 | Bind the form's submit handler to the wrapper tile, not the form itself | "Which reducer receives it" is visible in one place in the tile tree |
 | Type-level validation via refinement | "If the type passes, the value is valid" |
 | Centralize error messages in the theme | i18n and consistency |
 | Express multi-step via slots | Avoids adding a dedicated wizard DSL |
 | Files are a `File` type rather than `Bytes` | Structures size, MIME, and name |
-| `radio`'s `group` prop | Wraps the HTML name attribute, kept self-contained within Strand |
+| `radio`'s `group` prop | Wraps the HTML name attribute, kept self-contained within Kumiki |
 
 ---
 

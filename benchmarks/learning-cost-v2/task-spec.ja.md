@@ -1,8 +1,8 @@
-# Kanban Board — Strand 学習コスト測定タスク v2
+# Kanban Board — Kumiki 学習コスト測定タスク v2
 
 [English](./task-spec.md) · 日本語
 
-中規模 SPA で LLM がどこまで正確に Strand を書けるかを測る。Pomodoro より複雑（150〜250 LOC 想定）。
+中規模 SPA で LLM がどこまで正確に Kumiki を書けるかを測る。Pomodoro より複雑（150〜250 LOC 想定）。
 
 ## 機能要件
 
@@ -28,18 +28,18 @@
 
 ## 制約
 
-- 出力は 1 つの `.strand` ファイル
+- 出力は 1 つの `.kumiki` ファイル
 - TypeScript / JSX を混ぜない
 - 副作用は effect で表現
 - `app` 宣言で routes/caps を明示
 
 ## 出力
 
-指定された path に `.strand` ファイルとして書き出すこと。
+指定された path に `.kumiki` ファイルとして書き出すこと。
 
 ## 評価
 
-`reference/scripts/learning-cost-eval.mjs` で：
+`benchmarks/scripts/learning-cost-eval.mjs` で：
 - parse 通過？
 - typecheck 通過？
 - build 通過？

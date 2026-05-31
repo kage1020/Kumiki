@@ -1,8 +1,8 @@
 {
-  "name": "@strand/runtime",
+  "name": "@kumiki/runtime",
   "version": "0.1.0",
   "type": "module",
-  "description": "Strand DOM runtime — mounts compiled Strand apps, dispatches effects, manages the signal graph.",
+  "description": "Kumiki DOM runtime — mounts compiled Kumiki apps, dispatches effects, manages the signal graph.",
   "license": "Apache-2.0",
   "exports": {
     ".": {

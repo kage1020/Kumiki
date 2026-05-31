@@ -4,7 +4,7 @@
 
 ## 4.1 方針
 
-Strand は **CSS を直接書かせない**。CSS のカスケード・特異度・継承は AI にとって最大の隠れた依存源で、Strand の「副作用静的追跡」原則と相反する。
+Kumiki は **CSS を直接書かせない**。CSS のカスケード・特異度・継承は AI にとって最大の隠れた依存源で、Kumiki の「副作用静的追跡」原則と相反する。
 
 代わりに：
 
@@ -21,7 +21,7 @@ Strand は **CSS を直接書かせない**。CSS のカスケード・特異度
 
 `theme` 定義で宣言する：
 
-```strand
+```kumiki
 theme DefaultTheme = {
     colors: {
         bg:        "#ffffff",
@@ -77,7 +77,7 @@ theme-entry ::= identifier ':' (string | '{' theme-entry (',' theme-entry)* '}')
 
 ### 4.2.2 app への適用
 
-```strand
+```kumiki
 app TodoApp
     caps   = []
     routes = {"/" -> Home, "/404" -> NotFound}
@@ -91,7 +91,7 @@ app TodoApp
 
 tile prop の中でトークンを参照する場合、`@` 接頭辞を使う：
 
-```strand
+```kumiki
 tile Card = box(
               column(
                 heading("Title"),
@@ -123,7 +123,7 @@ tile Card = box(
 | `size` | typography.size token name | `size: "lg"` |
 | `weight` | typography.weight token name | `weight: "bold"` |
 
-```strand
+```kumiki
 tile Card = box(
               column(
                 heading("Title") {size: "lg", weight: "bold"},
@@ -146,7 +146,7 @@ tile Card = box(
 
 ### 4.4.1 row / column
 
-```strand
+```kumiki
 row(A, B, C) {gap: "md", align: "center", justify: "between"}
 column(A, B, C) {gap: "sm", align: "stretch"}
 ```
@@ -160,7 +160,7 @@ column(A, B, C) {gap: "sm", align: "stretch"}
 
 ### 4.4.2 grid
 
-```strand
+```kumiki
 grid(A, B, C, D) {cols: 2, gap: "md"}
 grid(A, B, C) {cols: [1, "auto", 1], gap: "sm"}     ; 数値 or 配列
 ```
@@ -176,7 +176,7 @@ grid(A, B, C) {cols: [1, "auto", 1], gap: "sm"}     ; 数値 or 配列
 
 `stack` は **vertical stack** — `column` と意味的に同等のレイアウト（子を縦並びに積む）。視覚的な「積み重ね」のニュアンスがほしい時に使う。
 
-```strand
+```kumiki
 stack(Card1, Card2, Card3) {gap: "md"}
 ```
 
@@ -191,7 +191,7 @@ stack(Card1, Card2, Card3) {gap: "md"}
 | `scroll` | overflow auto なコンテナ。`h` 指定で固定高スクロール |
 | `fieldset` | form 内のフィールドグループ。`<fieldset>` 相当 |
 
-```strand
+```kumiki
 panel(heading("Settings"), settingsForm) {bg: "surface", pad: "md"}
 region(navList) {role: "navigation", aria-label: "Main"}
 scroll(longList) {h: 400}
@@ -201,7 +201,7 @@ scroll(longList) {h: 400}
 
 水平線（`<hr>`）。区切り用：
 
-```strand
+```kumiki
 column(A, divider(), B)
 ```
 
@@ -209,7 +209,7 @@ column(A, divider(), B)
 
 汎用コンテナ。pad/bg/radius/shadow などで装飾する：
 
-```strand
+```kumiki
 box(content) {
     pad: "lg",
     bg: "primary",
@@ -227,7 +227,7 @@ box(content) {
 | `min-w`, `min-h`, `max-w`, `max-h` | min/max |
 | `aspect` | `"1/1"` / `"16/9"` 等 |
 
-```strand
+```kumiki
 image(src=url) {w: "full", max-w: 600, aspect: "16/9"}
 ```
 
@@ -237,7 +237,7 @@ image(src=url) {w: "full", max-w: 600, aspect: "16/9"}
 
 スタイル props はオブジェクトでブレイクポイント分岐できる：
 
-```strand
+```kumiki
 column(A, B, C) {
     gap: {base: "sm", md: "md", lg: "lg"},
     pad: {base: "md", lg: "xl"}
@@ -256,7 +256,7 @@ grid(A, B, C, D) {
 
 複数 theme を定義し、`slot theme-name` を切り替える：
 
-```strand
+```kumiki
 theme Light = {colors: {bg: "#fff", fg: "#000", ...}, ...}
 theme Dark  = {colors: {bg: "#0a0a0a", fg: "#fff", ...}, ...}
 
@@ -277,7 +277,7 @@ app App
 
 ### 4.6.1 OS 設定への追従
 
-```strand
+```kumiki
 reducer initTheme
     on=app.start
     do= themeName := if prefers-dark() then "Dark" else "Light"
@@ -291,7 +291,7 @@ reducer initTheme
 
 タイルプリミティブは状態別 props を持つ：
 
-```strand
+```kumiki
 button(text="Save") {
     bg: "primary",
     color: "bg",
@@ -309,13 +309,13 @@ button(text="Save") {
 
 `icon` 要素は名前で参照する：
 
-```strand
+```kumiki
 icon(name="check") {size: "md", color: "success"}
 ```
 
 組み込みアイコンセットを v0.1 で 100 個程度提供する予定（リストは後日）。カスタムアイコンは `theme.icons` でパス登録：
 
-```strand
+```kumiki
 theme MyTheme = {
     ...,
     icons: {
@@ -339,7 +339,7 @@ v0.1 では以下のみ：
 
 `when` で表示切替したタイルに自動適用される：
 
-```strand
+```kumiki
 when(modalOpen, Modal() {transition: "slide-up", transition-duration: "normal"})
 ```
 
@@ -355,7 +355,7 @@ when(modalOpen, Modal() {transition: "slide-up", transition-duration: "normal"})
 
 例外：`<head>` への meta タグ・OG 画像などは `app.meta` で宣言：
 
-```strand
+```kumiki
 app TodoApp
     ...
     meta = {

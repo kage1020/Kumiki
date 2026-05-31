@@ -1,4 +1,4 @@
-# Blog SPA — Strand v0.1
+# Blog SPA — Kumiki v0.1
 # Demonstrates: routing, HTTP, list+detail+edit, auth, error handling, suspense, fn
 
 # ====== Types ======
@@ -369,7 +369,7 @@ tile NotFound = page(
                   link(to="/posts") {text: "Home"})
 
 tile About = page(Nav, heading("About"),
-                  text("This is a demo blog SPA built with Strand."))
+                  text("This is a demo blog SPA built with Kumiki."))
 
 # ====== Theme ======
 
@@ -412,7 +412,7 @@ app Blog
         timeout:  10000
     }
     meta   = {
-        title:       "Strand Blog",
-        description: "A blog SPA built with Strand",
+        title:       "Kumiki Blog",
+        description: "A blog SPA built with Kumiki",
         favicon:     "/favicon.ico"
     }

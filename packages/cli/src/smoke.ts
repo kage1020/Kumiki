@@ -1,4 +1,4 @@
-// `strand smoke` — runtime verification. Compiles a .strand file, mounts it in a
+// `kumiki smoke` — runtime verification. Compiles a .kumiki file, mounts it in a
 // headless DOM (jsdom), exercises its UI, and reports failures that check/build
 // cannot catch: runtime throws, empty renders, and unhandled rejections.
 
@@ -6,8 +6,8 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { compile } from "@strand/compiler";
-import { nodeRuntimeBundleReader } from "@strand/compiler/node";
+import { compile } from "@kumiki/compiler";
+import { nodeRuntimeBundleReader } from "@kumiki/compiler/node";
 import {
   type AppShape,
   runScenario,
@@ -15,7 +15,7 @@ import {
   type ScenarioReport,
   type SmokeReport,
   smoke,
-} from "@strand/runtime";
+} from "@kumiki/runtime";
 import { JSDOM } from "jsdom";
 
 let domReady = false;
@@ -72,16 +72,16 @@ async function loadApp(source: string): Promise<AppShape> {
     );
   }
   const patched = result.js.replace(/mount\(App, document\.getElementById\("root"\)\);?/, "");
-  const dir = mkdtempSync(join(tmpdir(), "strand-smoke-"));
+  const dir = mkdtempSync(join(tmpdir(), "kumiki-smoke-"));
   const file = join(dir, "app.mjs");
   writeFileSync(file, patched);
   await import(pathToFileURL(file).href);
-  const app = (globalThis as unknown as { __strandApp?: AppShape }).__strandApp;
-  if (!app) throw new Error("compiled module did not expose __strandApp");
+  const app = (globalThis as unknown as { __kumikiApp?: AppShape }).__kumikiApp;
+  if (!app) throw new Error("compiled module did not expose __kumikiApp");
   return app;
 }
 
-/** Compile + mount + exercise a Strand source string; return the smoke report. */
+/** Compile + mount + exercise a Kumiki source string; return the smoke report. */
 export async function smokeSource(source: string): Promise<SmokeReport> {
   ensureDom();
   const app = await loadApp(source);
@@ -132,10 +132,10 @@ export async function runScenarioSource(
   }
 }
 
-/** CLI entry: run a scenario JSON file against a .strand file; print the trace. */
-export async function runCmd(strandPath: string, scenarioPath: string): Promise<void> {
+/** CLI entry: run a scenario JSON file against a .kumiki file; print the trace. */
+export async function runCmd(kumikiPath: string, scenarioPath: string): Promise<void> {
   const scenario = JSON.parse(readFileSync(scenarioPath, "utf8")) as Scenario;
-  const report = await runScenarioSource(readFileSync(strandPath, "utf8"), scenario);
+  const report = await runScenarioSource(readFileSync(kumikiPath, "utf8"), scenario);
   for (let i = 0; i < report.steps.length; i++) {
     const s = report.steps[i];
     if (!s) continue;

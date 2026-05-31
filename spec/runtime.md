@@ -9,7 +9,7 @@ For runtime implementers, this defines the compilation pipeline and the executio
 ```
 [CRDT graph store]
     ↓ project (selector)
-[strand source (text view)]
+[kumiki source (text view)]
     ↓ parse
 [AST]
     ↓ name resolution
@@ -21,7 +21,7 @@ For runtime implementers, this defines the compilation pipeline and the executio
     ↓ purity check
 [verified AST] ←── error: reducer-side-effect, tile-mutation
     ↓ lower
-[IR (Strand Intermediate Representation)]
+[IR (Kumiki Intermediate Representation)]
     ↓ codegen
 [runtime artifacts]:
     • signal graph (JS or WASM)
@@ -110,7 +110,7 @@ Debuggable as JSON; in production, CBOR (binary):
 
 ## 10.3 Signal Graph
 
-The runtime generates a **static signal graph** from the IR. It is Solid-style fine-grained reactivity, but in Strand the **graph structure is fully determined at compile time** (no signal tracking at runtime).
+The runtime generates a **static signal graph** from the IR. It is Solid-style fine-grained reactivity, but in Kumiki the **graph structure is fully determined at compile time** (no signal tracking at runtime).
 
 ### 10.3.1 Node Kinds
 
@@ -153,7 +153,7 @@ All slot changes within a single reducer execution are treated as **one batch**.
 You can bind to a **nested lvalue path** like `bind=draft.title`. The runtime:
 - Display: follows `_live[root][...path]` to read the initial value
 - Change: on an input event, uses `_setPath` to immutably update the root slot
-- Focus restoration: identifies it by putting the full path string (`"draft.title"`) in the `data-strand-bind` attribute
+- Focus restoration: identifies it by putting the full path string (`"draft.title"`) in the `data-kumiki-bind` attribute
 
 ### 10.3.6 Dynamic theme switching
 
@@ -161,7 +161,7 @@ You can **specify the theme by slot name**, like `app theme = themeName`. The ru
 - If `app.themeName` does not exist in `app.themes`, reads `_live[app.themeName]` to resolve the theme name
 - Re-runs `applyThemeDefaults` at the beginning of each `render()` → changes to the slot value are reflected in the body style
 
-```strand
+```kumiki
 slot themeName : Text = "Light"
 theme Light = { colors: {bg: "#fff", fg: "#222"}, ... }
 theme Dark  = { colors: {bg: "#222", fg: "#eee"}, ... }
@@ -187,7 +187,7 @@ app App ... theme = themeName    ; ← pass the slot name
 ### 10.3.9 Focus Restoration
 
 It maintains the focus and cursor position of an input/textarea being edited even after re-rendering:
-- Elements with `bind=`: re-identified by the `data-strand-bind` attribute (a nested path is a full path string)
+- Elements with `bind=`: re-identified by the `data-kumiki-bind` attribute (a nested path is a full path string)
 - Elements with `id=`: re-identified by id
 - Neither (e.g. a search box with only `value=`): re-identified positionally by a **DOM child-index path**
 
@@ -278,10 +278,10 @@ The causal sequence derived from a single trigger is recorded as one **episode**
 ### 10.5.3 replay
 
 ```bash
-strand replay <episode-id>                  # replay the signal graph from the initial state
-strand replay --from-log <file>             # load from a file and replay
-strand replay --mock 'loadUser: from-log'   # specify an effect mock
-strand replay --until-step 5                # partway through
+kumiki replay <episode-id>                  # replay the signal graph from the initial state
+kumiki replay --from-log <file>             # load from a file and replay
+kumiki replay --mock 'loadUser: from-log'   # specify an effect mock
+kumiki replay --until-step 5                # partway through
 ```
 
 ---
@@ -317,10 +317,10 @@ SSR on Cloudflare Workers / Vercel Edge, etc.:
 ## 10.7 Development Server
 
 ```bash
-strand dev                          # start the development server
-strand dev --port 5173
-strand dev --episode-log ./eps.log
-strand dev --strict-a11y
+kumiki dev                          # start the development server
+kumiki dev --port 5173
+kumiki dev --episode-log ./eps.log
+kumiki dev --strict-a11y
 ```
 
 Features:
@@ -335,12 +335,12 @@ Features:
 ## 10.8 Build
 
 ```bash
-strand build                        # production build
-strand build --target=spa           # SPA only
-strand build --target=ssr           # Node.js SSR
-strand build --target=edge          # Edge runtime
-strand build --target=static        # static site
-strand build --analyze              # bundle analysis
+kumiki build                        # production build
+kumiki build --target=spa           # SPA only
+kumiki build --target=ssr           # Node.js SSR
+kumiki build --target=edge          # Edge runtime
+kumiki build --target=static        # static site
+kumiki build --analyze              # bundle analysis
 ```
 
 Output composition:
@@ -361,10 +361,10 @@ dist/
 
 ## 10.9 Runtime API (for Embedding)
 
-When embedding a Strand app from a host app:
+When embedding a Kumiki app from a host app:
 
 ```javascript
-import { mount } from "strand/runtime"
+import { mount } from "kumiki/runtime"
 
 const app = mount({
   target: document.getElementById("app"),

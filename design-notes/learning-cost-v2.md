@@ -2,36 +2,36 @@
 
 English · [日本語](./learning-cost-v2.ja.md)
 
-We verify the result obtained in `./learning-cost-v1.md` that "Strand can be written zero-shot after specification fixes" with a **different model** and a **larger task**. Furthermore, we confirmed not only static checks but also **actual operation in the browser**.
+We verify the result obtained in `./learning-cost-v1.md` that "Kumiki can be written zero-shot after specification fixes" with a **different model** and a **larger task**. Furthermore, we confirmed not only static checks but also **actual operation in the browser**.
 
-## 18.1 Purpose
+## Purpose
 
 In v1 we had 4 Claude subagent conditions implement Pomodoro (~90 LOC). Remaining doubts:
 
-1. **Claude bias**: Strand was designed through dialogue with Claude. It might just be easy for Claude to write
+1. **Claude bias**: Kumiki was designed through dialogue with Claude. It might just be easy for Claude to write
 2. **Scale**: Pomodoro is small. Will the same performance hold for a medium-scale task?
 3. **Dynamic consistency**: passing parse / typecheck / build does not necessarily mean it actually works in the browser
 
-v2 confirms (1) by running with **OpenAI Codex (gpt-5.5) + Google Gemini**, (2) with a **Kanban Board** (assumed 150–250 LOC), and (3) by real-device verification with `strand build` + a static server + Chrome.
+v2 confirms (1) by running with **OpenAI Codex (gpt-5.5) + Google Gemini**, (2) with a **Kanban Board** (assumed 150–250 LOC), and (3) by real-device verification with `kumiki build` + a static server + Chrome.
 
-## 18.2 Task
+## Task
 
 `benchmarks/learning-cost-v2/task-spec.md` — Kanban Board SPA:
 - 3 columns (Todo / Doing / Done)
 - card add / column move / delete
 - count display / localStorage persistence / theme
 
-## 18.3 Conditions
+## Conditions
 
 | ID | LLM | Provider | Path | context |
 |---|---|---|---|---|
 | K-Claude | Claude (subagent) | Anthropic | Claude Code Agent tool | specification docs + 3 examples |
 | K-Codex  | gpt-5.5            | OpenAI    | `codex exec --sandbox workspace-write` | same as above |
-| K-Gemini | Gemini             | Google    | `agy.exe --print`                       | same as above |
+| K-Gemini | Gemini             | Google    | Gemini CLI (`--print`)                  | same as above |
 
-Experiment rule: one-shot write, self-looping with `strand check` is forbidden.
+Experiment rule: one-shot write, self-looping with `kumiki check` is forbidden.
 
-## 18.4 Results
+## Results
 
 | Condition | parse | typecheck | build | LOC | cl100k tokens |
 |---|:-:|:-:|:-:|---:|---:|
@@ -42,7 +42,7 @@ Experiment rule: one-shot write, self-looping with `strand check` is forbidden.
 **3/3 — all models fully pass Kanban in one-shot writing**.
 
 - LOC is **2–3x** that of Pomodoro (60–90). No quality degradation even at 3x task scale
-- **K-Gemini is the most concise** (183 LOC, 1499 tokens) — made the most of Strand's declarative structure
+- **K-Gemini is the most concise** (183 LOC, 1499 tokens) — made the most of Kumiki's declarative structure
 - K-Codex is somewhat verbose (239 LOC) — defensive fallbacks / explanatory naming
 
 ### Differences Between Models
@@ -62,20 +62,13 @@ Even though the 3 models wrote independently, all of them:
 - abstracted localStorage with effect
 - decomposed tiles into reusable units
 
-This shows that Strand's structural constraints guide the LLM to the same "correct design" **regardless of model choice**.
+This shows that Kumiki's structural constraints guide the LLM to the same "correct design" **regardless of model choice**.
 
-### K-Gemini Execution Note
+### Output Capture Note
 
-agy.exe (Gemini CLI) has a known issue where **stdout is empty when going through bash** on Windows. We solved it by passing the prompt via `Get-Content -Raw` from PowerShell and redirecting with `>`. Execution command:
+Each model's output was captured to its result `output.kumiki` via its own CLI. The prompt instructed the model to emit code and report in a single response, separated by a delimiter so the code could be extracted into `output.kumiki`.
 
-```powershell
-$prompt = Get-Content "...\gemini-prompt-stdout.txt" -Raw
-agy --print --print-timeout 15m $prompt > "...\K-Gemini\response.txt"
-```
-
-response.txt was instructed in a format that separates code and report with `===STRAND_BEGIN===` / `===STRAND_END===`, allowing extraction with awk.
-
-## 18.5 Additional Strand Specification Bugs Detected
+## Additional Kumiki Specification Bugs Detected
 
 K-Claude failed 1 case at the build stage → fixed codegen afterward:
 
@@ -83,9 +76,9 @@ K-Claude failed 1 case at the build stage → fixed codegen afterward:
 |---|---|
 | `grid` / `stack` / `region` / `scroll` / `divider` builtins unimplemented | they are included in the parser's `BUILTIN_TILES`, but were not registered in codegen's `BUILTIN_TILES` and switch case. 50% of layout builtins were in an unimplemented state |
 
-After the fix K-Claude fully passes. With this, Strand specification gaps total **6 detected + all fixed**.
+After the fix K-Claude fully passes. With this, Kumiki specification gaps total **6 detected + all fixed**.
 
-## 18.6 Token Efficiency at Scale (Pomodoro vs Kanban)
+## Token Efficiency at Scale (Pomodoro vs Kanban)
 
 | Metric | Pomodoro (K-Claude equivalent) | Kanban (K-Claude) | Ratio |
 |---|---:|---:|---:|
@@ -93,9 +86,9 @@ After the fix K-Claude fully passes. With this, Strand specification gaps total 
 | cl100k tokens | 542 (average) | 1,686 | 3.11x |
 | chars | 1,838 (average) | 5,668 | 3.08x |
 
-2.3x LOC / 3.1x chars. This is natural because Kanban has many functional elements: "3 columns × 3 operations × 2 effects (persistence)." **In Strand the amount of code per feature grows linearly with scale change** (no exponential growth).
+2.3x LOC / 3.1x chars. This is natural because Kanban has many functional elements: "3 columns × 3 operations × 2 effects (persistence)." **In Kumiki the amount of code per feature grows linearly with scale change** (no exponential growth).
 
-## 18.7 Browser Operation Verification
+## Browser Operation Verification
 
 "Passing parse / typecheck / build" and "actually working in the browser" are separate problems. The former is static consistency, the latter is runtime compatibility. We performed operation verification.
 
@@ -103,10 +96,10 @@ After the fix K-Claude fully passes. With this, Strand specification gaps total 
 
 | App | Source LLM | Learning setting | LOC |
 |---|---|---|---:|
-| Pomodoro Timer | Claude (S1, derived from `docs./learning-cost-v1.md`) | **zero-shot** | 66 |
+| Pomodoro Timer | Claude (S1, derived from `./learning-cost-v1.md`) | **zero-shot** | 66 |
 | Kanban Board   | Gemini (`benchmarks/learning-cost-v2/results/K-Gemini/`) | few-shot | 183 |
 
-We output static assets to `examples-build/{pomodoro,kanban}/` with `strand build`, hosted them on ports 5190/5191 with `scripts/serve.mjs`, and confirmed operation in a Chromium-based browser.
+We output static assets to `out/{pomodoro,kanban}/` with `kumiki build`, hosted them on ports 5190/5191 with `benchmarks/scripts/serve.mjs`, and confirmed operation in a Chromium-based browser.
 
 ### Results
 
@@ -126,15 +119,15 @@ We output static assets to `examples-build/{pomodoro,kanban}/` with `strand buil
 | 10 | `Cannot access '_d_1' before initialization` (TDZ) | the IIFE of a nested tile call redeclares `const _d_1 = ...`, colliding when an inner expression references the same-named outer | changed codegen to pass tile args and props **via IIFE arguments** (`((_arg, _propsOuter) => { const _d_1 = _arg; ... })(oneJs, propsJs)`) |
 | 11 | `appendChild` parameter not Node | codegen generates `{kind:"grid",...}` etc. but `renderTile`'s switch case was unregistered, returning `undefined` | added `grid` / `stack` / `region` / `scroll` / `panel` / `divider` cases to `renderTile` |
 
-All fixes were reflected in `reference/src/{compiler/codegen.ts, runtime/index.ts}`, maintaining 71 tests pass.
+All fixes were reflected in `packages/compiler/src/codegen.ts` and `packages/runtime/src/index.ts`, maintaining 71 tests pass.
 
 ### Implications
 
-- **"parse + typecheck + build = works" is** not true. It is not so much that Strand's static checks are loose, but that the codegen ↔ runtime coverage was simply incomplete
+- **"parse + typecheck + build = works" is** not true. It is not so much that Kumiki's static checks are loose, but that the codegen ↔ runtime coverage was simply incomplete
 - Of the **4 bugs revealed for the first time by browser verification, 3 are codegen-to-runtime correspondences** (not specification problems)
 - 1 case (the null from `when`'s false branch) is a design-finalization problem not written in the specification docs → the semantics of "tree nodes omittable in conditional branching" should be made explicit
 
-## 18.8 Conclusion
+## Conclusion
 
 | Verification item | Result |
 |---|---|
@@ -144,11 +137,11 @@ All fixes were reflected in `reference/src/{compiler/codegen.ts, runtime/index.t
 | **Design convergence** | ✓ the 3 models wrote independently and reached the same "correct design" (variant + fn + effect + tile separation) |
 | **Browser actual operation** | ✓ both Pomodoro (zero-shot) / Kanban (few-shot) fully work |
 
-**It was demonstrated at the browser level that Strand is a language where the AI writes without training data and produces code that actually works**.
+**It was demonstrated at the browser level that Kumiki is a language where the AI writes without training data and produces code that actually works**.
 
 ### Cumulative Specification Gap Fixes (11)
 
-Detected and fixed through `docs./learning-cost-v1.md` + `docs./learning-cost-v2.md`:
+Detected and fixed through `./learning-cost-v1.md` + `./learning-cost-v2.md`:
 
 | Category | # | Fix |
 |---|---|---|
@@ -164,7 +157,7 @@ Detected and fixed through `docs./learning-cost-v1.md` + `docs./learning-cost-v2
 | Runtime | 9 | null child guard in `renderTile` |
 | Runtime | 11 | renderTile for `grid/stack/region/scroll/panel/divider` |
 
-All resolved in a single detect → fix → re-verify loop. There was no fundamental defect in the Strand specification itself.
+All resolved in a single detect → fix → re-verify loop. There was no fundamental defect in the Kumiki specification itself.
 
 ### Remaining Issues
 
@@ -173,45 +166,45 @@ All resolved in a single detect → fix → re-verify loop. There was no fundame
 - convergence in real-time collaborative editing
 - reflecting fixes into the specification docs (`../spec/language.md` etc.) (documenting spec ↔ impl consistency)
 
-## 18.9 Reproduction
+## Reproduction
 
 ```bash
+# Run from the repo root.
+
 # K-Claude
 # Spawn a general-purpose subagent with the Claude Code Agent tool and
 # pass benchmarks/learning-cost-v2/task-spec.md
 
 # K-Codex
-cd C:\Users\delta\repositories\demo\new-js-framework
 cat benchmarks/learning-cost-v2/codex-prompt.txt | codex exec \
-  --cd "C:\Users\delta\repositories\demo\new-js-framework" \
   --skip-git-repo-check \
   --sandbox workspace-write \
   -o benchmarks/learning-cost-v2/results/K-Codex/codex-report.txt
 
-# K-Gemini (PowerShell one-liner)
-$prompt = Get-Content "...\benchmarks\learning-cost-v2\gemini-prompt-stdout.txt" -Raw
-agy --print --print-timeout 15m $prompt > "...\benchmarks\learning-cost-v2\results\K-Gemini\response.txt"
-# Extract output.strand from response.txt:
-awk '/^===STRAND_BEGIN===$/{f=1;next} /^===STRAND_END===$/{f=0} f' response.txt > output.strand
+# K-Gemini
+# Run the Gemini CLI on benchmarks/learning-cost-v2/gemini-prompt-stdout.txt
+# and capture its response into the result directory.
+
+# For each model, extract its output.kumiki from the captured response
+# (the prompt separates code from report with a delimiter), then:
 
 # Eval (static)
-cd reference
-pnpm exec tsx scripts/learning-cost-eval.mjs \
-  ../benchmarks/learning-cost-v2/results/K-Claude/output.strand \
-  ../benchmarks/learning-cost-v2/results/K-Codex/output.strand \
-  ../benchmarks/learning-cost-v2/results/K-Gemini/output.strand
+node benchmarks/scripts/learning-cost-eval.mjs \
+  benchmarks/learning-cost-v2/results/K-Claude/output.kumiki \
+  benchmarks/learning-cost-v2/results/K-Codex/output.kumiki \
+  benchmarks/learning-cost-v2/results/K-Gemini/output.kumiki
 
 # Browser operation verification
-pnpm exec tsx src/cli/strand.ts build \
-  ../benchmarks/learning-cost/results/S1-zero-shot/output.strand \
-  ../examples-build/pomodoro
-pnpm exec tsx src/cli/strand.ts build \
-  ../benchmarks/learning-cost-v2/results/K-Gemini/output.strand \
-  ../examples-build/kanban
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build \
+  benchmarks/learning-cost/results/S1-zero-shot/output.kumiki \
+  out/pomodoro
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build \
+  benchmarks/learning-cost-v2/results/K-Gemini/output.kumiki \
+  out/kanban
 
 # Serve individually in separate terminals
-node scripts/serve.mjs ../examples-build/pomodoro 5190 &
-node scripts/serve.mjs ../examples-build/kanban   5191 &
+node benchmarks/scripts/serve.mjs out/pomodoro 5190 &
+node benchmarks/scripts/serve.mjs out/kanban   5191 &
 
 # Open http://localhost:5190/ and http://localhost:5191/ in the browser to confirm
 ```

@@ -4,7 +4,7 @@ English · [日本語](./style.ja.md)
 
 ## 4.1 Policy
 
-Strand **does not let you write CSS directly**. CSS cascade, specificity, and inheritance are the biggest source of hidden dependencies for an AI, and they conflict with Strand's "statically trackable side effects" principle.
+Kumiki **does not let you write CSS directly**. CSS cascade, specificity, and inheritance are the biggest source of hidden dependencies for an AI, and they conflict with Kumiki's "statically trackable side effects" principle.
 
 Instead:
 
@@ -21,7 +21,7 @@ This covers the visual needs of an ordinary SPA. Complex animations and elaborat
 
 Declared in a `theme` definition:
 
-```strand
+```kumiki
 theme DefaultTheme = {
     colors: {
         bg:        "#ffffff",
@@ -77,7 +77,7 @@ theme-entry ::= identifier ':' (string | '{' theme-entry (',' theme-entry)* '}')
 
 ### 4.2.2 Applying It to an app
 
-```strand
+```kumiki
 app TodoApp
     caps   = []
     routes = {"/" -> Home, "/404" -> NotFound}
@@ -91,7 +91,7 @@ app TodoApp
 
 To reference a token inside a tile prop, use the `@` prefix:
 
-```strand
+```kumiki
 tile Card = box(
               column(
                 heading("Title"),
@@ -123,7 +123,7 @@ Frequently used style props are provided as **common props** and are resolved wi
 | `size` | typography.size token name | `size: "lg"` |
 | `weight` | typography.weight token name | `weight: "bold"` |
 
-```strand
+```kumiki
 tile Card = box(
               column(
                 heading("Title") {size: "lg", weight: "bold"},
@@ -146,7 +146,7 @@ Layout is expressed via **tile structure**, not CSS.
 
 ### 4.4.1 row / column
 
-```strand
+```kumiki
 row(A, B, C) {gap: "md", align: "center", justify: "between"}
 column(A, B, C) {gap: "sm", align: "stretch"}
 ```
@@ -160,7 +160,7 @@ column(A, B, C) {gap: "sm", align: "stretch"}
 
 ### 4.4.2 grid
 
-```strand
+```kumiki
 grid(A, B, C, D) {cols: 2, gap: "md"}
 grid(A, B, C) {cols: [1, "auto", 1], gap: "sm"}     ; number or array
 ```
@@ -176,7 +176,7 @@ grid(A, B, C) {cols: [1, "auto", 1], gap: "sm"}     ; number or array
 
 `stack` is a **vertical stack** — a layout semantically equivalent to `column` (stacking children vertically). Use it when you want the visual nuance of "stacking."
 
-```strand
+```kumiki
 stack(Card1, Card2, Card3) {gap: "md"}
 ```
 
@@ -191,7 +191,7 @@ stack(Card1, Card2, Card3) {gap: "md"}
 | `scroll` | A container with overflow auto. Specify `h` for fixed-height scrolling |
 | `fieldset` | A field group within a form. Equivalent to `<fieldset>` |
 
-```strand
+```kumiki
 panel(heading("Settings"), settingsForm) {bg: "surface", pad: "md"}
 region(navList) {role: "navigation", aria-label: "Main"}
 scroll(longList) {h: 400}
@@ -201,7 +201,7 @@ scroll(longList) {h: 400}
 
 A horizontal line (`<hr>`). For separators:
 
-```strand
+```kumiki
 column(A, divider(), B)
 ```
 
@@ -209,7 +209,7 @@ column(A, divider(), B)
 
 A general-purpose container. Decorate it with pad/bg/radius/shadow and so on:
 
-```strand
+```kumiki
 box(content) {
     pad: "lg",
     bg: "primary",
@@ -227,7 +227,7 @@ box(content) {
 | `min-w`, `min-h`, `max-w`, `max-h` | min/max |
 | `aspect` | `"1/1"` / `"16/9"`, etc. |
 
-```strand
+```kumiki
 image(src=url) {w: "full", max-w: 600, aspect: "16/9"}
 ```
 
@@ -237,7 +237,7 @@ image(src=url) {w: "full", max-w: 600, aspect: "16/9"}
 
 Style props can branch by breakpoint via an object:
 
-```strand
+```kumiki
 column(A, B, C) {
     gap: {base: "sm", md: "md", lg: "lg"},
     pad: {base: "md", lg: "xl"}
@@ -256,7 +256,7 @@ The keys are `base` plus the keys of theme.breakpoints (`sm`, `md`, `lg`, `xl`).
 
 Define multiple themes and switch a `slot theme-name`:
 
-```strand
+```kumiki
 theme Light = {colors: {bg: "#fff", fg: "#000", ...}, ...}
 theme Dark  = {colors: {bg: "#0a0a0a", fg: "#fff", ...}, ...}
 
@@ -277,7 +277,7 @@ When you specify a slot as in `theme = themeName`, the theme switches whenever t
 
 ### 4.6.1 Following OS Settings
 
-```strand
+```kumiki
 reducer initTheme
     on=app.start
     do= themeName := if prefers-dark() then "Dark" else "Light"
@@ -291,7 +291,7 @@ reducer initTheme
 
 Tile primitives have per-state props:
 
-```strand
+```kumiki
 button(text="Save") {
     bg: "primary",
     color: "bg",
@@ -309,13 +309,13 @@ Supported state keys: `hover` / `focus` / `active` / `disabled` / `selected` / `
 
 The `icon` element is referenced by name:
 
-```strand
+```kumiki
 icon(name="check") {size: "md", color: "success"}
 ```
 
 We plan to provide a built-in icon set of around 100 icons in v0.1 (the list comes later). Custom icons are registered by path in `theme.icons`:
 
-```strand
+```kumiki
 theme MyTheme = {
     ...,
     icons: {
@@ -339,7 +339,7 @@ In v0.1, only the following:
 
 Applied automatically to tiles whose visibility is toggled with `when`:
 
-```strand
+```kumiki
 when(modalOpen, Modal() {transition: "slide-up", transition-duration: "normal"})
 ```
 
@@ -355,7 +355,7 @@ Rationale: global CSS becomes an implicit dependency the AI cannot track. All de
 
 Exception: meta tags and OG images in `<head>` are declared via `app.meta`:
 
-```strand
+```kumiki
 app TodoApp
     ...
     meta = {

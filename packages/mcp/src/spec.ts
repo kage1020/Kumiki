@@ -5,9 +5,9 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/** Resolve the repo's spec/ directory. Override with STRAND_SPEC_DIR. */
+/** Resolve the repo's spec/ directory. Override with KUMIKI_SPEC_DIR. */
 export function specDir(): string {
-  const env = process.env.STRAND_SPEC_DIR;
+  const env = process.env.KUMIKI_SPEC_DIR;
   if (env) return env;
   // From packages/mcp/src, walk up to the repo root.
   const here = dirname(fileURLToPath(import.meta.url));

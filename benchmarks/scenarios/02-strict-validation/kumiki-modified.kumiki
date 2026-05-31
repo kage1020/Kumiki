@@ -1,4 +1,4 @@
-# TodoMVC — Strand v0.1
+# TodoMVC — Kumiki v0.1
 # Demonstrates: types, slots, effects, reducers, tiles, fns, theme, app
 
 # ====== Types ======
@@ -11,7 +11,7 @@ type Filter = All | Active | Done
 
 slot todos  : Map(TodoId, Todo)              = {}
 slot filter : Filter                         = All
-slot draft  : Text where len-lt(280)         = ""
+slot draft  : Text where len-lt(100)         = ""
 slot ready  : Bool                           = false
 
 # ====== Effects ======
@@ -57,9 +57,12 @@ reducer todosFailed  on=loadTodos.err(_, _)  do= ready := true
 reducer addTodo
     on=ui.submit(NewTodoForm)
     do= let id = TodoId.fresh()
-        todos[id] := {id, text=draft, done=false, createdAt=now}
-        draft := ""
-        emit saveTodos(todos)
+        let trimmed = draft.trim
+        if trimmed.length > 0 then {
+          todos[id] := {id, text=trimmed, done=false, createdAt=now};
+          draft := "";
+          emit saveTodos(todos)
+        } else { () }
 
 reducer toggle
     on=ui.click(TodoRow)
@@ -158,4 +161,4 @@ app TodoApp
     routes = {"/" -> App, "/404" -> NotFound}
     init   = []
     theme  = DefaultTheme
-    meta   = {title: "Strand TodoMVC", description: "Demo"}
+    meta   = {title: "Kumiki TodoMVC", description: "Demo"}

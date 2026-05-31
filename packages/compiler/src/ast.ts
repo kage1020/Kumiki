@@ -1,4 +1,4 @@
-// AST types for Strand v0.1 — Phase 1 + Phase 2 (TodoMVC).
+// AST types for Kumiki v0.1 — Phase 1 + Phase 2 (TodoMVC).
 
 export type Pos = { line: number; col: number };
 

@@ -6,7 +6,7 @@
 import { readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { smoke } from "@strand/runtime";
+import { smoke } from "@kumiki/runtime";
 import { describe, expect, it } from "vitest";
 import { loadApp } from "./helpers/load.ts";
 
@@ -16,14 +16,14 @@ const examplesDir = join(here, "..", "examples");
 function featureExamples(): string[] {
   const dir = join(examplesDir, "features");
   return readdirSync(dir)
-    .filter((f) => f.endsWith(".strand"))
+    .filter((f) => f.endsWith(".kumiki"))
     .map((f) => join(dir, f));
 }
 
 function appExamples(): string[] {
   const dir = join(examplesDir, "apps");
   return readdirSync(dir)
-    .map((name) => join(dir, name, "app.strand"))
+    .map((name) => join(dir, name, "app.kumiki"))
     .filter((p) => {
       try {
         return statSync(p).isFile();

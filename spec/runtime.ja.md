@@ -9,7 +9,7 @@
 ```
 [CRDT graph store]
     ↓ project (selector)
-[strand source (text view)]
+[kumiki source (text view)]
     ↓ parse
 [AST]
     ↓ name resolution
@@ -21,7 +21,7 @@
     ↓ purity check
 [verified AST] ←── error: reducer-side-effect, tile-mutation
     ↓ lower
-[IR (Strand Intermediate Representation)]
+[IR (Kumiki Intermediate Representation)]
     ↓ codegen
 [runtime artifacts]:
     • signal graph (JS or WASM)
@@ -110,7 +110,7 @@ JSON でデバッグ可能、本番は CBOR（バイナリ）：
 
 ## 10.3 Signal Graph
 
-ランタイムは IR から **静的 signal graph** を生成する。Solid 風の fine-grained reactivity だが、Strand では**コンパイル時にグラフ構造が完全に決まる**（実行時にシグナル追跡しない）。
+ランタイムは IR から **静的 signal graph** を生成する。Solid 風の fine-grained reactivity だが、Kumiki では**コンパイル時にグラフ構造が完全に決まる**（実行時にシグナル追跡しない）。
 
 ### 10.3.1 ノード種
 
@@ -153,7 +153,7 @@ on reducer execution:
 `bind=draft.title` のように **nested lvalue path** に bind できる。ランタイムは：
 - 表示: `_live[root][...path]` を辿って初期値を読む
 - 変更: 入力イベントで `_setPath` を使い root slot を immutable に更新
-- focus 復元: `data-strand-bind` 属性に full path 文字列 (`"draft.title"`) を入れて識別
+- focus 復元: `data-kumiki-bind` 属性に full path 文字列 (`"draft.title"`) を入れて識別
 
 ### 10.3.6 動的 theme switching
 
@@ -161,7 +161,7 @@ on reducer execution:
 - `app.themeName` が `app.themes` に存在しなければ、`_live[app.themeName]` を読んで theme 名を解決
 - 各 `render()` の冒頭で `applyThemeDefaults` を再実行 → slot 値の変更が body スタイルに反映
 
-```strand
+```kumiki
 slot themeName : Text = "Light"
 theme Light = { colors: {bg: "#fff", fg: "#222"}, ... }
 theme Dark  = { colors: {bg: "#222", fg: "#eee"}, ... }
@@ -187,7 +187,7 @@ app App ... theme = themeName    ; ← slot 名を渡す
 ### 10.3.9 focus 復元
 
 再レンダリング後も入力中の input/textarea の focus とカーソル位置を維持する:
-- `bind=` がある要素: `data-strand-bind` 属性（nested path は full path 文字列）で再特定
+- `bind=` がある要素: `data-kumiki-bind` 属性（nested path は full path 文字列）で再特定
 - `id=` がある要素: id で再特定
 - どちらもない（`value=` のみの検索ボックス等）: **DOM child-index path** で位置ベースに再特定
 
@@ -278,10 +278,10 @@ effect 完了時、結果を `<effect-name>.ok($value, $key)` / `<effect-name>.e
 ### 10.5.3 replay
 
 ```bash
-strand replay <episode-id>                  # signal graph を初期状態から再生
-strand replay --from-log <file>             # ファイルから読み込んで再生
-strand replay --mock 'loadUser: from-log'   # effect mock 指定
-strand replay --until-step 5                # 途中まで
+kumiki replay <episode-id>                  # signal graph を初期状態から再生
+kumiki replay --from-log <file>             # ファイルから読み込んで再生
+kumiki replay --mock 'loadUser: from-log'   # effect mock 指定
+kumiki replay --until-step 5                # 途中まで
 ```
 
 ---
@@ -317,10 +317,10 @@ Cloudflare Workers / Vercel Edge 等での SSR：
 ## 10.7 開発サーバ
 
 ```bash
-strand dev                          # 開発サーバ起動
-strand dev --port 5173
-strand dev --episode-log ./eps.log
-strand dev --strict-a11y
+kumiki dev                          # 開発サーバ起動
+kumiki dev --port 5173
+kumiki dev --episode-log ./eps.log
+kumiki dev --strict-a11y
 ```
 
 機能：
@@ -335,12 +335,12 @@ strand dev --strict-a11y
 ## 10.8 ビルド
 
 ```bash
-strand build                        # 本番ビルド
-strand build --target=spa           # SPA only
-strand build --target=ssr           # Node.js SSR
-strand build --target=edge          # Edge runtime
-strand build --target=static        # 静的サイト
-strand build --analyze              # bundle 分析
+kumiki build                        # 本番ビルド
+kumiki build --target=spa           # SPA only
+kumiki build --target=ssr           # Node.js SSR
+kumiki build --target=edge          # Edge runtime
+kumiki build --target=static        # 静的サイト
+kumiki build --analyze              # bundle 分析
 ```
 
 出力構成：
@@ -361,10 +361,10 @@ dist/
 
 ## 10.9 ランタイム API（埋め込み用）
 
-ホストアプリから Strand アプリを埋め込む場合：
+ホストアプリから Kumiki アプリを埋め込む場合：
 
 ```javascript
-import { mount } from "strand/runtime"
+import { mount } from "kumiki/runtime"
 
 const app = mount({
   target: document.getElementById("app"),

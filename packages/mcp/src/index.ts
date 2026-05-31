@@ -1,4 +1,4 @@
-// Strand MCP server — exposes the compiler and AI-edit toolchain as MCP tools.
+// Kumiki MCP server — exposes the compiler and AI-edit toolchain as MCP tools.
 //
 // Tools fall into three groups:
 //   * source / file validation  (check, build)
@@ -21,13 +21,13 @@ import {
   smokeSource,
   viewDef,
   viewWithDeps,
-} from "@strand/cli";
+} from "@kumiki/cli";
 
 type Scenario = Parameters<typeof runScenarioSource>[1];
 
-import type { StrandError } from "@strand/compiler";
-import { check, compile, lex, parse } from "@strand/compiler";
-import { nodeRuntimeBundleReader } from "@strand/compiler/node";
+import type { KumikiError } from "@kumiki/compiler";
+import { check, compile, lex, parse } from "@kumiki/compiler";
+import { nodeRuntimeBundleReader } from "@kumiki/compiler/node";
 import { z } from "zod";
 import { getSpecDoc, listSpecDocs, searchSpec } from "./spec.ts";
 
@@ -43,7 +43,7 @@ function readSource(input: { source?: string | undefined; path?: string | undefi
   throw new Error("provide either `source` or `path`");
 }
 
-function toDiagnostics(errors: StrandError[]): Diagnostic[] {
+function toDiagnostics(errors: KumikiError[]): Diagnostic[] {
   return errors.map((e) => ({
     code: e.code,
     kind: e.kind,
@@ -77,17 +77,17 @@ function validate(source: string): { ok: boolean; diagnostics: Diagnostic[] } {
 }
 
 export function createServer(): McpServer {
-  const server = new McpServer({ name: "strand", version: "0.1.0" });
+  const server = new McpServer({ name: "kumiki", version: "0.1.0" });
 
   server.registerTool(
-    "strand_check",
+    "kumiki_check",
     {
-      title: "Check Strand source",
+      title: "Check Kumiki source",
       description:
-        "Parse and typecheck a Strand program. Pass `source` (text) or `path` (file). Returns ok or a list of diagnostics with codes (see spec/errors.md).",
+        "Parse and typecheck a Kumiki program. Pass `source` (text) or `path` (file). Returns ok or a list of diagnostics with codes (see spec/errors.md).",
       inputSchema: {
-        source: z.string().optional().describe("Full Strand source text"),
-        path: z.string().optional().describe("Path to a .strand file (relative to cwd)"),
+        source: z.string().optional().describe("Full Kumiki source text"),
+        path: z.string().optional().describe("Path to a .kumiki file (relative to cwd)"),
       },
     },
     async (input) => {
@@ -98,11 +98,11 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    "strand_build",
+    "kumiki_build",
     {
-      title: "Build Strand source",
+      title: "Build Kumiki source",
       description:
-        "Compile a Strand program to a self-contained JS module (runtime inlined). Pass `source` or `path`. Returns the generated JS, or diagnostics on failure.",
+        "Compile a Kumiki program to a self-contained JS module (runtime inlined). Pass `source` or `path`. Returns the generated JS, or diagnostics on failure.",
       inputSchema: {
         source: z.string().optional(),
         path: z.string().optional(),
@@ -127,11 +127,11 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    "strand_smoke",
+    "kumiki_smoke",
     {
       title: "Runtime smoke test",
       description:
-        "Mount a Strand program in a headless DOM, exercise its UI, and report runtime failures that check/build cannot catch (throws, empty render, unhandled rejections). Pass `source` or `path`. Run this after check/build — a program can compile yet error or render nothing when actually used.",
+        "Mount a Kumiki program in a headless DOM, exercise its UI, and report runtime failures that check/build cannot catch (throws, empty render, unhandled rejections). Pass `source` or `path`. Run this after check/build — a program can compile yet error or render nothing when actually used.",
       inputSchema: {
         source: z.string().optional(),
         path: z.string().optional(),
@@ -155,11 +155,11 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    "strand_run_scenario",
+    "kumiki_run_scenario",
     {
       title: "Run a scenario",
       description:
-        "Drive a Strand app through a scenario and return a per-step trace (slot state, DOM text, errors, emitted effects) plus assertion results. This is the substrate for an autonomous generate→run→observe→fix loop: write the user's requirements as scenario steps with `expect` assertions on state, run, read the trace, and patch without a human operating the app.\n\nScenario shape: { steps: [{ label?, do?, expect? }], effects?: { <name>: [{outcome, value}] } }. An action `do` is one of: {dispatch, payload?}, {clickText}, {click}, {fill, value}, {choose, value}, {navigate}. An `expect` is { noErrors?, state?: {slot: value}, domIncludes?: [..], domExcludes?: [..] } (state uses partial match; keys may be dotted paths).",
+        "Drive a Kumiki app through a scenario and return a per-step trace (slot state, DOM text, errors, emitted effects) plus assertion results. This is the substrate for an autonomous generate→run→observe→fix loop: write the user's requirements as scenario steps with `expect` assertions on state, run, read the trace, and patch without a human operating the app.\n\nScenario shape: { steps: [{ label?, do?, expect? }], effects?: { <name>: [{outcome, value}] } }. An action `do` is one of: {dispatch, payload?}, {clickText}, {click}, {fill, value}, {choose, value}, {navigate}. An `expect` is { noErrors?, state?: {slot: value}, domIncludes?: [..], domExcludes?: [..] } (state uses partial match; keys may be dotted paths).",
       inputSchema: {
         source: z.string().optional(),
         path: z.string().optional(),
@@ -193,12 +193,12 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    "strand_list",
+    "kumiki_list",
     {
       title: "List definitions",
-      description: "List the definitions in a .strand file, optionally filtered by layer.",
+      description: "List the definitions in a .kumiki file, optionally filtered by layer.",
       inputSchema: {
-        path: z.string().describe("Path to a .strand file"),
+        path: z.string().describe("Path to a .kumiki file"),
         layer: z
           .enum(["type", "slot", "effect", "reducer", "tile", "fn", "app", "theme"])
           .optional(),
@@ -214,7 +214,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    "strand_view",
+    "kumiki_view",
     {
       title: "View a definition",
       description:
@@ -233,7 +233,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    "strand_refs",
+    "kumiki_refs",
     {
       title: "Find references",
       description: "Find all sites that reference a definition.",
@@ -247,10 +247,10 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    "strand_add",
+    "kumiki_add",
     {
       title: "Add a definition",
-      description: "Append a new definition to a .strand file.",
+      description: "Append a new definition to a .kumiki file.",
       inputSchema: {
         path: z.string(),
         layer: z.enum(["type", "slot", "effect", "reducer", "tile", "fn", "app", "theme"]),
@@ -265,7 +265,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    "strand_replace",
+    "kumiki_replace",
     {
       title: "Replace a definition",
       description: "Replace the body of an existing definition.",
@@ -278,7 +278,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    "strand_remove",
+    "kumiki_remove",
     {
       title: "Remove a definition",
       description:
@@ -292,7 +292,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    "strand_rename",
+    "kumiki_rename",
     {
       title: "Rename a definition",
       description: "Rename a definition and update all references.",
@@ -305,7 +305,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    "strand_fix",
+    "kumiki_fix",
     {
       title: "Plan auto-fixes",
       description:
@@ -322,7 +322,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    "strand_spec_search",
+    "kumiki_spec_search",
     {
       title: "Search the spec",
       description: "Keyword search across the normative spec/ documents. Returns doc:line matches.",
@@ -335,7 +335,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    "strand_spec_list",
+    "kumiki_spec_list",
     {
       title: "List spec documents",
       description: "List the available normative spec/ documents.",
@@ -345,7 +345,7 @@ export function createServer(): McpServer {
   );
 
   server.registerTool(
-    "strand_spec_get",
+    "kumiki_spec_get",
     {
       title: "Get a spec document",
       description: "Fetch the full text of one spec document (e.g. 'language' or 'errors.md').",

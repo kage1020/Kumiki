@@ -2,13 +2,13 @@
 
 [English](./routing.md) · 日本語
 
-Strand のルーティングは **SPA を前提**にしている。ハッシュルーティングではなく **History API** ベース。サーバから静的に同じ HTML を返し、クライアントランタイムがルートを解決する。
+Kumiki のルーティングは **SPA を前提**にしている。ハッシュルーティングではなく **History API** ベース。サーバから静的に同じ HTML を返し、クライアントランタイムがルートを解決する。
 
 ## 3.1 ルートの宣言
 
 `app` の `routes` フィールドで宣言する。
 
-```strand
+```kumiki
 app TodoApp
     caps   = [nav.push, nav.replace, nav.back]
     routes = {
@@ -46,13 +46,13 @@ app TodoApp
 
 ランタイムは標準 slot `route` を提供する：
 
-```strand
+```kumiki
 slot route : Route = Route.empty       ; ランタイムが管理
 ```
 
 `Route` 型は[標準ライブラリ](./stdlib.md#213-ドメイン型標準提供)：
 
-```strand
+```kumiki
 type Route = {
     path: Text,                ; "/todos/abc-123"
     pattern: Text,             ; "/todos/:id"
@@ -64,7 +64,7 @@ type Route = {
 
 tile から参照：
 
-```strand
+```kumiki
 tile TodoDetail = column(
                     heading("Todo " + route.params.get-or("id", "?")),
                     ...)
@@ -76,7 +76,7 @@ tile TodoDetail = column(
 
 ### 3.3.1 link 要素（推奨）
 
-```strand
+```kumiki
 tile Nav = row(
              link(to="/")        {text: "Home"},
              link(to="/todos")   {text: "Todos"},
@@ -89,7 +89,7 @@ tile Nav = row(
 
 reducer から遷移するには effect を emit：
 
-```strand
+```kumiki
 reducer save  on=ui.click(SaveBtn)
               do= emit persist(todos)
                   emit navigate({path: "/todos", params: {}})
@@ -97,7 +97,7 @@ reducer save  on=ui.click(SaveBtn)
 
 ビルトイン effect:
 
-```strand
+```kumiki
 effect navigate         cap=nav.push     in={path: Text, params: Map(Text, Text)}    out=Unit
 effect navigate-replace cap=nav.replace  in={path: Text, params: Map(Text, Text)}    out=Unit
 effect navigate-back    cap=nav.back     in=Unit                                     out=Unit
@@ -105,7 +105,7 @@ effect navigate-back    cap=nav.back     in=Unit                                
 
 ### 3.3.3 動的パス構築
 
-```strand
+```kumiki
 emit navigate({path: "/todos/{id}", params: {"id": todo.id.show}})
 ```
 
@@ -122,7 +122,7 @@ emit navigate({path: "/todos/{id}", params: {"id": todo.id.show}})
 | `route.leave(pattern)` | 旧ルートを離れる直前 |
 | `route.enter(pattern)` | 新ルートに入った直後 |
 
-```strand
+```kumiki
 reducer loadTodoOnEnter
     on=route.enter("/todos/:id")
     do= todos[$route.params.get-or("id", "")] := Loading
@@ -145,7 +145,7 @@ reducer cleanupOnLeave
 
 `route.enter(pattern)` の reducer 中で `emit navigate-replace(...)` を出すと、リダイレクトとして扱われる。
 
-```strand
+```kumiki
 reducer requireAuth
     on=route.enter("/admin/*")
     do= if session.is-none
@@ -157,7 +157,7 @@ reducer requireAuth
 
 未保存変更があるなら遷移を止めたい場合：
 
-```strand
+```kumiki
 slot dirty : Bool = false
 
 reducer guardEdit
@@ -177,7 +177,7 @@ reducer guardEdit
 
 ### 3.6.1 親ルート
 
-```strand
+```kumiki
 app App
     caps   = [nav.push]
     routes = {
@@ -190,7 +190,7 @@ app App
 
 子ルートマップは tile 定義に `sub-routes` で書く：
 
-```strand
+```kumiki
 tile SettingsLayout
     sub-routes = {
         "/settings/account" -> AccountSettings,
@@ -220,7 +220,7 @@ tile SettingsLayout
 
 クエリは `route.query` から読む。書き込みは `navigate` の `params` には含まれず、別フィールド `query` で渡す。
 
-```strand
+```kumiki
 emit navigate({
     path: "/search",
     params: {},
@@ -230,7 +230,7 @@ emit navigate({
 
 `navigate` effect の `in` 型はこれを許す拡張版：
 
-```strand
+```kumiki
 effect navigate cap=nav.push
                 in={path: Text, params: Map(Text, Text), query: Map(Text, Text)}
                 out=Unit
@@ -244,7 +244,7 @@ effect navigate cap=nav.push
 
 リンクがビューポートに入ったときに先にデータを取りたい：
 
-```strand
+```kumiki
 link(to="/todos/abc-123") {
     text: "Todo abc-123",
     prefetch: loadTodo,           ; emit する reducer 名
@@ -262,7 +262,7 @@ link(to="/todos/abc-123") {
 
 無効化したい tile：
 
-```strand
+```kumiki
 tile Chat
     scroll-restoration = false
     = scroll(...)
@@ -270,7 +270,7 @@ tile Chat
 
 特定ルート進入時にトップへ：
 
-```strand
+```kumiki
 reducer scrollTop on=route.enter("/*") do= emit scroll-to({x: 0, y: 0})
 ```
 
@@ -280,7 +280,7 @@ reducer scrollTop on=route.enter("/*") do= emit scroll-to({x: 0, y: 0})
 
 ## 3.10 リダイレクト（静的）
 
-```strand
+```kumiki
 app App
     routes = {
         "/old-path"  ->> "/new-path",     ; ->> はリダイレクト
@@ -295,7 +295,7 @@ app App
 
 ## 3.11 例: 認証付きルーティング
 
-```strand
+```kumiki
 type SessionId = nominal Text
 
 slot session : Option(SessionId) = None

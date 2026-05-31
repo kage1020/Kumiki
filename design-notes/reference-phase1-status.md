@@ -1,8 +1,8 @@
-# Strand Reference Implementation — Phase 1
+# Kumiki Reference Implementation — Phase 1
 
 English · [日本語](./reference-phase1-status.ja.md)
 
-Phase 1 PoC: with 01-counter.strand as input, **lexer → parser → typecheck → codegen → runtime** runs in series, and the Counter SPA works in the browser.
+Phase 1 PoC: with 01-counter.kumiki as input, **lexer → parser → typecheck → codegen → runtime** runs in series, and the Counter SPA works in the browser.
 
 ## Status
 
@@ -15,38 +15,26 @@ Phase 1 PoC: with 01-counter.strand as input, **lexer → parser → typecheck �
 | AC-Runtime (5) | pass |
 | AC-CLI (1) | pass |
 | **Total 28 / 28** | pass |
-| Manual browser check | server started, visual inspection on the user side |
+| Manual browser check | served and verified by visual inspection |
 
 ## Directory
 
 ```
-reference/
-├── package.json
-├── tsconfig.json
-├── biome.json
-├── vite.config.ts
-├── scripts/
-│   └── serve.mjs              static file server
-├── src/
-│   ├── compiler/
-│   │   ├── ast.ts             Phase 1 AST types
-│   │   ├── lexer.ts           lexical analysis
-│   │   ├── parser.ts          hand-written recursive-descent parser
-│   │   ├── typecheck.ts       name resolution + type checking
-│   │   ├── codegen.ts         AST → JS
-│   │   └── compile.ts         lex→parse→check→codegen
-│   ├── runtime/
-│   │   └── index.ts           mount / DOM rendering / dispatch
-│   └── cli/
-│       ├── strand.ts          strand build command
-│       └── strip-ts.ts        strip the runtime's TS types
-└── test/
-    ├── lexer.test.ts
-    ├── parser.test.ts
-    ├── typecheck.test.ts
-    ├── codegen.test.ts
-    ├── runtime.test.ts
-    └── cli.test.ts
+packages/
+├── compiler/
+│   └── src/
+│       ├── ast.ts             Phase 1 AST types
+│       ├── lexer.ts           lexical analysis
+│       ├── parser.ts          hand-written recursive-descent parser
+│       ├── typecheck.ts       name resolution + type checking
+│       ├── codegen.ts         AST → JS
+│       └── compile.ts         lex→parse→check→codegen
+├── runtime/
+│   └── src/
+│       └── index.ts           mount / DOM rendering / dispatch
+└── cli/
+    └── src/
+        └── kumiki.ts          kumiki build command
 ```
 
 ## Usage
@@ -63,15 +51,14 @@ pnpm lint
 ### Building Counter
 
 ```bash
-pnpm strand build ../docs/examples/01-counter.strand ../examples-build/counter
-# → index.html, app.js, runtime.js are emitted to examples-build/counter/
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki out/counter
+# → index.html, app.js, runtime.js are emitted to out/counter/
 ```
 
 ### Verifying Operation in the Browser
 
 ```bash
-# in the reference/ directory:
-node scripts/serve.mjs ../examples-build/counter 5174
+node benchmarks/scripts/serve.mjs out/counter 5174
 # → open http://localhost:5174 in the browser
 ```
 
@@ -102,6 +89,6 @@ Points intentionally kept small in Phase 1:
 |---|---|
 | no signal graph, full re-render on every click | a naive implementation without DOM diff, prioritizing operation |
 | direct JS output without going through an IR | sufficient for Phase 1; insert an IR in Phase 2 |
-| `strand build` only (dev / check separately) | focus on the core experience |
+| `kumiki build` only (dev / check separately) | focus on the core experience |
 | test the runtime with hand-written AppShape on Vitest jsdom | codegen→runtime integration via CLI smoke and manually |
 | do not use `new Function` | following the security warning, also avoiding tmp files / dynamic import, unifying on isolated tests |

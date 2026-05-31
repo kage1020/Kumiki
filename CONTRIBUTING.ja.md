@@ -1,8 +1,8 @@
-# Contributing to Strand
+# Contributing to Kumiki
 
 [English](./CONTRIBUTING.md) · 日本語
 
-Strand は experimental OSS であり、運用方針がやや特殊です。読んでから手を動かしてください。
+Kumiki は experimental OSS であり、運用方針がやや特殊です。読んでから手を動かしてください。
 
 ## 基本方針：質問・バグには example と test で答える
 
@@ -42,7 +42,7 @@ pnpm exec turbo run typecheck test lint build
 
 すべて緑であること。特に:
 
-- **新しい example は必ず check + build + smoke が通る**（`tests/` が自動検証する）。`check`/`build` は構文・型・codegen までしか保証しない。**実際に mount して操作して落ちないか**は `strand smoke <file>`（= `tests/` の runtime smoke）で検証する。「コンパイルは通るが動かすとエラー/何も描画されない」バグはここで捕まえる。
+- **新しい example は必ず check + build + smoke が通る**（`tests/` が自動検証する）。`check`/`build` は構文・型・codegen までしか保証しない。**実際に mount して操作して落ちないか**は `kumiki smoke <file>`（= `tests/` の runtime smoke）で検証する。「コンパイルは通るが動かすとエラー/何も描画されない」バグはここで捕まえる。
 - **lint の inline 抑制（`@biome-ignore` 等）は禁止**。足したくなったら設計を直す。
 - **依存バージョンを直書きしない**。`pnpm add` で最新を入れ、共通バージョンは `pnpm-workspace.yaml` の catalog に置く。
 

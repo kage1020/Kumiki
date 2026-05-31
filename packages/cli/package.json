@@ -1,11 +1,11 @@
 {
-  "name": "@strand/cli",
+  "name": "@kumiki/cli",
   "version": "0.1.0",
   "type": "module",
-  "description": "Strand CLI — build, check, and AI-edit (list/view/add/replace/remove/rename/fix) Strand sources.",
+  "description": "Kumiki CLI — build, check, and AI-edit (list/view/add/replace/remove/rename/fix) Kumiki sources.",
   "license": "Apache-2.0",
   "bin": {
-    "strand": "./src/strand.ts"
+    "kumiki": "./src/kumiki.ts"
   },
   "exports": {
     ".": {
@@ -22,11 +22,11 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "lint": "biome check src test",
-    "strand": "tsx src/strand.ts"
+    "kumiki": "tsx src/kumiki.ts"
   },
   "dependencies": {
-    "@strand/compiler": "workspace:*",
-    "@strand/runtime": "workspace:*"
+    "@kumiki/compiler": "workspace:*",
+    "@kumiki/runtime": "workspace:*"
   },
   "devDependencies": {
     "@types/jsdom": "^28.0.3",

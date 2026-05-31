@@ -11,18 +11,18 @@
 
 ```sh
 git clone <this-repo>
-cd new-js-framework
+cd Kumiki
 pnpm install
 pnpm build
 pnpm test     # 全パッケージのテストが緑になることを確認
 ```
 
-## Strand プログラムを検査する
+## Kumiki プログラムを検査する
 
-`.strand` ファイルをパース + 型検査する:
+`.kumiki` ファイルをパース + 型検査する:
 
 ```sh
-pnpm --filter @strand/cli exec tsx src/strand.ts check examples/apps/01-counter/app.strand
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts check examples/apps/01-counter/app.kumiki
 # → ok
 ```
 
@@ -31,7 +31,7 @@ pnpm --filter @strand/cli exec tsx src/strand.ts check examples/apps/01-counter/
 ## ビルドして動かす
 
 ```sh
-pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand ./out
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki ./out
 # → Wrote ./out/index.html, app.js, runtime.js
 ```
 
@@ -39,7 +39,7 @@ pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/
 
 ## エディタ / AI 連携（MCP）
 
-`@strand/mcp` は検査・ビルド・編集・仕様検索を MCP ツールとして公開する。MCP クライアント設定例は [packages/mcp/README.md](https://github.com/kage1020/Strand/blob/main/packages/mcp/README.md) を参照。
+`@kumiki/mcp` は検査・ビルド・編集・仕様検索を MCP ツールとして公開する。MCP クライアント設定例は [packages/mcp/README.md](https://github.com/kage1020/Kumiki/blob/main/packages/mcp/README.md) を参照。
 
 ## 次へ
 

@@ -16,7 +16,7 @@ import type {
 } from "./ast.ts";
 import { KNOWN_METHODS } from "./codegen.ts";
 
-export type StrandError = {
+export type KumikiError = {
   code: string;
   kind: string;
   message: string;
@@ -76,7 +76,7 @@ const BUILTIN_TILES = new Set([
 const A11Y_CODES = new Set(["E0701", "E0702", "E0703"]);
 
 /** Returns errors with a11y warnings filtered out (unless strict). */
-export function check(program: Program, opts?: { strictA11y?: boolean }): StrandError[] {
+export function check(program: Program, opts?: { strictA11y?: boolean }): KumikiError[] {
   const errors = checkAll(program);
   if (opts?.strictA11y) return errors;
   return errors.filter((e) => !A11Y_CODES.has(e.code));
@@ -92,8 +92,8 @@ type SymbolTable = {
   app?: AppDef;
 };
 
-function checkAll(program: Program): StrandError[] {
-  const errors: StrandError[] = [];
+function checkAll(program: Program): KumikiError[] {
+  const errors: KumikiError[] = [];
   const sym: SymbolTable = {
     types: new Map(),
     slots: new Map(),
@@ -141,12 +141,12 @@ function checkAll(program: Program): StrandError[] {
   return errors;
 }
 
-function checkSlot(slot: SlotDef, sym: SymbolTable, errors: StrandError[]): void {
+function checkSlot(slot: SlotDef, sym: SymbolTable, errors: KumikiError[]): void {
   resolveType(slot.type, sym, errors);
   checkExpr(slot.init, sym, errors, { kind: "slot-init", localBinds: new Set() });
 }
 
-function checkTile(tile: TileDef, sym: SymbolTable, errors: StrandError[]): void {
+function checkTile(tile: TileDef, sym: SymbolTable, errors: KumikiError[]): void {
   const ctx: Ctx = { kind: "tile", localBinds: new Set() };
   if (tile.in) ctx.localBinds.add("$1");
   checkTileExpr(tile.body, sym, errors, ctx);
@@ -158,7 +158,7 @@ type Ctx = {
   capsAvailable?: Set<string>; // for reducer context
 };
 
-function checkA11y(t: TileExpr & { kind: "TileCall" }, errors: StrandError[]): void {
+function checkA11y(t: TileExpr & { kind: "TileCall" }, errors: KumikiError[]): void {
   if (t.name === "button") {
     const hasText = t.args.some((a) => a.name === "text");
     const hasAria = t.props.some((p) => p.name === "aria-label");
@@ -196,7 +196,7 @@ function checkA11y(t: TileExpr & { kind: "TileCall" }, errors: StrandError[]): v
   }
 }
 
-function checkTileExpr(t: TileExpr, sym: SymbolTable, errors: StrandError[], ctx: Ctx): void {
+function checkTileExpr(t: TileExpr, sym: SymbolTable, errors: KumikiError[], ctx: Ctx): void {
   switch (t.kind) {
     case "TileFor": {
       checkExpr(t.iter, sym, errors, ctx);
@@ -233,7 +233,7 @@ function checkTileExpr(t: TileExpr, sym: SymbolTable, errors: StrandError[], ctx
 function checkTileCall(
   t: TileExpr & { kind: "TileCall" },
   sym: SymbolTable,
-  errors: StrandError[],
+  errors: KumikiError[],
   ctx: Ctx,
 ): void {
   if (!BUILTIN_TILES.has(t.name) && !sym.tiles.has(t.name)) {
@@ -311,7 +311,7 @@ function checkTileCall(
   }
 }
 
-function checkReducer(r: ReducerDef, sym: SymbolTable, errors: StrandError[]): void {
+function checkReducer(r: ReducerDef, sym: SymbolTable, errors: KumikiError[]): void {
   const ctx: Ctx = {
     kind: "reducer",
     localBinds: new Set(),
@@ -335,7 +335,7 @@ function checkReducer(r: ReducerDef, sym: SymbolTable, errors: StrandError[]): v
 function checkStmt(
   s: Statement,
   sym: SymbolTable,
-  errors: StrandError[],
+  errors: KumikiError[],
   ctx: Ctx,
   writtenRoots: Set<string>,
 ): void {
@@ -459,13 +459,13 @@ function lvalueRoot(lv: Lvalue): string {
   return lv.name;
 }
 
-function checkLvalue(lv: Lvalue, sym: SymbolTable, errors: StrandError[], ctx: Ctx): void {
+function checkLvalue(lv: Lvalue, sym: SymbolTable, errors: KumikiError[], ctx: Ctx): void {
   if (lv.kind === "LSlot") return;
   if (lv.kind === "LIndex") checkExpr(lv.index, sym, errors, ctx);
   checkLvalue(lv.base, sym, errors, ctx);
 }
 
-function checkExpr(e: Expr, sym: SymbolTable, errors: StrandError[], ctx: Ctx): void {
+function checkExpr(e: Expr, sym: SymbolTable, errors: KumikiError[], ctx: Ctx): void {
   switch (e.kind) {
     case "Num":
     case "Str":
@@ -575,7 +575,7 @@ function currentFnName(ctx: Ctx): string {
   return (ctx as Ctx & { fnName?: string }).fnName ?? "<fn>";
 }
 
-function checkFn(fn: FnDef, sym: SymbolTable, errors: StrandError[]): void {
+function checkFn(fn: FnDef, sym: SymbolTable, errors: KumikiError[]): void {
   const ctx: Ctx = { kind: "fn", localBinds: new Set() };
   (ctx as Ctx & { fnName?: string }).fnName = fn.name;
   for (const p of fn.params) ctx.localBinds.add(p.name);
@@ -585,7 +585,7 @@ function checkFn(fn: FnDef, sym: SymbolTable, errors: StrandError[]): void {
   checkExpr(fn.body, sym, errors, ctx);
 }
 
-function checkEffect(eff: EffectDef, sym: SymbolTable, errors: StrandError[]): void {
+function checkEffect(eff: EffectDef, sym: SymbolTable, errors: KumikiError[]): void {
   resolveType(eff.inType, sym, errors);
   resolveType(eff.outType, sym, errors);
   if (eff.mapRequest)
@@ -595,7 +595,7 @@ function checkEffect(eff: EffectDef, sym: SymbolTable, errors: StrandError[]): v
     });
 }
 
-function checkApp(app: AppDef, sym: SymbolTable, errors: StrandError[]): void {
+function checkApp(app: AppDef, sym: SymbolTable, errors: KumikiError[]): void {
   let saw404 = false;
   for (const r of app.routes) {
     if (r.tile.startsWith(">>")) continue; // redirect
@@ -626,7 +626,7 @@ function checkApp(app: AppDef, sym: SymbolTable, errors: StrandError[]): void {
   }
 }
 
-function resolveType(t: TypeExpr, sym: SymbolTable, errors: StrandError[]): void {
+function resolveType(t: TypeExpr, sym: SymbolTable, errors: KumikiError[]): void {
   switch (t.kind) {
     case "TypePrim":
       return;

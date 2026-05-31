@@ -168,7 +168,7 @@ function hasContent(root: HTMLElement): boolean {
 
 function collectInteractive(root: HTMLElement): HTMLElement[] {
   return Array.from(
-    root.querySelectorAll<HTMLElement>("button, input, textarea, select, [data-strand-bind]"),
+    root.querySelectorAll<HTMLElement>("button, input, textarea, select, [data-kumiki-bind]"),
   );
 }
 

@@ -1,8 +1,8 @@
-You are participating in an experiment to measure how accurately an LLM can write code in a brand-new DSL called "Strand" given only the specification documents. You have NO prior knowledge of Strand — its syntax does not exist in your training data.
+You are participating in an experiment to measure how accurately an LLM can write code in a brand-new DSL called "Kumiki" given only the specification documents. You have NO prior knowledge of Kumiki — its syntax does not exist in your training data.
 
 ## Task
 
-Implement an Issue Tracker SPA in Strand (large task, target 500+ LOC). The full requirements are in:
+Implement an Issue Tracker SPA in Kumiki (large task, target 500+ LOC). The full requirements are in:
   C:\Users\delta\repositories\demo\new-js-framework\benchmarks\learning-cost-v3\task-spec.md
 
 Please read that file first.
@@ -20,22 +20,22 @@ Specification docs:
   C:\Users\delta\repositories\demo\new-js-framework\docs\10-runtime.md
 
 Working examples:
-  C:\Users\delta\repositories\demo\new-js-framework\docs\examples\01-counter.strand
-  C:\Users\delta\repositories\demo\new-js-framework\docs\examples\02-todomvc.strand
-  C:\Users\delta\repositories\demo\new-js-framework\docs\examples\03-blog-spa.strand (multi-route reference!)
+  C:\Users\delta\repositories\demo\new-js-framework\docs\examples\01-counter.kumiki
+  C:\Users\delta\repositories\demo\new-js-framework\docs\examples\02-todomvc.kumiki
+  C:\Users\delta\repositories\demo\new-js-framework\docs\examples\03-blog-spa.kumiki (multi-route reference!)
 
 ## Rules
 
-- Write the Strand code in a SINGLE pass. Do not loop with strand check.
+- Write the Kumiki code in a SINGLE pass. Do not loop with kumiki check.
 - Do not use JSX or TypeScript syntax.
 
 ## Output format
 
 Print to stdout in this exact format:
 
-===STRAND_BEGIN===
-<your pure Strand code here, no markdown fences>
-===STRAND_END===
+===KUMIKI_BEGIN===
+<your pure Kumiki code here, no markdown fences>
+===KUMIKI_END===
 ===REPORT_BEGIN===
 {
   "condition": "I-Gemini",

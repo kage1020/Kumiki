@@ -1,4 +1,4 @@
-// Compare LOC / character / token counts between the Strand source and the
+// Compare LOC / character / token counts between the Kumiki source and the
 // equivalent React implementation. Tokenizes with cl100k_base (GPT-4 family)
 // and o200k_base (GPT-4o family) for two reference points.
 
@@ -71,13 +71,13 @@ function render(rows) {
   return out.join("\n");
 }
 
-const STRAND = resolve(ROOT, "../docs/examples/02-todomvc.strand");
+const KUMIKI = resolve(ROOT, "../docs/examples/02-todomvc.kumiki");
 const REACT_APP = resolve(ROOT, "todomvc-react/src/App.tsx");
-const STRAND_COUNTER = resolve(ROOT, "../docs/examples/01-counter.strand");
-const STRAND_BLOG = resolve(ROOT, "../docs/examples/03-blog-spa.strand");
+const KUMIKI_COUNTER = resolve(ROOT, "../docs/examples/01-counter.kumiki");
+const KUMIKI_BLOG = resolve(ROOT, "../docs/examples/03-blog-spa.kumiki");
 
 const rows = [
-  measure("strand (todomvc.strand)", [STRAND]),
+  measure("kumiki (todomvc.kumiki)", [KUMIKI]),
   measure("react  (App.tsx)", [REACT_APP]),
 ];
 console.log(render(rows));
@@ -93,7 +93,7 @@ const json = {
     o200k: rows[1].o200k / rows[0].o200k,
   },
 };
-console.log("\nReact / Strand ratios:");
+console.log("\nReact / Kumiki ratios:");
 console.log(`  chars   : ${json.ratio.chars.toFixed(2)}x`);
 console.log(`  loc-code: ${json.ratio.locCode.toFixed(2)}x`);
 console.log(`  cl100k  : ${json.ratio.cl100k.toFixed(2)}x`);

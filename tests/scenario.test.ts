@@ -5,13 +5,13 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { runScenario, type Scenario } from "@strand/runtime";
+import { runScenario, type Scenario } from "@kumiki/runtime";
 import { describe, expect, it } from "vitest";
 import { loadApp } from "./helpers/load.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const examples = join(here, "..", "examples");
-const counter = join(examples, "features", "01-slot-and-reducer.strand");
+const counter = join(examples, "features", "01-slot-and-reducer.kumiki");
 
 function freshRoot(): HTMLElement {
   const root = document.createElement("div");
@@ -56,7 +56,7 @@ describe("scenario runner", () => {
   // that was silently wrong via string concatenation).
   it("runs the expense-tracker acceptance scenario (fold + Int.parse)", async () => {
     const dir = join(examples, "apps", "06-expenses");
-    const app = await loadApp(join(dir, "app.strand"));
+    const app = await loadApp(join(dir, "app.kumiki"));
     const scenario = JSON.parse(readFileSync(join(dir, "scenario.json"), "utf8")) as Scenario;
     const report = await runScenario(app, freshRoot(), scenario);
     if (!report.ok) {

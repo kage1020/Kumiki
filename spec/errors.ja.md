@@ -2,14 +2,14 @@
 
 [English](./errors.md) · 日本語
 
-Strand のコンパイラ（`@strand/compiler`）が報告する診断は、**パースエラー**と**型検査エラー**の 2 系統に分かれる。本書は両者を正規（normative）に列挙する。実装側でコードを追加・変更した場合は、本書も同時に更新しなければならない。
+Kumiki のコンパイラ（`@kumiki/compiler`）が報告する診断は、**パースエラー**と**型検査エラー**の 2 系統に分かれる。本書は両者を正規（normative）に列挙する。実装側でコードを追加・変更した場合は、本書も同時に更新しなければならない。
 
 ## エラーの形
 
-型検査エラーは `StrandError` として表現される：
+型検査エラーは `KumikiError` として表現される：
 
 ```ts
-type StrandError = {
+type KumikiError = {
   code: string;   // "E0103" のような安定識別子
   kind: string;   // "undef-slot" のような機械可読な分類
   message: string; // 人間向けメッセージ（対象名を含む）
@@ -51,7 +51,7 @@ type StrandError = {
 
 > `Reference to undefined reducer "<name>"`
 
-**修正**：reducer 名の綴りを確認する。`strand fix` が近い名前を提案できる（→ [AI Editing](./ai-edit.md)）。
+**修正**：reducer 名の綴りを確認する。`kumiki fix` が近い名前を提案できる（→ [AI Editing](./ai-edit.md)）。
 
 ### E0103 `undef-ref` / `undef-slot`
 
@@ -140,6 +140,6 @@ a11y 検査は `check(program, { strictA11y: true })` で有効化される。
 
 > `Method ".<name>" is not implemented by the runtime`
 
-**補足**：実装されているメソッド集合は `@strand/compiler` の `KNOWN_METHODS`（コード生成の `methodCallJs` と同期）が唯一の正。引数なしメソッドを `()` 付きで呼んだ場合もこの帯で捕捉される。標準ライブラリのメソッド一覧は [Standard Library](./stdlib.md)。
+**補足**：実装されているメソッド集合は `@kumiki/compiler` の `KNOWN_METHODS`（コード生成の `methodCallJs` と同期）が唯一の正。引数なしメソッドを `()` 付きで呼んだ場合もこの帯で捕捉される。標準ライブラリのメソッド一覧は [Standard Library](./stdlib.md)。
 
 **修正**：正しいメソッド名に直すか、その操作を `match` / `fold` など実装済みの手段で書き換える。未実装の仕様メソッドが必要なら、`packages/` に実装して `examples/` に動く例を足す。

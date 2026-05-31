@@ -1,8 +1,8 @@
-# Issue Tracker — Strand Learning-Cost Measurement Task v3
+# Issue Tracker — Kumiki Learning-Cost Measurement Task v3
 
 English · [日本語](./task-spec.ja.md)
 
-A large SPA (an estimated 500+ LOC) that measures whether an LLM can write Strand accurately even at scale.
+A large SPA (an estimated 500+ LOC) that measures whether an LLM can write Kumiki accurately even at scale.
 It involves a more complex structure than Pomodoro (90 LOC) / Kanban (200 LOC), multiple routes, filtering, and persistence.
 
 ## Feature requirements
@@ -80,16 +80,16 @@ Save and restore `issues` and `comments` in localStorage.
 
 ## Constraints
 
-- The output is a single `.strand` file
+- The output is a single `.kumiki` file
 - Do not use any TypeScript / JSX / React syntax
 - Express side effects with effects
 - Include the necessary capabilities in the `app` declaration's `caps`
 
 ## Output
 
-Write it out as a `.strand` file at the specified path. **Do not leave any stray XML/markdown fence at the end of the file.**
+Write it out as a `.kumiki` file at the specified path. **Do not leave any stray XML/markdown fence at the end of the file.**
 
 ## Evaluation
 
-Score parse / typecheck / build with `reference/scripts/learning-cost-eval.mjs`.
-The best version also goes through `strand build` + a browser smoke test.
+Score parse / typecheck / build with `benchmarks/scripts/learning-cost-eval.mjs`.
+The best version also goes through `kumiki build` + a browser smoke test.

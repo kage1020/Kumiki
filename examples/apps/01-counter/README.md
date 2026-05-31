@@ -2,7 +2,7 @@
 
 English · [日本語](./README.ja.md)
 
-The smallest Strand app. With this alone, you get one full cycle of "state, update, render."
+The smallest Kumiki app. With this alone, you get one full cycle of "state, update, render."
 
 ## What you'll learn
 
@@ -14,7 +14,7 @@ The smallest Strand app. With this alone, you get one full cycle of "state, upda
 ## Run
 
 ```sh
-pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/01-counter/app.strand ./out
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki ./out
 ```
 
 Related specs: [language](../../../spec/language.md)

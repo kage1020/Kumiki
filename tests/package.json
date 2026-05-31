@@ -1,5 +1,5 @@
 {
-  "name": "@strand/tests",
+  "name": "@kumiki/tests",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,8 +10,8 @@
     "lint": "biome check ."
   },
   "devDependencies": {
-    "@strand/compiler": "workspace:*",
-    "@strand/runtime": "workspace:*",
+    "@kumiki/compiler": "workspace:*",
+    "@kumiki/runtime": "workspace:*",
     "jsdom": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

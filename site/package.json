@@ -1,9 +1,9 @@
 {
-  "name": "@strand/site",
+  "name": "@kumiki/site",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Strand documentation site (VitePress) — serves spec/guide/examples and a browser playground with WebMCP tools.",
+  "description": "Kumiki documentation site (VitePress) — serves spec/guide/examples and a browser playground with WebMCP tools.",
   "license": "Apache-2.0",
   "scripts": {
     "sync": "node scripts/sync-docs.mjs",
@@ -12,8 +12,8 @@
     "preview": "vitepress preview"
   },
   "dependencies": {
-    "@strand/compiler": "workspace:*",
-    "@strand/runtime": "workspace:*"
+    "@kumiki/compiler": "workspace:*",
+    "@kumiki/runtime": "workspace:*"
   },
   "devDependencies": {
     "vitepress": "^1.6.4",

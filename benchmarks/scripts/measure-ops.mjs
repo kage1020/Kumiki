@@ -1,5 +1,5 @@
 // Compute the "AI edit op-stream" cost for each scenario: what does it cost
-// (chars + tokens) to express the change as a sequence of `strand add /
+// (chars + tokens) to express the change as a sequence of `kumiki add /
 // replace / remove` operations on the source file, vs. shipping the whole
 // modified file or a unified diff?
 
@@ -11,7 +11,7 @@ import { load } from "../src/cli/store.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ROOT = resolve(here, "../../benchmarks");
-const STRAND_BASE_PATH = resolve(ROOT, "../docs/examples/02-todomvc.strand");
+const KUMIKI_BASE_PATH = resolve(ROOT, "../docs/examples/02-todomvc.kumiki");
 
 function tokenCount(s) {
   return encodeCl100k(s).length;
@@ -119,11 +119,11 @@ const scenarios = readdirSync(resolve(ROOT, "scenarios"))
 const rows = [];
 for (const sc of scenarios) {
   const dir = resolve(ROOT, "scenarios", sc);
-  const modPath = join(dir, "strand-modified.strand");
-  const ops = diffOps(STRAND_BASE_PATH, modPath);
+  const modPath = join(dir, "kumiki-modified.kumiki");
+  const ops = diffOps(KUMIKI_BASE_PATH, modPath);
   const opText = ops.map(formatOp).join("\n");
   const modSrc = readFileSync(modPath, "utf8");
-  const baseSrc = readFileSync(STRAND_BASE_PATH, "utf8");
+  const baseSrc = readFileSync(KUMIKI_BASE_PATH, "utf8");
   const patch = diffPatch(baseSrc, modSrc);
   rows.push({
     sc,
@@ -139,7 +139,7 @@ for (const sc of scenarios) {
 
 const fmt = (n) => String(n).padStart(7);
 console.log("");
-console.log("Strand edit cost per scenario (full file vs unified patch vs op stream)");
+console.log("Kumiki edit cost per scenario (full file vs unified patch vs op stream)");
 console.log("");
 console.log(
   `${"scenario".padEnd(24)} ${"#ops".padStart(5)}  ${"full ch".padStart(7)}  ${"full tk".padStart(7)}  ${"patch ch".padStart(7)}  ${"patch tk".padStart(8)}  ${"op ch".padStart(7)}  ${"op tk".padStart(7)}`,
@@ -175,7 +175,7 @@ const totals = rows.reduce(
 );
 
 console.log("");
-console.log("Totals (Strand only)");
+console.log("Totals (Kumiki only)");
 console.log(`  #ops total      : ${totals.opCount}`);
 console.log(`  full-file chars : ${totals.fullChars}`);
 console.log(`  full-file tokens: ${totals.fullTokens}`);

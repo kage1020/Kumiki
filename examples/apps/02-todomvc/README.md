@@ -15,7 +15,7 @@ The classic TodoMVC. It adds list operations and persistence, forming the skelet
 ## Run
 
 ```sh
-pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/02-todomvc/app.strand ./out
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/02-todomvc/app.kumiki ./out
 ```
 
 Related specs: [language](../../../spec/language.md) / [forms](../../../spec/forms.md) / [http](../../../spec/http.md)

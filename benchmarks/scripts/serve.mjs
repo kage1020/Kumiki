@@ -1,4 +1,4 @@
-// Minimal static file server for Strand demos.
+// Minimal static file server for Kumiki demos.
 // Supports:
 //  - SPA fallback (any unknown path → index.html)
 //  - JSON-suffix fallback (/api/posts → /api/posts.json)

@@ -82,7 +82,7 @@ for (const d of dirs) {
     } else if (rel.endsWith(".md")) {
       writeText(join(enDest, toPageRel(rel)), stripSwitchLine(readFileSync(abs, "utf8")));
     } else {
-      // Shared non-Markdown asset (e.g. *.strand, *.json): mirror into both.
+      // Shared non-Markdown asset (e.g. *.kumiki, *.json): mirror into both.
       copyAsset(abs, join(enDest, rel));
       copyAsset(abs, join(jaDest, rel));
     }

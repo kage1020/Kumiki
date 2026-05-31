@@ -16,7 +16,7 @@ A mid-sized, CRUD-centric app (~726 lines). You'll learn a `Map`-based data mode
 ## Run
 
 ```sh
-pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/04-issue-tracker/app.strand ./out
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/04-issue-tracker/app.kumiki ./out
 ```
 
 Related specs: [language](../../../spec/language.md) / [stdlib](../../../spec/stdlib.md) / [forms](../../../spec/forms.md)

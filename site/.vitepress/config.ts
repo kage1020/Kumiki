@@ -5,15 +5,15 @@ import { defineConfig } from "vitepress";
 // English pages come from the `*.md` files; Japanese pages are generated from
 // their `*.ja.md` siblings into `site/ja/` and served as the `ja` locale.
 export default defineConfig({
-  title: "Strand",
+  title: "Kumiki",
   cleanUrls: true,
   ignoreDeadLinks: true,
   markdown: {
-    // Strand has no Shiki grammar; reuse a close-enough one for color.
-    languageAlias: { strand: "rust" },
+    // Kumiki has no Shiki grammar; reuse a close-enough one for color.
+    languageAlias: { kumiki: "rust" },
   },
   themeConfig: {
-    socialLinks: [{ icon: "github", link: "https://github.com/kage1020/Strand" }],
+    socialLinks: [{ icon: "github", link: "https://github.com/kage1020/Kumiki" }],
     search: { provider: "local" },
   },
   locales: {
@@ -37,7 +37,7 @@ export default defineConfig({
               items: [
                 { text: "Getting Started", link: "/guide/getting-started" },
                 { text: "Your First App", link: "/guide/your-first-app" },
-                { text: "Thinking in Strand", link: "/guide/thinking-in-strand" },
+                { text: "Thinking in Kumiki", link: "/guide/thinking-in-kumiki" },
                 { text: "Recipes", link: "/guide/recipes" },
                 { text: "Playground", link: "/guide/playground" },
               ],
@@ -95,7 +95,7 @@ export default defineConfig({
               items: [
                 { text: "はじめに", link: "/ja/guide/getting-started" },
                 { text: "最初のアプリ", link: "/ja/guide/your-first-app" },
-                { text: "Strand の考え方", link: "/ja/guide/thinking-in-strand" },
+                { text: "Kumiki の考え方", link: "/ja/guide/thinking-in-kumiki" },
                 { text: "レシピ", link: "/ja/guide/recipes" },
                 { text: "Playground", link: "/ja/guide/playground" },
               ],

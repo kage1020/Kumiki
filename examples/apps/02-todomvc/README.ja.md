@@ -15,7 +15,7 @@
 ## 実行
 
 ```sh
-pnpm --filter @strand/cli exec tsx src/strand.ts build examples/apps/02-todomvc/app.strand ./out
+pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/02-todomvc/app.kumiki ./out
 ```
 
 関連仕様: [language](../../../spec/language.md) / [forms](../../../spec/forms.md) / [http](../../../spec/http.md)

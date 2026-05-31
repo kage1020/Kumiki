@@ -1,10 +1,10 @@
-# Thinking in Strand
+# Thinking in Kumiki
 
-English · [日本語](./thinking-in-strand.ja.md)
+English · [日本語](./thinking-in-kumiki.ja.md)
 
 ## 7 Layers = Separation of Roles
 
-A Strand app is a collection of 7 kinds of definitions. There are no file boundaries or modules; each definition refers to others by name.
+A Kumiki app is a collection of 7 kinds of definitions. There are no file boundaries or modules; each definition refers to others by name.
 
 | layer | In a word | React equivalent |
 |---|---|---|
@@ -18,7 +18,7 @@ A Strand app is a collection of 7 kinds of definitions. There are no file bounda
 
 ## Eliminate the Implicit
 
-Strand has no rules about the order of Hook calls, no dependency arrays, and no implicit scoping via Context.
+Kumiki has no rules about the order of Hook calls, no dependency arrays, and no implicit scoping via Context.
 
 - **State lives in `slot`**, consolidated and changed only via `:=` in a `reducer`. You can trace, in the text, where and what gets rewritten.
 - **Side effects are confined to `effect`**, and the required **capability** is declared explicitly in `app.caps`. Using a capability not in the declaration triggers [E0301](../spec/errors.md#e0301-missing-capability).
@@ -28,7 +28,7 @@ Strand has no rules about the order of Hook calls, no dependency arrays, and no 
 
 Writing to the same **path shape** multiple times within a single reducer triggers [E0601](../spec/errors.md#e06xx---reducer-write-rules). This guarantees that "updates are consolidated in one place," making partial edits safe.
 
-```strand
+```kumiki
 # NG: double write to tasks
 tasks := tasks.remove(id)
 tasks := tasks.filter(pred)
@@ -41,4 +41,4 @@ tasks := tasks.remove(id).filter(pred)
 
 ## A Design Easy for AI to Partially Edit
 
-Because each definition is independent and references are explicit, `@strand/cli` / `@strand/mcp` can list / view / add / replace / remove / rename / fix at the **per-definition** level. This is the core of the goal that "AI can work in parallel." For details, see [AI Editing](../spec/ai-edit.md).
+Because each definition is independent and references are explicit, `@kumiki/cli` / `@kumiki/mcp` can list / view / add / replace / remove / rename / fix at the **per-definition** level. This is the core of the goal that "AI can work in parallel." For details, see [AI Editing](../spec/ai-edit.md).

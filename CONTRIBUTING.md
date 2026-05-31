@@ -1,8 +1,8 @@
-# Contributing to Strand
+# Contributing to Kumiki
 
 English · [日本語](./CONTRIBUTING.ja.md)
 
-Strand is experimental OSS, and its operating policy is somewhat unusual. Please read this before getting your hands dirty.
+Kumiki is experimental OSS, and its operating policy is somewhat unusual. Please read this before getting your hands dirty.
 
 ## Core policy: answer questions and bugs with examples and tests
 
@@ -42,7 +42,7 @@ pnpm exec turbo run typecheck test lint build
 
 Everything must be green. In particular:
 
-- **Every new example must pass check + build + smoke** (`tests/` verifies this automatically). `check`/`build` only guarantee syntax, types, and codegen. Whether it **actually mounts and survives interaction** is verified by `strand smoke <file>` (= the runtime smoke in `tests/`). "Compiles but errors / renders nothing when run" bugs are caught here.
+- **Every new example must pass check + build + smoke** (`tests/` verifies this automatically). `check`/`build` only guarantee syntax, types, and codegen. Whether it **actually mounts and survives interaction** is verified by `kumiki smoke <file>` (= the runtime smoke in `tests/`). "Compiles but errors / renders nothing when run" bugs are caught here.
 - **Inline lint suppression (`@biome-ignore`, etc.) is forbidden**. If you want to add one, fix the design instead.
 - **Don't hardcode dependency versions**. Install the latest with `pnpm add`, and put shared versions in the catalog of `pnpm-workspace.yaml`.
 

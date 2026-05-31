@@ -1,10 +1,10 @@
-// Definition store: parse a .strand file, record source ranges, and answer
+// Definition store: parse a .kumiki file, record source ranges, and answer
 // list / view / refs queries. Read-only on disk; mutations go through a
 // separate path that rewrites the file and appends to the op-log.
 
 import { readFileSync } from "node:fs";
-import type { Def, Program, Token } from "@strand/compiler";
-import { lex, parse } from "@strand/compiler";
+import type { Def, Program, Token } from "@kumiki/compiler";
+import { lex, parse } from "@kumiki/compiler";
 
 export type DefRange = {
   /** 1-based start line in the source file. */

@@ -1,9 +1,9 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { compile } from "@strand/compiler";
-import { nodeRuntimeBundleReader } from "@strand/compiler/node";
-import type { AppShape } from "@strand/runtime";
+import { compile } from "@kumiki/compiler";
+import { nodeRuntimeBundleReader } from "@kumiki/compiler/node";
+import type { AppShape } from "@kumiki/runtime";
 
 const here = dirname(fileURLToPath(import.meta.url));
 // Drop temp bundles inside the project tree so Vitest's resolver allows them.
@@ -11,14 +11,14 @@ const TMP_ROOT = resolve(here, "../../test-tmp");
 mkdirSync(TMP_ROOT, { recursive: true });
 
 /**
- * Compile a .strand file as a self-contained bundle, write it to a temp file,
- * and dynamic-import it. Sets `globalThis.__strandApp` and returns it.
+ * Compile a .kumiki file as a self-contained bundle, write it to a temp file,
+ * and dynamic-import it. Sets `globalThis.__kumikiApp` and returns it.
  *
  * Each call uses a fresh temp file + query-string cache-bust so tests don't
  * share module state.
  */
-export async function buildAndLoad(strandPath: string, rootId: string): Promise<AppShape> {
-  const src = readFileSync(strandPath, "utf8");
+export async function buildAndLoad(kumikiPath: string, rootId: string): Promise<AppShape> {
+  const src = readFileSync(kumikiPath, "utf8");
   const result = compile(src, {
     runtimeSpecifier: "ignored",
     bundle: true,
@@ -29,13 +29,13 @@ export async function buildAndLoad(strandPath: string, rootId: string): Promise<
     throw new Error(`compile failed:\n${summary}`);
   }
 
-  // Patch the bottom of the bundle so it stops at `globalThis.__strandApp = App`
+  // Patch the bottom of the bundle so it stops at `globalThis.__kumikiApp = App`
   // instead of mounting to a hard-coded "#root" we don't own in tests.
   const patched = result.js
     .replace(`mount(App, document.getElementById("root"));`, "")
     .replace(
-      /globalThis\.__strandApp = App;/,
-      `globalThis.__strandApp = App; globalThis.__strandRootId = ${JSON.stringify(rootId)};`,
+      /globalThis\.__kumikiApp = App;/,
+      `globalThis.__kumikiApp = App; globalThis.__kumikiRootId = ${JSON.stringify(rootId)};`,
     );
 
   const dir = mkdtempSync(join(TMP_ROOT, "e2e-"));
@@ -45,7 +45,7 @@ export async function buildAndLoad(strandPath: string, rootId: string): Promise<
   const url = `${pathToFileURL(file).href}?t=${Date.now()}_${Math.random()}`;
   await import(/* @vite-ignore */ url);
 
-  const app = (globalThis as unknown as { __strandApp?: AppShape }).__strandApp;
-  if (!app) throw new Error("Generated bundle did not expose __strandApp");
+  const app = (globalThis as unknown as { __kumikiApp?: AppShape }).__kumikiApp;
+  if (!app) throw new Error("Generated bundle did not expose __kumikiApp");
   return app;
 }

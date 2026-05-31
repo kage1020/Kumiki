@@ -13,22 +13,22 @@ import {
   renameDef,
   replaceDef,
   viewDef,
-} from "@strand/cli";
-import { check } from "@strand/compiler";
+} from "@kumiki/cli";
+import { check } from "@kumiki/compiler";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const _COUNTER = resolve(here, "../../../examples/apps/01-counter/app.strand");
-const TODOMVC = resolve(here, "../../../examples/apps/02-todomvc/app.strand");
+const _COUNTER = resolve(here, "../../../examples/apps/01-counter/app.kumiki");
+const TODOMVC = resolve(here, "../../../examples/apps/02-todomvc/app.kumiki");
 
 function copy(src: string): string {
-  const dir = mkdtempSync(join(tmpdir(), "strand-ai-"));
-  const dst = join(dir, "input.strand");
+  const dir = mkdtempSync(join(tmpdir(), "kumiki-ai-"));
+  const dst = join(dir, "input.kumiki");
   copyFileSync(src, dst);
   return dst;
 }
 
-describe("strand store: list / view / refs", () => {
+describe("kumiki store: list / view / refs", () => {
   it("lists every definition from todomvc", () => {
     const store = load(TODOMVC);
     const layers = new Set(listDefs(store).map((e) => e.layer));
@@ -60,7 +60,7 @@ describe("strand store: list / view / refs", () => {
   });
 });
 
-describe("strand mutate: add / replace / rename / remove", () => {
+describe("kumiki mutate: add / replace / rename / remove", () => {
   let path: string;
   beforeEach(() => {
     path = copy(TODOMVC);
@@ -75,7 +75,7 @@ describe("strand mutate: add / replace / rename / remove", () => {
     expect(store.byQName.has("slot.lastSync")).toBe(true);
     expect(viewDef(store, "slot.lastSync")).toContain("slot lastSync : Time = 0");
     // op log entry
-    const log = readFileSync(`${path}.strand-ops.jsonl`, "utf8");
+    const log = readFileSync(`${path}.kumiki-ops.jsonl`, "utf8");
     expect(log).toContain('"op":"add"');
     expect(log).toContain('"name":"lastSync"');
   });
@@ -121,10 +121,10 @@ describe("strand mutate: add / replace / rename / remove", () => {
   });
 });
 
-describe("strand fix: auto-patch suggestions", () => {
+describe("kumiki fix: auto-patch suggestions", () => {
   it("suggests did-you-mean for an undef slot reference", () => {
-    const dir = mkdtempSync(join(tmpdir(), "strand-fix-"));
-    const file = join(dir, "broken.strand");
+    const dir = mkdtempSync(join(tmpdir(), "kumiki-fix-"));
+    const file = join(dir, "broken.kumiki");
     writeFileSync(
       file,
       `type N = nominal Int where between(0, 999)
@@ -148,8 +148,8 @@ app Counter
   });
 
   it("apply fixes the file end-to-end", () => {
-    const dir = mkdtempSync(join(tmpdir(), "strand-fix-"));
-    const file = join(dir, "broken.strand");
+    const dir = mkdtempSync(join(tmpdir(), "kumiki-fix-"));
+    const file = join(dir, "broken.kumiki");
     writeFileSync(
       file,
       `type N = nominal Int where between(0, 999)

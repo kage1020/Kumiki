@@ -1,9 +1,9 @@
 {
-  "name": "strand",
+  "name": "kumiki",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Strand — an AI-first web framework language. Optimized for LLMs to write, edit, and reason about, not for humans to read.",
+  "description": "Kumiki — an AI-first web framework language. Optimized for LLMs to write, edit, and reason about, not for humans to read.",
   "license": "Apache-2.0",
   "packageManager": "pnpm@10.14.0",
   "scripts": {

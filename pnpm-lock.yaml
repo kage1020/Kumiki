@@ -41,10 +41,10 @@ importers:
 
   packages/cli:
     dependencies:
-      '@strand/compiler':
+      '@kumiki/compiler':
         specifier: workspace:*
         version: link:../compiler
-      '@strand/runtime':
+      '@kumiki/runtime':
         specifier: workspace:*
         version: link:../runtime
     devDependencies:
@@ -69,7 +69,7 @@ importers:
 
   packages/compiler:
     dependencies:
-      '@strand/runtime':
+      '@kumiki/runtime':
         specifier: workspace:*
         version: link:../runtime
     devDependencies:
@@ -85,7 +85,7 @@ importers:
 
   packages/e2e:
     dependencies:
-      '@strand/compiler':
+      '@kumiki/compiler':
         specifier: workspace:*
         version: link:../compiler
       playwright:
@@ -104,15 +104,15 @@ importers:
 
   packages/mcp:
     dependencies:
+      '@kumiki/cli':
+        specifier: workspace:*
+        version: link:../cli
+      '@kumiki/compiler':
+        specifier: workspace:*
+        version: link:../compiler
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0
         version: 1.29.0(zod@4.4.3)
-      '@strand/cli':
-        specifier: workspace:*
-        version: link:../cli
-      '@strand/compiler':
-        specifier: workspace:*
-        version: link:../compiler
       zod:
         specifier: ^4.4.3
         version: 4.4.3
@@ -144,10 +144,10 @@ importers:
 
   site:
     dependencies:
-      '@strand/compiler':
+      '@kumiki/compiler':
         specifier: workspace:*
         version: link:../packages/compiler
-      '@strand/runtime':
+      '@kumiki/runtime':
         specifier: workspace:*
         version: link:../packages/runtime
     devDependencies:
@@ -160,10 +160,10 @@ importers:
 
   tests:
     devDependencies:
-      '@strand/compiler':
+      '@kumiki/compiler':
         specifier: workspace:*
         version: link:../packages/compiler
-      '@strand/runtime':
+      '@kumiki/runtime':
         specifier: workspace:*
         version: link:../packages/runtime
       jsdom:

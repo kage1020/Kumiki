@@ -1,10 +1,10 @@
-// Scenario runner: drive a mounted Strand app through a sequence of actions and
+// Scenario runner: drive a mounted Kumiki app through a sequence of actions and
 // capture a structured trace (state snapshot, DOM text, errors, emitted effects)
 // after each step, plus state/DOM assertions. This is the deterministic,
 // introspectable substrate that lets an agent run a generate → run → observe →
 // fix loop with NO human operating the app.
 //
-// Strand makes this clean: state is explicit (slots), events are named
+// Kumiki makes this clean: state is explicit (slots), events are named
 // (reducers), and effects are mocked at the capability boundary — so the oracle
 // is reliable app state, not scraped pixels, and runs are reproducible.
 

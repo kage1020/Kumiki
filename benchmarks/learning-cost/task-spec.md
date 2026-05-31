@@ -1,9 +1,9 @@
-# Pomodoro Timer — Strand Learning-Cost Measurement Task
+# Pomodoro Timer — Kumiki Learning-Cost Measurement Task
 
 English · [日本語](./task-spec.ja.md)
 
-This task measures how accurately an LLM with only the Strand spec in its context
-can write Strand code.
+This task measures how accurately an LLM with only the Kumiki spec in its context
+can write Kumiki code.
 
 ## Feature requirements
 
@@ -26,19 +26,19 @@ A Pomodoro timer SPA:
 
 ## Constraints
 
-- The output is a single `.strand` file
+- The output is a single `.kumiki` file
 - Do not mix in TypeScript / JavaScript / React syntax
 - Do not call `setInterval` directly; use `effect timer`
-- Once everything is written, write it out as a `.strand` file at the specified output path
+- Once everything is written, write it out as a `.kumiki` file at the specified output path
 
 ## Evaluation
 
-The output `.strand` is evaluated as follows:
+The output `.kumiki` is evaluated as follows:
 
 | Stage | Criterion |
 |---|---|
 | Parse | Does `lexer + parser` not throw? |
-| Typecheck | Does `strand check` return 0 errors? |
-| Build | Can `strand build` generate `app.js`? |
+| Typecheck | Does `kumiki check` return 0 errors? |
+| Build | Can `kumiki build` generate `app.js`? |
 
 LOC and token count are also recorded.

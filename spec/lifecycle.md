@@ -27,7 +27,7 @@ English · [日本語](./lifecycle.ja.md)
 
 Fires exactly once at app startup. It arrives **after** the effect list declared in `app.init = [...]` has been emitted.
 
-```strand
+```kumiki
 reducer boot
     on=app.start
     do= emit loadSession()
@@ -41,7 +41,7 @@ Effects emitted inside the `app.start` reducer are **passed synchronously to the
 
 The timing at which the browser fires `beforeunload`. Only processing that completes in a short time can be executed (browser specification).
 
-```strand
+```kumiki
 reducer cleanup
     on=app.stop
     do= emit persist(todos)         ; only synchronous storage.write is practical
@@ -51,7 +51,7 @@ reducer cleanup
 
 Corresponds to the `visibilitychange` event. When you want to pause state on tab switching:
 
-```strand
+```kumiki
 reducer pause on=app.hidden  do= timerPaused := true
 reducer resume on=app.visible do= timerPaused := false
                                  emit syncFromServer()
@@ -59,14 +59,14 @@ reducer resume on=app.visible do= timerPaused := false
 
 ### 7.1.4 app.online / app.offline
 
-```strand
+```kumiki
 reducer onlineSync   on=app.online   do= emit retryQueued()
 reducer showOffline  on=app.offline  do= emit toast({kind: "warn", text: "Offline"})
 ```
 
 ### 7.1.5 timer
 
-```strand
+```kumiki
 reducer poll
     on=timer(5s)
     do= emit fetchUpdates()
@@ -76,7 +76,7 @@ reducer poll
 
 **duration literals**: can be written as an integer + unit (`ms` / `s` / `m`), as in `1ms`, `500ms`, `1s`, `30s`, `5m`.
 
-```strand
+```kumiki
 reducer tick on=timer(1s)   do= elapsed := elapsed + 1
 reducer poll on=timer(30s)  do= emit fetchUpdates()
 reducer fast on=timer(100ms) do= emit syncCursor()
@@ -86,7 +86,7 @@ reducer fast on=timer(100ms) do= emit syncCursor()
 
 The timing at which a specific tile appears in / disappears from the DOM.
 
-```strand
+```kumiki
 reducer trackPageView
     on=tile.mount(SettingsPage)
     do= emit track({event: "settings_view", props: {}})
@@ -98,7 +98,7 @@ When you want to target multiple tiles at once, define multiple reducers with th
 
 ## 7.2 Error Handling
 
-Strand **does not permit try/catch**. Errors are handled via the following routes:
+Kumiki **does not permit try/catch**. Errors are handled via the following routes:
 
 ### 7.2.1 Expected Errors
 
@@ -115,7 +115,7 @@ These are exceptions called **panics**. A panic is recorded in the episode log, 
 
 ### 7.2.3 The app.error reducer
 
-```strand
+```kumiki
 slot lastError : Option(PanicInfo) = None
 
 reducer onPanic
@@ -127,7 +127,7 @@ reducer onPanic
 
 The `PanicInfo` type:
 
-```strand
+```kumiki
 type PanicInfo = {
     message: Text,
     location: Text,         ; "reducer:foo:line:42"
@@ -142,7 +142,7 @@ type PanicInfo = {
 
 Capture rendering errors under a specific tile and show a fallback:
 
-```strand
+```kumiki
 tile UserPage
     error-boundary = ErrorFallback
     = page(
@@ -164,9 +164,9 @@ When you write `error-boundary = X` in a tile definition, a panic during renderi
 
 ## 7.4 Suspense (loading display)
 
-When you want to show a loading display while awaiting the result of an async effect. Strand recommends **explicitly using the `LoadResult(T)` type**:
+When you want to show a loading display while awaiting the result of an async effect. Kumiki recommends **explicitly using the `LoadResult(T)` type**:
 
-```strand
+```kumiki
 type LoadResult(T) = Idle | Loading | Loaded(T) | Failed(HttpError)
 
 slot user : LoadResult(User) = Idle
@@ -191,7 +191,7 @@ pattern    ::= identifier                              ; variant name
 bind       ::= identifier
 ```
 
-Network code is almost always written with `match`. This is the canonical pattern for loading/error in Strand.
+Network code is almost always written with `match`. This is the canonical pattern for loading/error in Kumiki.
 
 ---
 
@@ -201,7 +201,7 @@ Network code is almost always written with `match`. This is the canonical patter
 
 Reaching `/404` is the same as a normal route. When route matching fails, the runtime sends you to `/404` via `nav.replace`.
 
-```strand
+```kumiki
 tile NotFound = page(
                   heading("404"),
                   text("Page not found"),
@@ -210,7 +210,7 @@ tile NotFound = page(
 
 ### 7.5.2 Per-Route Error Fallback
 
-```strand
+```kumiki
 reducer onRouteErr
     on=route.error("/todos/:id")
     do= toastError := Some("Failed to load todo")
@@ -221,9 +221,9 @@ reducer onRouteErr
 
 ## 7.6 Confirmation Dialogs
 
-Strand **provides the equivalent of `window.confirm` as an effect**:
+Kumiki **provides the equivalent of `window.confirm` as an effect**:
 
-```strand
+```kumiki
 effect confirm cap=notification.show
                in={title: Text, message: Text, onYes: ReducerRef, onNo: ReducerRef}
                out=Unit
@@ -247,7 +247,7 @@ In the runtime implementation, this is rendered as a **modal dialog tile** (not 
 
 ## 7.7 Toasts
 
-```strand
+```kumiki
 effect toast cap=notification.show
              in={kind: Text, text: Text, duration: Option(Duration)}
              out=Unit
@@ -289,7 +289,7 @@ Whether to keep or discard slot values on a development hot reload:
 | `transient` | Discarded (returns to the initial value) |
 | `volatile` | Excluded from persistence (not written to the log either, discarded on reload) |
 
-```strand
+```kumiki
 slot draft : Text             = ""        ; kept on reload
 slot toast : Option(Toast)    transient = None  ; discarded on reload
 slot password : Text          volatile  = ""    ; not written to the episode log either

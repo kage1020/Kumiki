@@ -1,4 +1,4 @@
-# Project Management Tool — Strand v0.1
+# Project Management Tool — Kumiki v0.1
 # Asana / Linear-like SPA. Demonstrates: routing, storage, lifecycle, theme switching,
 # nested forms, list+board views, comments, tags, sub-tasks.
 
@@ -1249,6 +1249,6 @@ app ProjectManagement
     init   = []
     theme  = themeName
     meta   = {
-        title: "Strand PM",
-        description: "Project management tool built with Strand"
+        title: "Kumiki PM",
+        description: "Project management tool built with Kumiki"
     }

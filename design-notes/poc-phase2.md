@@ -118,7 +118,7 @@ tile TodoList = column(for id in todos.keys when(matchFilter(todos[id], filter),
 ### AC-CLI
 
 ```
-pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/02-todomvc/app.kumiki out/todomvc
+pnpm kumiki build examples/apps/02-todomvc/app.kumiki out/todomvc
 ```
 
 - Exit code 0

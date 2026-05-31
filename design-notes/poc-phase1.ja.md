@@ -11,7 +11,7 @@
 ```bash
 pnpm install
 pnpm build
-pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki out/counter
+pnpm kumiki build examples/apps/01-counter/app.kumiki out/counter
 node benchmarks/scripts/serve.mjs out/counter 5173
 ```
 
@@ -103,7 +103,7 @@ TDD で先に固める。
 ### AC-CLI
 
 ```bash
-pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki out/counter
+pnpm kumiki build examples/apps/01-counter/app.kumiki out/counter
 ```
 
 - 終了コード 0

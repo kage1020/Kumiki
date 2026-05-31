@@ -61,18 +61,18 @@ kumiki fix --apply E0103                       # 特定コードだけ
 ## 受け入れ基準
 
 ### AC-list/view
-- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts list` で examples/apps/02-todomvc/app.kumiki の全 35 定義（type/slot/effect/reducer/fn/tile/app/theme 合計）を表示
-- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts view slot.todos` で `slot todos : Map(TodoId, Todo) = {}` を返す
-- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts view --with-deps reducer.addTodo` で関連 fn / slot も同梱
+- `pnpm kumiki list` で examples/apps/02-todomvc/app.kumiki の全 35 定義（type/slot/effect/reducer/fn/tile/app/theme 合計）を表示
+- `pnpm kumiki view slot.todos` で `slot todos : Map(TodoId, Todo) = {}` を返す
+- `pnpm kumiki view --with-deps reducer.addTodo` で関連 fn / slot も同梱
 
 ### AC-refs
-- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts refs slot.todos` で todos を参照する reducer / tile / fn の (name, file, line) を列挙
+- `pnpm kumiki refs slot.todos` で todos を参照する reducer / tile / fn の (name, file, line) を列挙
 
 ### AC-mutate
-- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts add slot foo 'Int = 0'` でファイル末尾に slot 追加、op-log に記録
-- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts replace slot.draft 'Text = ""'` で該当 slot だけ書き換え
-- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts remove slot.draft` で参照ありなら exit code 1 + エラー、`--cascade` でカスケード削除
-- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts rename slot.draft newTodoText` で定義 + 全参照を rename
+- `pnpm kumiki add slot foo 'Int = 0'` でファイル末尾に slot 追加、op-log に記録
+- `pnpm kumiki replace slot.draft 'Text = ""'` で該当 slot だけ書き換え
+- `pnpm kumiki remove slot.draft` で参照ありなら exit code 1 + エラー、`--cascade` でカスケード削除
+- `pnpm kumiki rename slot.draft newTodoText` で定義 + 全参照を rename
 
 ### AC-fix
 - examples/apps/02-todomvc/app.kumiki に `slot usres : Int = 0; reducer r on=ui.click(B) do= usres := 1` のような typo を入れて `kumiki fix` がパッチ提案

@@ -51,7 +51,7 @@ pnpm lint
 ### Counter のビルド
 
 ```bash
-pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki out/counter
+pnpm kumiki build examples/apps/01-counter/app.kumiki out/counter
 # → out/counter/ に index.html, app.js, runtime.js が出る
 ```
 

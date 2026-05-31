@@ -79,7 +79,7 @@ examples/apps/03-blog/app.kumiki passes with **errors=0**.
 
 ### AC-Browser
 
-Opening the result of `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/03-blog/app.kumiki out/blog` in the browser, with the mock JSON bundled, posts → detail → about → 404 cycles.
+Opening the result of `pnpm kumiki build examples/apps/03-blog/app.kumiki out/blog` in the browser, with the mock JSON bundled, posts → detail → about → 404 cycles.
 
 ## Mock Backend Strategy
 

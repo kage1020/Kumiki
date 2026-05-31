@@ -58,18 +58,18 @@ Every op is appended to `<file>.kumiki-ops.jsonl` (reviewable in git).
 ## Acceptance Criteria
 
 ### AC-list/view
-- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts list` displays all 35 definitions of examples/apps/02-todomvc/app.kumiki (the total of type/slot/effect/reducer/fn/tile/app/theme)
-- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts view slot.todos` returns `slot todos : Map(TodoId, Todo) = {}`
-- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts view --with-deps reducer.addTodo` also bundles the related fn / slot
+- `pnpm kumiki list` displays all 35 definitions of examples/apps/02-todomvc/app.kumiki (the total of type/slot/effect/reducer/fn/tile/app/theme)
+- `pnpm kumiki view slot.todos` returns `slot todos : Map(TodoId, Todo) = {}`
+- `pnpm kumiki view --with-deps reducer.addTodo` also bundles the related fn / slot
 
 ### AC-refs
-- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts refs slot.todos` enumerates the (name, file, line) of the reducer / tile / fn that reference todos
+- `pnpm kumiki refs slot.todos` enumerates the (name, file, line) of the reducer / tile / fn that reference todos
 
 ### AC-mutate
-- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts add slot foo 'Int = 0'` adds a slot at the end of the file and records it in the op-log
-- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts replace slot.draft 'Text = ""'` rewrites only the target slot
-- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts remove slot.draft` exits with code 1 + an error if referenced; `--cascade` performs a cascade delete
-- `pnpm --filter @kumiki/cli exec tsx src/kumiki.ts rename slot.draft newTodoText` renames the definition + all references
+- `pnpm kumiki add slot foo 'Int = 0'` adds a slot at the end of the file and records it in the op-log
+- `pnpm kumiki replace slot.draft 'Text = ""'` rewrites only the target slot
+- `pnpm kumiki remove slot.draft` exits with code 1 + an error if referenced; `--cascade` performs a cascade delete
+- `pnpm kumiki rename slot.draft newTodoText` renames the definition + all references
 
 ### AC-fix
 - Insert a typo such as `slot usres : Int = 0; reducer r on=ui.click(B) do= usres := 1` into examples/apps/02-todomvc/app.kumiki and have `kumiki fix` propose a patch

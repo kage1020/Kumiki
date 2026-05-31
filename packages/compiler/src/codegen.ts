@@ -557,6 +557,24 @@ export const KNOWN_METHODS: ReadonlySet<string> = new Set([
   "plus",
   "minus",
   "diff",
+  // Issue #5: spec/stdlib.md §2.2 methods that were missing here and therefore
+  // wrongly rejected with E0801. All take ≥1 argument, so they always parse as
+  // MethodCall (never the parenthesis-free FieldAccess form).
+  "concat", // List(T).concat(other)
+  "prepend", // List(T).prepend(x)
+  "chunk", // List(T).chunk(n)
+  "zip", // List(T).zip(other)
+  "merge", // Map(K,V).merge(other)
+  "update", // Map(K,V).update(k, expr)  — $1 is the current value inside expr
+  "add", // Set(T).add(x)
+  "union", // Set(T).union(other)
+  "intersect", // Set(T).intersect(other)
+  "or", // Option(T).or(other) / Result(T,E).or(other)
+  "map-err", // Result(T,E).map-err(expr)
+  "replace", // Text.replace(from, to)
+  "min", // Int/Float.min(b)
+  "max", // Int/Float.max(b)
+  "clamp", // Int/Float.clamp(lo, hi)
 ]);
 
 function methodCallJs(recv: Expr, method: string, args: Expr[], ctx: EvalCtx): string {
@@ -668,7 +686,53 @@ function methodCallJs(recv: Expr, method: string, args: Expr[], ctx: EvalCtx): s
     case "minus":
       return `((${recvJs}) - (${argRaw(args[0]!)}))`;
     case "diff":
-      return `Math.abs((${recvJs}) - (${argRaw(args[0]!)}))`;
+      // Polymorphic: Time/Duration → numeric magnitude; Set(T) → set difference.
+      return `_s.diff(${recvJs}, ${argRaw(args[0]!)})`;
+    // ----- Issue #5: previously-missing stdlib methods -----
+    case "concat":
+      // List(T).concat(other)
+      return `[...((${recvJs}) ?? []), ...((${argRaw(args[0]!)}) ?? [])]`;
+    case "prepend":
+      // List(T).prepend(x)
+      return `[${argRaw(args[0]!)}, ...((${recvJs}) ?? [])]`;
+    case "chunk":
+      // List(T).chunk(n) → List(List(T))
+      return `_s.listChunk(${recvJs}, ${argRaw(args[0]!)})`;
+    case "zip":
+      // List(T).zip(other) → List(Tuple(T, U))
+      return `_s.listZip(${recvJs}, ${argRaw(args[0]!)})`;
+    case "merge":
+      // Map(K,V).merge(other) — right side wins on key conflicts. Wrapped in
+      // parens so the object literal is safe in arrow-body position.
+      return `({ ...((${recvJs}) ?? {}), ...((${argRaw(args[0]!)}) ?? {}) })`;
+    case "update":
+      // Map(K,V).update(k, expr) — within expr, $1 is the current value.
+      return `_s.mapUpdate(${recvJs}, ${argRaw(args[0]!)}, ((${jsName("$1")}) => (${jsOfExpr(args[1]!, inner)})))`;
+    case "add":
+      // Set(T).add(x)
+      return `_s.setAdd(${recvJs}, ${argRaw(args[0]!)})`;
+    case "union":
+      // Set(T).union(other)
+      return `_s.setUnion(${recvJs}, ${argRaw(args[0]!)})`;
+    case "intersect":
+      // Set(T).intersect(other)
+      return `_s.setIntersect(${recvJs}, ${argRaw(args[0]!)})`;
+    case "or":
+      // Option(T).or(other) / Result(T,E).or(other)
+      return `_s.or(${recvJs}, ${argRaw(args[0]!)})`;
+    case "map-err":
+      // Result(T,E).map-err(expr) — within expr, $1 is the current Err payload.
+      return `_s.mapErr(${recvJs}, ((${jsName("$1")}) => (${jsOfExpr(args[0]!, inner)})))`;
+    case "replace":
+      // Text.replace(from, to) — replaces every occurrence.
+      return `String((${recvJs}) ?? "").replaceAll(${argRaw(args[0]!)}, ${argRaw(args[1]!)})`;
+    case "min":
+      return `Math.min((${recvJs}), (${argRaw(args[0]!)}))`;
+    case "max":
+      return `Math.max((${recvJs}), (${argRaw(args[0]!)}))`;
+    case "clamp":
+      // Int/Float.clamp(lo, hi)
+      return `Math.min(Math.max((${recvJs}), (${argRaw(args[0]!)})), (${argRaw(args[1]!)}))`;
     default:
       // generic fallback: receiver.method(...args)
       return `(${recvJs}).${jsName(method)}(${args.map(argRaw).join(", ")})`;

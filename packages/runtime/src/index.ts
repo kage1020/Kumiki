@@ -1586,6 +1586,92 @@ export const _stdlib = {
   variantIs(v: unknown, tag: string): boolean {
     return !!v && typeof v === "object" && "_tag" in v && (v as { _tag: string })._tag === tag;
   },
+
+  // ----- Issue #5: collection / value helpers for the stdlib methods that the
+  // codegen now lowers to `_s.*` calls. See spec/stdlib.md §2.2. -----
+
+  /** List(T).chunk(n) → List(List(T)). The last chunk may be shorter. */
+  listChunk(xs: unknown[] | undefined | null, n: number): unknown[] {
+    const arr = xs ?? [];
+    const size = Math.max(1, Math.floor(n));
+    const out: unknown[] = [];
+    for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+  },
+  /** List(T).zip(other) → List(Tuple(T, U)); truncates to the shorter list. */
+  listZip(a: unknown[] | undefined | null, b: unknown[] | undefined | null): unknown[] {
+    const xs = a ?? [];
+    const ys = b ?? [];
+    const n = Math.min(xs.length, ys.length);
+    const out: unknown[] = [];
+    for (let i = 0; i < n; i++) out.push([xs[i], ys[i]]);
+    return out;
+  },
+  /** Map(K,V).update(k, fn): apply fn to the current value of k, no-op if absent. */
+  mapUpdate(
+    m: Record<string, unknown> | undefined | null,
+    k: string,
+    fn: (v: unknown) => unknown,
+  ): Record<string, unknown> {
+    const obj = m ?? {};
+    if (!(k in obj)) return obj;
+    return { ...obj, [k]: fn(obj[k]) };
+  },
+  /** Set(T).add(x). Sets are stored as `{ [String(x)]: true }`. */
+  setAdd(s: Record<string, true> | undefined | null, x: unknown): Record<string, true> {
+    return { ...(s ?? {}), [String(x)]: true };
+  },
+  /** Set(T).union(other). */
+  setUnion(
+    a: Record<string, true> | undefined | null,
+    b: Record<string, true> | undefined | null,
+  ): Record<string, true> {
+    return { ...(a ?? {}), ...(b ?? {}) };
+  },
+  /** Set(T).intersect(other) — keys present in both. */
+  setIntersect(
+    a: Record<string, true> | undefined | null,
+    b: Record<string, true> | undefined | null,
+  ): Record<string, true> {
+    const bb = b ?? {};
+    const out: Record<string, true> = {};
+    for (const k of Object.keys(a ?? {})) if (k in bb) out[k] = true;
+    return out;
+  },
+  /** Set(T).diff(other) — keys in a not in b. */
+  setDiff(
+    a: Record<string, true> | undefined | null,
+    b: Record<string, true> | undefined | null,
+  ): Record<string, true> {
+    const bb = b ?? {};
+    const out: Record<string, true> = {};
+    for (const k of Object.keys(a ?? {})) if (!(k in bb)) out[k] = true;
+    return out;
+  },
+  /** Option(T).or / Result(T,E).or — receiver when Some/Ok, else `other`. */
+  or(v: unknown, other: unknown): unknown {
+    if (v && typeof v === "object" && "_tag" in (v as Record<string, unknown>)) {
+      const tag = (v as { _tag: string })._tag;
+      if (tag === "Some" || tag === "Ok") return v;
+      if (tag === "None" || tag === "Err") return other;
+    }
+    return v ?? other;
+  },
+  /** Result(T,E).map-err(fn) — maps the Err payload, passes Ok through unchanged. */
+  mapErr(r: unknown, fn: (e: unknown) => unknown): unknown {
+    if (r && typeof r === "object" && "_tag" in (r as Record<string, unknown>)) {
+      const t = r as { _tag: string; _0?: unknown };
+      if (t._tag === "Err") return { _tag: "Err", _0: fn(t._0) };
+    }
+    return r;
+  },
+  /** Polymorphic `.diff`: numeric magnitude (Time/Duration) or Set difference. */
+  diff(a: unknown, b: unknown): unknown {
+    if (typeof a === "number" || typeof b === "number") {
+      return Math.abs((a as number) - (b as number));
+    }
+    return _stdlib.setDiff(a as Record<string, true>, b as Record<string, true>);
+  },
 };
 
 // ----- Built-in capability handlers -----

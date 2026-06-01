@@ -5,9 +5,9 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { compile } from "@kumiki/compiler";
-import { nodeRuntimeBundleReader } from "@kumiki/compiler/node";
-import type { AppShape } from "@kumiki/runtime";
+import { compile } from "@kumikijs/compiler";
+import { nodeRuntimeBundleReader } from "@kumikijs/compiler/node";
+import type { AppShape } from "@kumikijs/runtime";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const TMP_ROOT = join(here, "..", ".smoke-tmp");

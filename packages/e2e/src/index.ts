@@ -1,4 +1,4 @@
-// Public API of @kumiki/e2e — the real-browser (Playwright) verification tier.
+// Public API of @kumikijs/e2e — the real-browser (Playwright) verification tier.
 export {
   type Action,
   type BrowserOptions,

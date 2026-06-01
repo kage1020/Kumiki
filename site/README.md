@@ -1,4 +1,4 @@
-# @kumiki/site
+# @kumikijs/site
 
 English · [日本語](./README.ja.md)
 
@@ -11,12 +11,12 @@ The normative source lives at the repository root in `spec/` etc. Before the bui
 ## Development
 
 ```sh
-pnpm --filter @kumiki/site dev      # sync + dev server
-pnpm --filter @kumiki/site build    # sync + production build → site/dist
-pnpm --filter @kumiki/site preview
+pnpm --filter @kumikijs/site dev      # sync + dev server
+pnpm --filter @kumikijs/site build    # sync + production build → site/dist
+pnpm --filter @kumikijs/site preview
 ```
 
-The Playground imports `@kumiki/runtime/bundle?raw`, so the runtime bundle is required before building. Using `pnpm exec turbo run build --filter=@kumiki/site` builds the dependencies (runtime/compiler) first automatically.
+The Playground imports `@kumikijs/runtime/bundle?raw`, so the runtime bundle is required before building. Using `pnpm exec turbo run build --filter=@kumikijs/site` builds the dependencies (runtime/compiler) first automatically.
 
 ## Deploy (Cloudflare Pages → kumiki.kage1020.com)
 
@@ -29,6 +29,6 @@ CI ([`.github/workflows/deploy-site.yml`](../.github/workflows/deploy-site.yml))
 For a manual deploy:
 
 ```sh
-pnpm exec turbo run build --filter=@kumiki/site
+pnpm exec turbo run build --filter=@kumikijs/site
 cd site && wrangler pages deploy   # uses pages_build_output_dir=dist from wrangler.jsonc
 ```

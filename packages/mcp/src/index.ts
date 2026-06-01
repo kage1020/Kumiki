@@ -21,13 +21,13 @@ import {
   smokeSource,
   viewDef,
   viewWithDeps,
-} from "@kumiki/cli";
+} from "@kumikijs/cli";
 
 type Scenario = Parameters<typeof runScenarioSource>[1];
 
-import type { KumikiError } from "@kumiki/compiler";
-import { check, compile, lex, parse } from "@kumiki/compiler";
-import { nodeRuntimeBundleReader } from "@kumiki/compiler/node";
+import type { KumikiError } from "@kumikijs/compiler";
+import { check, compile, lex, parse } from "@kumikijs/compiler";
+import { nodeRuntimeBundleReader } from "@kumikijs/compiler/node";
 import { z } from "zod";
 import { getSpecDoc, listSpecDocs, searchSpec } from "./spec.ts";
 

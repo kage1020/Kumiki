@@ -1,8 +1,8 @@
-#!/usr/bin/env tsx
+#!/usr/bin/env node
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
-import { check, compile } from "@kumiki/compiler";
+import { check, compile } from "@kumikijs/compiler";
 import { fixCmd } from "./fix.ts";
 import { addDef, removeDef, renameDef, replaceDef } from "./mutate.ts";
 import { runCmd, smokeCmd } from "./smoke.ts";
@@ -216,7 +216,7 @@ async function main(argv: string[]): Promise<void> {
 function buildRuntimeBundle(): string {
   // The prebuilt runtime bundle is a browser-ready ESM module that already
   // exports mount / _stdlib / builtinEffects.
-  const runtimeBundlePath = require.resolve("@kumiki/runtime/bundle");
+  const runtimeBundlePath = require.resolve("@kumikijs/runtime/bundle");
   return readFileSync(runtimeBundlePath, "utf8");
 }
 

@@ -3,8 +3,8 @@
 // CSS layout / visibility, real focus management, and real rendering. State is
 // still the oracle — read from `window.__kumikiApp.live` in the page.
 
-import { compile } from "@kumiki/compiler";
-import { nodeRuntimeBundleReader } from "@kumiki/compiler/node";
+import { compile } from "@kumikijs/compiler";
+import { nodeRuntimeBundleReader } from "@kumikijs/compiler/node";
 import { chromium, type Page } from "playwright";
 
 export type Action =

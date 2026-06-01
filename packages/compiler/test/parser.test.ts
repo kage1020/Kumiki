@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import type { AppDef, ReducerDef, SlotDef, TileDef, TypeDef } from "@kumiki/compiler";
-import { lex, parse } from "@kumiki/compiler";
+import type { AppDef, ReducerDef, SlotDef, TileDef, TypeDef } from "@kumikijs/compiler";
+import { lex, parse } from "@kumikijs/compiler";
 import { describe, expect, it } from "vitest";
 
 const COUNTER_PATH = resolve(__dirname, "../../../examples/apps/01-counter/app.kumiki");

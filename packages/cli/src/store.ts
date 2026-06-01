@@ -3,8 +3,8 @@
 // separate path that rewrites the file and appends to the op-log.
 
 import { readFileSync } from "node:fs";
-import type { Def, Program, Token } from "@kumiki/compiler";
-import { lex, parse } from "@kumiki/compiler";
+import type { Def, Program, Token } from "@kumikijs/compiler";
+import { lex, parse } from "@kumikijs/compiler";
 
 export type DefRange = {
   /** 1-based start line in the source file. */

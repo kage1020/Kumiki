@@ -6,7 +6,7 @@
 import { readdirSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { smoke } from "@kumiki/runtime";
+import { smoke } from "@kumikijs/runtime";
 import { describe, expect, it } from "vitest";
 import { loadApp } from "./helpers/load.ts";
 

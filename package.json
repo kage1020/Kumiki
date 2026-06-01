@@ -1,5 +1,5 @@
 {
-  "name": "kumiki",
+  "name": "kumiki-monorepo",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,11 +13,17 @@
     "typecheck": "turbo run typecheck",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "kumiki": "tsx packages/cli/src/kumiki.ts"
+    "kumiki": "tsx packages/cli/src/kumiki.ts",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish"
   },
   "devDependencies": {
     "@biomejs/biome": "catalog:",
+    "@changesets/cli": "^2.31.0",
+    "tsdown": "^0.22.1",
     "tsx": "catalog:",
-    "turbo": "^2.9.16"
+    "turbo": "^2.9.16",
+    "unrun": "^0.3.0"
   }
 }

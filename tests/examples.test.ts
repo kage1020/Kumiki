@@ -6,8 +6,8 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { compile, type KumikiError } from "@kumiki/compiler";
-import { nodeRuntimeBundleReader } from "@kumiki/compiler/node";
+import { compile, type KumikiError } from "@kumikijs/compiler";
+import { nodeRuntimeBundleReader } from "@kumikijs/compiler/node";
 import { describe, expect, it } from "vitest";
 
 const here = dirname(fileURLToPath(import.meta.url));

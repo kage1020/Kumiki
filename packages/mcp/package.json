@@ -1,11 +1,29 @@
 {
-  "name": "@kumiki/mcp",
+  "name": "@kumikijs/mcp",
   "version": "0.1.0",
   "type": "module",
   "description": "Kumiki MCP server — exposes the compiler (check/build/list/view/add/replace/remove/fix) and spec search as MCP tools.",
   "license": "Apache-2.0",
+  "author": "kage1020",
+  "homepage": "https://github.com/kage1020/Kumiki/tree/main/packages/mcp#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kage1020/Kumiki.git",
+    "directory": "packages/mcp"
+  },
+  "bugs": "https://github.com/kage1020/Kumiki/issues",
+  "keywords": [
+    "kumiki",
+    "ai-first",
+    "mcp",
+    "model-context-protocol",
+    "compiler"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
-    "kumiki-mcp": "./src/server.ts"
+    "kumiki-mcp": "./dist/server.js"
   },
   "exports": {
     ".": {
@@ -14,19 +32,28 @@
     }
   },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      }
+    }
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsdown",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "biome check src",
     "start": "tsx src/server.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "@kumiki/cli": "workspace:*",
-    "@kumiki/compiler": "workspace:*",
+    "@kumikijs/cli": "workspace:*",
+    "@kumikijs/compiler": "workspace:*",
     "zod": "^4.4.3"
   },
   "devDependencies": {

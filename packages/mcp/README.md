@@ -1,4 +1,4 @@
-# @kumiki/mcp
+# @kumikijs/mcp
 
 English · [日本語](./README.ja.md)
 
@@ -22,7 +22,7 @@ Exposes the Kumiki compiler and the AI editing toolchain as an **MCP (Model Cont
 ## Startup
 
 ```sh
-pnpm --filter @kumiki/mcp start
+pnpm --filter @kumikijs/mcp start
 ```
 
 Example configuration for an MCP client (e.g. Claude Code):

@@ -1,9 +1,28 @@
 {
-  "name": "@kumiki/compiler",
+  "name": "@kumikijs/compiler",
   "version": "0.1.0",
   "type": "module",
   "description": "Kumiki compiler — lexer, parser, typechecker, and code generator.",
   "license": "Apache-2.0",
+  "author": "kage1020",
+  "homepage": "https://github.com/kage1020/Kumiki/tree/main/packages/compiler#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kage1020/Kumiki.git",
+    "directory": "packages/compiler"
+  },
+  "bugs": "https://github.com/kage1020/Kumiki/issues",
+  "keywords": [
+    "kumiki",
+    "ai-first",
+    "compiler",
+    "dsl",
+    "codegen",
+    "language"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -15,17 +34,30 @@
     }
   },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./node": {
+        "types": "./dist/node.d.ts",
+        "import": "./dist/node.js"
+      }
+    }
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsdown",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "lint": "biome check src test"
   },
   "dependencies": {
-    "@kumiki/runtime": "workspace:*"
+    "@kumikijs/runtime": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",

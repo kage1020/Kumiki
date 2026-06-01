@@ -1,10 +1,10 @@
-# @kumiki/e2e
+# @kumikijs/e2e
 
 English · [日本語](./README.ja.md)
 
 An **opt-in tier** that verifies Kumiki apps in a real browser (Chromium / Playwright). It catches layers invisible to jsdom — CSS layout, **real focus**, real rendering, and real events.
 
-It uses the **same scenario format** as `@kumiki/runtime`'s jsdom `runScenario`, plus browser-only assertions:
+It uses the **same scenario format** as `@kumikijs/runtime`'s jsdom `runScenario`, plus browser-only assertions:
 
 - `focused`: that the given CSS selector is actually focused (detects focus-stealing bugs on re-render)
 - `visible` / `hidden`: that it is really visible / invisible per computed style (visibility you can't tell from mere DOM presence, e.g. `display:none`)
@@ -16,19 +16,19 @@ The state oracle, as in the jsdom version, reads `window.__kumikiApp.live` (slot
 A one-time browser install is required:
 
 ```sh
-pnpm --filter @kumiki/e2e exec playwright install chromium
+pnpm --filter @kumikijs/e2e exec playwright install chromium
 ```
 
 Run:
 
 ```sh
-pnpm --filter @kumiki/e2e exec tsx src/cli.ts <app.kumiki> <scenario.json> [--headed]
+pnpm --filter @kumikijs/e2e exec tsx src/cli.ts <app.kumiki> <scenario.json> [--headed]
 ```
 
 Example:
 
 ```sh
-pnpm --filter @kumiki/e2e exec tsx src/cli.ts \
+pnpm --filter @kumikijs/e2e exec tsx src/cli.ts \
   examples/apps/06-expenses/app.kumiki \
   examples/apps/06-expenses/scenario.browser.json
 ```

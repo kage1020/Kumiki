@@ -1,5 +1,5 @@
 {
-  "name": "@kumiki/tests",
+  "name": "@kumikijs/tests",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,8 +10,8 @@
     "lint": "biome check ."
   },
   "devDependencies": {
-    "@kumiki/compiler": "workspace:*",
-    "@kumiki/runtime": "workspace:*",
+    "@kumikijs/compiler": "workspace:*",
+    "@kumikijs/runtime": "workspace:*",
     "jsdom": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

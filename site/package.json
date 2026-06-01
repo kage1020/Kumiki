@@ -1,5 +1,5 @@
 {
-  "name": "@kumiki/site",
+  "name": "@kumikijs/site",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -12,8 +12,8 @@
     "preview": "vitepress preview"
   },
   "dependencies": {
-    "@kumiki/compiler": "workspace:*",
-    "@kumiki/runtime": "workspace:*"
+    "@kumikijs/compiler": "workspace:*",
+    "@kumikijs/runtime": "workspace:*"
   },
   "devDependencies": {
     "vitepress": "^1.6.4",

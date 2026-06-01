@@ -13,8 +13,8 @@ import {
   renameDef,
   replaceDef,
   viewDef,
-} from "@kumiki/cli";
-import { check } from "@kumiki/compiler";
+} from "@kumikijs/cli";
+import { check } from "@kumikijs/compiler";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const here = dirname(fileURLToPath(import.meta.url));

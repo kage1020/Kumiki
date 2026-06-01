@@ -1,5 +1,5 @@
 {
-  "name": "@kumiki/e2e",
+  "name": "@kumikijs/e2e",
   "version": "0.1.0",
   "type": "module",
   "description": "Kumiki real-browser verification tier — runs the same scenarios in Chromium (Playwright) to catch CSS layout, real focus, and rendering bugs jsdom can't see.",
@@ -23,7 +23,7 @@
     "lint": "biome check src"
   },
   "dependencies": {
-    "@kumiki/compiler": "workspace:*",
+    "@kumikijs/compiler": "workspace:*",
     "playwright": "^1.60.0"
   },
   "devDependencies": {

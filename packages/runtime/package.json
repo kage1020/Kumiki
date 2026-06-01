@@ -1,28 +1,56 @@
 {
-  "name": "@kumiki/runtime",
+  "name": "@kumikijs/runtime",
   "version": "0.1.0",
   "type": "module",
   "description": "Kumiki DOM runtime — mounts compiled Kumiki apps, dispatches effects, manages the signal graph.",
   "license": "Apache-2.0",
+  "author": "kage1020",
+  "homepage": "https://github.com/kage1020/Kumiki/tree/main/packages/runtime#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kage1020/Kumiki.git",
+    "directory": "packages/runtime"
+  },
+  "bugs": "https://github.com/kage1020/Kumiki/issues",
+  "keywords": [
+    "kumiki",
+    "ai-first",
+    "runtime",
+    "dom",
+    "signals",
+    "reactive"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
     },
-    "./bundle": "./dist/runtime.bundle.js"
+    "./bundle": "./dist/index.js"
   },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./bundle": "./dist/index.js"
+    }
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json && esbuild src/index.ts --bundle --format=esm --outfile=dist/runtime.bundle.js",
+    "build": "tsdown",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "lint": "biome check src test"
   },
   "devDependencies": {
-    "esbuild": "catalog:",
     "jsdom": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

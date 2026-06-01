@@ -12,14 +12,22 @@
     "directory": "packages/kumiki"
   },
   "bugs": "https://github.com/kage1020/Kumiki/issues",
-  "keywords": ["kumiki", "ai-first", "cli", "compiler", "codegen"],
+  "keywords": [
+    "kumiki",
+    "ai-first",
+    "cli",
+    "compiler",
+    "codegen"
+  ],
   "engines": {
     "node": ">=20"
   },
   "bin": {
     "kumiki": "./dist/kumiki.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public",
     "provenance": true

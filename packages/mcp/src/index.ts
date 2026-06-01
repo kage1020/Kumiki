@@ -7,7 +7,6 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import {
   addDef,
   findReferences,
@@ -22,6 +21,7 @@ import {
   viewDef,
   viewWithDeps,
 } from "@kumikijs/cli";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
 type Scenario = Parameters<typeof runScenarioSource>[1];
 

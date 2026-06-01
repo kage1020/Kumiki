@@ -1,8 +1,8 @@
 // kumiki fix — propose auto-patches for repairable typecheck errors.
 
 import { readFileSync, writeFileSync } from "node:fs";
-import type { KumikiError } from "@kumiki/compiler";
-import { check, lex, parse } from "@kumiki/compiler";
+import type { KumikiError } from "@kumikijs/compiler";
+import { check, lex, parse } from "@kumikijs/compiler";
 import { listDefs, load, type Store } from "./store.ts";
 
 export type AutoPatch = {

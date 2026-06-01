@@ -1,37 +1,66 @@
 {
-  "name": "@kumiki/cli",
+  "name": "@kumikijs/cli",
   "version": "0.1.0",
   "type": "module",
   "description": "Kumiki CLI — build, check, and AI-edit (list/view/add/replace/remove/rename/fix) Kumiki sources.",
   "license": "Apache-2.0",
+  "author": "kage1020",
+  "homepage": "https://github.com/kage1020/Kumiki/tree/main/packages/cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kage1020/Kumiki.git",
+    "directory": "packages/cli"
+  },
+  "bugs": "https://github.com/kage1020/Kumiki/issues",
+  "keywords": [
+    "kumiki",
+    "ai-first",
+    "cli",
+    "compiler",
+    "codegen"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "bin": {
-    "kumiki": "./src/kumiki.ts"
+    "kumiki": "./dist/kumiki.js"
   },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
-    }
+    },
+    "./kumiki": "./src/kumiki.ts"
   },
   "files": [
-    "dist",
-    "src"
+    "dist"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./kumiki": "./dist/kumiki.js"
+    }
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsdown",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "lint": "biome check src test",
     "kumiki": "tsx src/kumiki.ts"
   },
   "dependencies": {
-    "@kumiki/compiler": "workspace:*",
-    "@kumiki/runtime": "workspace:*"
+    "@kumikijs/compiler": "workspace:*",
+    "@kumikijs/runtime": "workspace:*",
+    "jsdom": "catalog:"
   },
   "devDependencies": {
     "@types/jsdom": "^28.0.3",
     "@types/node": "catalog:",
-    "jsdom": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

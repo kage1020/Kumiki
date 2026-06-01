@@ -1,4 +1,4 @@
-import { LexError, lex } from "@kumiki/compiler";
+import { LexError, lex } from "@kumikijs/compiler";
 import { describe, expect, it } from "vitest";
 
 const tokenSummary = (s: string) =>

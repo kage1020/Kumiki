@@ -1,4 +1,4 @@
-# @kumiki/mcp
+# @kumikijs/mcp
 
 [English](./README.md) · 日本語
 
@@ -22,7 +22,7 @@ Kumiki コンパイラと AI 編集ツールチェインを **MCP（Model Contex
 ## 起動
 
 ```sh
-pnpm --filter @kumiki/mcp start
+pnpm --filter @kumikijs/mcp start
 ```
 
 MCP クライアント（例: Claude Code）の設定例:

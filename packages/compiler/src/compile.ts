@@ -15,7 +15,7 @@ export type ExtendedCodegenOptions = CodegenOptions & {
    * Returns the prebuilt runtime bundle JS. Required when `bundle` is true.
    * This is injected (rather than read here) to keep the compiler free of any
    * Node-only imports, so it can run unchanged in the browser. Node callers can
-   * use `nodeRuntimeBundleReader` from `@kumiki/compiler/node`.
+   * use `nodeRuntimeBundleReader` from `@kumikijs/compiler/node`.
    */
   readRuntimeBundle?: () => string;
 };
@@ -41,7 +41,7 @@ export function compile(source: string, opts: ExtendedCodegenOptions): CompileRe
   if (opts.bundle) {
     if (!opts.readRuntimeBundle) {
       throw new Error(
-        "compile({ bundle: true }) requires a readRuntimeBundle function (see @kumiki/compiler/node).",
+        "compile({ bundle: true }) requires a readRuntimeBundle function (see @kumikijs/compiler/node).",
       );
     }
     js = inlineRuntime(js, opts.readRuntimeBundle());

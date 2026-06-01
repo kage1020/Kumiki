@@ -1,4 +1,4 @@
-# @kumiki/site
+# @kumikijs/site
 
 [English](./README.md) · 日本語
 
@@ -11,12 +11,12 @@ Kumiki ドキュメントサイト（VitePress）。`spec/` `guide/` `examples/`
 ## 開発
 
 ```sh
-pnpm --filter @kumiki/site dev      # 同期 + dev サーバ
-pnpm --filter @kumiki/site build    # 同期 + 本番ビルド → site/dist
-pnpm --filter @kumiki/site preview
+pnpm --filter @kumikijs/site dev      # 同期 + dev サーバ
+pnpm --filter @kumikijs/site build    # 同期 + 本番ビルド → site/dist
+pnpm --filter @kumikijs/site preview
 ```
 
-Playground は `@kumiki/runtime/bundle?raw` を取り込むため、ビルド前に runtime バンドルが必要。`pnpm exec turbo run build --filter=@kumiki/site` を使えば依存（runtime/compiler）が自動で先にビルドされる。
+Playground は `@kumikijs/runtime/bundle?raw` を取り込むため、ビルド前に runtime バンドルが必要。`pnpm exec turbo run build --filter=@kumikijs/site` を使えば依存（runtime/compiler）が自動で先にビルドされる。
 
 ## デプロイ（Cloudflare Pages → kumiki.kage1020.com）
 
@@ -29,6 +29,6 @@ CI（[`.github/workflows/deploy-site.yml`](../.github/workflows/deploy-site.yml)
 手動デプロイは:
 
 ```sh
-pnpm exec turbo run build --filter=@kumiki/site
+pnpm exec turbo run build --filter=@kumikijs/site
 cd site && wrangler pages deploy   # wrangler.jsonc の pages_build_output_dir=dist を使用
 ```

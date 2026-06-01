@@ -6,8 +6,8 @@ import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { compile } from "@kumiki/compiler";
-import { nodeRuntimeBundleReader } from "@kumiki/compiler/node";
+import { compile } from "@kumikijs/compiler";
+import { nodeRuntimeBundleReader } from "@kumikijs/compiler/node";
 import {
   type AppShape,
   runScenario,
@@ -15,7 +15,7 @@ import {
   type ScenarioReport,
   type SmokeReport,
   smoke,
-} from "@kumiki/runtime";
+} from "@kumikijs/runtime";
 import { JSDOM } from "jsdom";
 
 let domReady = false;

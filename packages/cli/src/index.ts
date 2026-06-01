@@ -1,4 +1,4 @@
-// Public API of @kumiki/cli — the programmatic surface behind the `kumiki` command.
+// Public API of @kumikijs/cli — the programmatic surface behind the `kumiki` command.
 
 export { type AutoPatch, fixCmd, planFixes } from "./fix.ts";
 export { addDef, removeDef, renameDef, replaceDef } from "./mutate.ts";

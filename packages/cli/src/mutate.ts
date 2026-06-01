@@ -2,7 +2,7 @@
 // file and appends an entry to `<file>.kumiki-ops.jsonl`.
 
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
-import { check, lex, parse } from "@kumiki/compiler";
+import { check, lex, parse } from "@kumikijs/compiler";
 import { findReferences, load } from "./store.ts";
 
 const ULID_ALPHABET = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";

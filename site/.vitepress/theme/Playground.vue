@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
-import { compile, lex, parse, check } from "@kumiki/compiler";
+import { compile, lex, parse, check } from "@kumikijs/compiler";
 // The prebuilt runtime bundle, inlined as a string so generated apps are
 // fully self-contained and runnable inside the preview iframe.
-import runtimeBundle from "@kumiki/runtime/bundle?raw";
+import runtimeBundle from "@kumikijs/runtime/bundle?raw";
 
 type Diag = { code: string; kind: string; message: string; line: number; col: number };
 

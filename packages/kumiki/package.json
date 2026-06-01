@@ -1,0 +1,47 @@
+{
+  "name": "kumiki",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Kumiki — the convenient `kumiki` CLI entry for the AI-first web framework language. Wraps @kumikijs/cli.",
+  "license": "Apache-2.0",
+  "author": "kage1020",
+  "homepage": "https://github.com/kage1020/Kumiki#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kage1020/Kumiki.git",
+    "directory": "packages/kumiki"
+  },
+  "bugs": "https://github.com/kage1020/Kumiki/issues",
+  "keywords": [
+    "kumiki",
+    "ai-first",
+    "cli",
+    "compiler",
+    "codegen"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "kumiki": "./dist/kumiki.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsdown",
+    "lint": "biome check src",
+    "kumiki": "tsx src/kumiki.ts"
+  },
+  "dependencies": {
+    "@kumikijs/cli": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  }
+}

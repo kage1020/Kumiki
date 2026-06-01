@@ -1,10 +1,10 @@
-# @kumiki/e2e
+# @kumikijs/e2e
 
 [English](./README.md) · 日本語
 
 実ブラウザ（Chromium / Playwright）で Kumiki アプリを検証する **opt-in tier**。jsdom では見えない層 — CSS レイアウト・**実フォーカス**・実レンダリング・実イベント — を捕まえる。
 
-`@kumiki/runtime` の jsdom `runScenario` と**同じシナリオ形式**を使い、加えてブラウザ限定アサーションを持つ:
+`@kumikijs/runtime` の jsdom `runScenario` と**同じシナリオ形式**を使い、加えてブラウザ限定アサーションを持つ:
 
 - `focused`: その CSS セレクタが実際にフォーカスされていること（再レンダリング時のフォーカス奪取バグを検出）
 - `visible` / `hidden`: 計算済みスタイル上で本当に見えている／いないこと（`display:none` 等、DOM 上の存在では分からない可視性）
@@ -16,19 +16,19 @@
 ブラウザのインストールが一度必要:
 
 ```sh
-pnpm --filter @kumiki/e2e exec playwright install chromium
+pnpm --filter @kumikijs/e2e exec playwright install chromium
 ```
 
 実行:
 
 ```sh
-pnpm --filter @kumiki/e2e exec tsx src/cli.ts <app.kumiki> <scenario.json> [--headed]
+pnpm --filter @kumikijs/e2e exec tsx src/cli.ts <app.kumiki> <scenario.json> [--headed]
 ```
 
 例:
 
 ```sh
-pnpm --filter @kumiki/e2e exec tsx src/cli.ts \
+pnpm --filter @kumikijs/e2e exec tsx src/cli.ts \
   examples/apps/06-expenses/app.kumiki \
   examples/apps/06-expenses/scenario.browser.json
 ```

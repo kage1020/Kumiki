@@ -1,4 +1,4 @@
-// Public API of @kumiki/compiler.
+// Public API of @kumikijs/compiler.
 export type * from "./ast.ts";
 export { type CodegenOptions, codegen, RUNTIME_HELPERS } from "./codegen.ts";
 export {

@@ -14,6 +14,7 @@ import type {
   TypeDef,
   TypeExpr,
 } from "./ast.ts";
+import { STANDARD_CAPABILITIES } from "./capabilities.ts";
 import { KNOWN_METHODS } from "./codegen.ts";
 
 export type KumikiError = {
@@ -76,9 +77,17 @@ const BUILTIN_TILES = new Set([
 
 const A11Y_CODES = new Set(["E0701", "E0702", "E0703"]);
 
-/** Returns errors with a11y warnings filtered out (unless strict). */
-export function check(program: Program, opts?: { strictA11y?: boolean }): KumikiError[] {
-  const errors = checkAll(program);
+/**
+ * Returns errors with a11y warnings filtered out (unless strict).
+ * `capabilities` lists project-registered capabilities (from a
+ * `kumiki.caps.json` manifest) that are accepted in `app.caps` in addition to
+ * the standard set.
+ */
+export function check(
+  program: Program,
+  opts?: { strictA11y?: boolean; capabilities?: string[] },
+): KumikiError[] {
+  const errors = checkAll(program, new Set(opts?.capabilities ?? []));
   if (opts?.strictA11y) return errors;
   return errors.filter((e) => !A11Y_CODES.has(e.code));
 }
@@ -95,7 +104,7 @@ type SymbolTable = {
   app?: AppDef;
 };
 
-function checkAll(program: Program): KumikiError[] {
+function checkAll(program: Program, registeredCaps: Set<string>): KumikiError[] {
   const errors: KumikiError[] = [];
   const sym: SymbolTable = {
     types: new Map(),
@@ -151,7 +160,7 @@ function checkAll(program: Program): KumikiError[] {
     if (def.kind === "ReducerDef") checkReducer(def, sym, errors);
     if (def.kind === "FnDef") checkFn(def, sym, errors);
     if (def.kind === "EffectDef") checkEffect(def, sym, errors);
-    if (def.kind === "AppDef") checkApp(def, sym, errors);
+    if (def.kind === "AppDef") checkApp(def, sym, errors, registeredCaps);
   }
 
   return errors;
@@ -622,7 +631,23 @@ function checkEffect(eff: EffectDef, sym: SymbolTable, errors: KumikiError[]): v
     });
 }
 
-function checkApp(app: AppDef, sym: SymbolTable, errors: KumikiError[]): void {
+function checkApp(
+  app: AppDef,
+  sym: SymbolTable,
+  errors: KumikiError[],
+  registeredCaps: Set<string>,
+): void {
+  // Each declared capability must be standard or registered via a manifest.
+  for (const cap of app.caps) {
+    if (!STANDARD_CAPABILITIES.has(cap) && !registeredCaps.has(cap)) {
+      errors.push({
+        code: "E0302",
+        kind: "unknown-capability",
+        message: `Unknown capability "${cap}" in app.caps — use a standard capability or register it in kumiki.caps.json`,
+        pos: app.pos,
+      });
+    }
+  }
   let saw404 = false;
   for (const r of app.routes) {
     if (r.tile.startsWith(">>")) continue; // redirect

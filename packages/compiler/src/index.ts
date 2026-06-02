@@ -1,5 +1,11 @@
 // Public API of @kumikijs/compiler.
 export type * from "./ast.ts";
+export {
+  type CapabilityManifest,
+  type ManifestResult,
+  parseCapabilityManifest,
+  STANDARD_CAPABILITIES,
+} from "./capabilities.ts";
 export { type CodegenOptions, codegen, RUNTIME_HELPERS } from "./codegen.ts";
 export {
   type CompileFail,

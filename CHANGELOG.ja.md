@@ -8,14 +8,14 @@
 
 ### Planned — v0.2
 
-スコープ・設計・受け入れ基準：[design-notes/roadmap-v0.2.ja.md](./design-notes/roadmap-v0.2.ja.md)。spec が既に「planned for v0.2」と明記している 5 項目を、独立したマイルストーン（M1–M5）として出荷する。M1–M2 は出荷済み（下の _Added_ 参照）：
+スコープ・設計・受け入れ基準：[design-notes/roadmap-v0.2.ja.md](./design-notes/roadmap-v0.2.ja.md)。spec が既に「planned for v0.2」と明記している 5 項目を、独立したマイルストーン（M1–M5）として出荷する。M1–M3 は出荷済み（下の _Added_ 参照）：
 
-- **M3 — プラグインによる capability 登録**：コンパイラを fork せず独自 capability + effect を登録する宣言的マニフェスト（`spec/stdlib.md §2.5`）。
 - **M4 — `kumiki fix --auto-patch <test-name>`**：`fix` を typecheck エラーからテスト失敗まで拡張し、ソースパッチを提案・適用（`spec/testing.md §8.7.1`）。
 - **M5 — `motion` レイヤー**：グローバル CSS の抜け穴のない、宣言的でスコープされた transition / keyframes（`spec/style.md §4.9`）。
 
 ### Added
 
+- **v0.2 M3 — プラグインによる capability 登録**：プロジェクトは `.kumiki` ファイルと同じディレクトリの `kumiki.caps.json` マニフェストで独自 capability を登録できる。登録名は `app.caps` で受理され、その effect は emit 可能になり capability 境界で dispatch される（標準 effect と同様 scenario でモック可能）。併せて spec が長らく定めていた「**未登録 capability はコンパイルエラー**」を実装した — 標準 capability セット + 新 **E0302 `unknown-capability`**（従来は任意の cap 文字列を受理しており `spec/stdlib.md §2.5` と乖離していた）。マニフェストは宣言的な capability 境界であって**新しい構文ではない**（rationale の非ゴールを維持）。CLI・MCP（`capabilities` 引数 / 同居マニフェスト）・テストハーネスが解決する。新規 example `examples/features/27-custom-capability.kumiki` + `kumiki.caps.json`。（[spec/stdlib.md](./spec/stdlib.md) §2.5）
 - **v0.2 M2 — `overlay` builtin**：`overlay(...children)` による z 軸重ね。最初の子がベース層（通常フロー）、以降の子はコンテナ上に絶対配置される（ベースのレイアウトは決してずれない）— モーダル / トースト / ドロップダウン / ツールチップの土台。`align` prop が重ねる子を配置（縦 `top`/`bottom` ＋ 横 `left`/`right` を `-` で連結、例 `top-left`、既定 `center`、未知は `center`）。`when(...)` と合成して mount/unmount。CSS は自己完結（グローバル CSS の抜け穴なし）。新規 example `examples/features/26-overlay.kumiki`。（[spec/style.md](./spec/style.md) §4.4.3）
 - **v0.2 M1 — `stop-timer(name)`**：タイマートリガーに `timer(d, name=N)` で名前を付与でき、reducer から `stop-timer(N)` 文で停止できる。タイマー名は単一ネームスペースを共有し一意でなければならない（重複は **E0002**）。未宣言の名前への `stop-timer` は **E0106**。`stop-timer` は純粋な制御文 — reducer は `stopTimers` を返し runtime が interval を clear するので、reducer の純粋性は保たれる。全タイマー（稼働中・停止中問わず）は `app` dispose 時に clear される。新規 example `examples/features/25-stop-timer.kumiki`。（[spec/lifecycle.md](./spec/lifecycle.md) §7.1.5）
 - pnpm + Turborepo モノレポ構成（`@kumiki/compiler` / `@kumiki/runtime` / `@kumiki/cli` / `@kumiki/mcp`）。

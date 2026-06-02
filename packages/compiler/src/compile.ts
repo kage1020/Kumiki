@@ -18,6 +18,8 @@ export type ExtendedCodegenOptions = CodegenOptions & {
    * use `nodeRuntimeBundleReader` from `@kumikijs/compiler/node`.
    */
   readRuntimeBundle?: () => string;
+  /** Project-registered capabilities (from `kumiki.caps.json`) accepted in `app.caps`. */
+  capabilities?: string[];
 };
 
 /** Inline a runtime bundle into generated module code, stripping the bridging import/export lines. */
@@ -32,7 +34,7 @@ export function inlineRuntime(generatedJs: string, runtimeBundleJs: string): str
 export function compile(source: string, opts: ExtendedCodegenOptions): CompileResult {
   const tokens = lex(source);
   const program = parse(tokens);
-  const errors = check(program);
+  const errors = check(program, { capabilities: opts.capabilities });
   if (errors.length > 0) return { kind: "fail", errors };
 
   const generated = codegen(program, opts);

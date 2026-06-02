@@ -7,7 +7,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { compile, type KumikiError } from "@kumikijs/compiler";
-import { nodeRuntimeBundleReader } from "@kumikijs/compiler/node";
+import { nodeRuntimeBundleReader, resolveCapabilities } from "@kumikijs/compiler/node";
 import { describe, expect, it } from "vitest";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -47,6 +47,7 @@ function expectCompiles(file: string): void {
     runtimeSpecifier: "./runtime.js",
     bundle: true,
     readRuntimeBundle: nodeRuntimeBundleReader,
+    capabilities: resolveCapabilities(file),
   });
   if (result.kind === "fail") {
     throw new Error(`${file} failed to compile:\n${fmtErrors(result.errors)}`);

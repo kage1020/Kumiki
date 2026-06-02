@@ -44,3 +44,20 @@ describe("kumiki build CLI", () => {
     expect(runtime).not.toContain(": AppShape"); // type stripped
   });
 });
+
+// Regression (PR #15 review): `smoke`/`run` go through their own loadApp in
+// src/smoke.ts, which must also thread the kumiki.caps.json capabilities.
+// Otherwise a file using a manifest capability passes `check`/`build` but fails
+// with E0302 before smoke/scenario can run.
+describe("kumiki smoke with a manifest-registered capability", () => {
+  const CUSTOM_CAP = resolve(here, "../../../examples/features/27-custom-capability.kumiki");
+
+  it("smokes a file whose capability is declared in kumiki.caps.json", { timeout: 30000 }, () => {
+    const out = execFileSync("npx", ["tsx", CLI_PATH, "smoke", CUSTOM_CAP], {
+      stdio: "pipe",
+      shell: true,
+      encoding: "utf8",
+    });
+    expect(out).toContain("ok");
+  });
+});

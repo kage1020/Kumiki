@@ -141,14 +141,16 @@ async function main(argv: string[]): Promise<void> {
     case "smoke": {
       const input = argv[3];
       if (!input) usage();
-      await smokeCmd(resolve(process.cwd(), input));
+      const inputPath = resolve(process.cwd(), input);
+      await smokeCmd(inputPath, capsFor(inputPath));
       return;
     }
     case "run": {
       const input = argv[3];
       const scenario = argv[4];
       if (!input || !scenario) usage();
-      await runCmd(resolve(process.cwd(), input), resolve(process.cwd(), scenario));
+      const inputPath = resolve(process.cwd(), input);
+      await runCmd(inputPath, resolve(process.cwd(), scenario), capsFor(inputPath));
       return;
     }
     case "add": {

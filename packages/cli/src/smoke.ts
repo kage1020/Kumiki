@@ -60,11 +60,12 @@ function ensureDom(): void {
   domReady = true;
 }
 
-async function loadApp(source: string): Promise<AppShape> {
+async function loadApp(source: string, capabilities: string[] = []): Promise<AppShape> {
   const result = compile(source, {
     runtimeSpecifier: "ignored",
     bundle: true,
     readRuntimeBundle: nodeRuntimeBundleReader,
+    capabilities,
   });
   if (result.kind !== "ok") {
     throw new Error(
@@ -82,9 +83,12 @@ async function loadApp(source: string): Promise<AppShape> {
 }
 
 /** Compile + mount + exercise a Kumiki source string; return the smoke report. */
-export async function smokeSource(source: string): Promise<SmokeReport> {
+export async function smokeSource(
+  source: string,
+  capabilities: string[] = [],
+): Promise<SmokeReport> {
   ensureDom();
-  const app = await loadApp(source);
+  const app = await loadApp(source, capabilities);
   const doc = (globalThis as unknown as { document: Document }).document;
   const root = doc.createElement("div");
   doc.body.appendChild(root);
@@ -95,13 +99,13 @@ export async function smokeSource(source: string): Promise<SmokeReport> {
   }
 }
 
-export async function smokeFile(path: string): Promise<SmokeReport> {
-  return smokeSource(readFileSync(path, "utf8"));
+export async function smokeFile(path: string, capabilities: string[] = []): Promise<SmokeReport> {
+  return smokeSource(readFileSync(path, "utf8"), capabilities);
 }
 
 /** CLI entry: print a human-readable report and exit non-zero on failure. */
-export async function smokeCmd(path: string): Promise<void> {
-  const report = await smokeFile(path);
+export async function smokeCmd(path: string, capabilities: string[] = []): Promise<void> {
+  const report = await smokeFile(path, capabilities);
   if (report.ok) {
     console.log(`ok — mounted, rendered, ${report.interactions} interaction(s), no runtime errors`);
     return;
@@ -119,9 +123,10 @@ export async function smokeCmd(path: string): Promise<void> {
 export async function runScenarioSource(
   source: string,
   scenario: Scenario,
+  capabilities: string[] = [],
 ): Promise<ScenarioReport> {
   ensureDom();
-  const app = await loadApp(source);
+  const app = await loadApp(source, capabilities);
   const doc = (globalThis as unknown as { document: Document }).document;
   const root = doc.createElement("div");
   doc.body.appendChild(root);
@@ -133,9 +138,13 @@ export async function runScenarioSource(
 }
 
 /** CLI entry: run a scenario JSON file against a .kumiki file; print the trace. */
-export async function runCmd(kumikiPath: string, scenarioPath: string): Promise<void> {
+export async function runCmd(
+  kumikiPath: string,
+  scenarioPath: string,
+  capabilities: string[] = [],
+): Promise<void> {
   const scenario = JSON.parse(readFileSync(scenarioPath, "utf8")) as Scenario;
-  const report = await runScenarioSource(readFileSync(kumikiPath, "utf8"), scenario);
+  const report = await runScenarioSource(readFileSync(kumikiPath, "utf8"), scenario, capabilities);
   for (let i = 0; i < report.steps.length; i++) {
     const s = report.steps[i];
     if (!s) continue;

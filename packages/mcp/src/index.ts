@@ -27,7 +27,11 @@ type Scenario = Parameters<typeof runScenarioSource>[1];
 
 import type { KumikiError } from "@kumikijs/compiler";
 import { check, compile, lex, parse } from "@kumikijs/compiler";
-import { nodeRuntimeBundleReader, resolveCapabilities } from "@kumikijs/compiler/node";
+import {
+  CapabilityManifestError,
+  nodeRuntimeBundleReader,
+  resolveCapabilities,
+} from "@kumikijs/compiler/node";
 import { z } from "zod";
 import { getSpecDoc, listSpecDocs, searchSpec } from "./spec.ts";
 
@@ -53,6 +57,12 @@ function capsForInput(input: {
 }): string[] {
   if (input.path) return resolveCapabilities(resolve(process.cwd(), input.path));
   return input.capabilities ?? [];
+}
+
+/** Turn a thrown input error (bad path / malformed manifest) into a clean message. */
+function errMsg(e: unknown): string {
+  if (e instanceof CapabilityManifestError) return `capability manifest error: ${e.message}`;
+  return `error: ${e instanceof Error ? e.message : String(e)}`;
 }
 
 function toDiagnostics(errors: KumikiError[]): Diagnostic[] {
@@ -112,9 +122,13 @@ export function createServer(): McpServer {
       },
     },
     async (input) => {
-      const result = validate(readSource(input), capsForInput(input));
-      if (result.ok) return text("ok — no diagnostics");
-      return text(JSON.stringify(result.diagnostics, null, 2));
+      try {
+        const result = validate(readSource(input), capsForInput(input));
+        if (result.ok) return text("ok — no diagnostics");
+        return text(JSON.stringify(result.diagnostics, null, 2));
+      } catch (e) {
+        return text(errMsg(e));
+      }
     },
   );
 
@@ -137,20 +151,24 @@ export function createServer(): McpServer {
       },
     },
     async (input) => {
-      const source = readSource(input);
-      const result = compile(source, {
-        runtimeSpecifier: "./runtime.js",
-        bundle: true,
-        readRuntimeBundle: nodeRuntimeBundleReader,
-        capabilities: capsForInput(input),
-      });
-      if (result.kind === "fail") {
-        return text(`build failed:\n${JSON.stringify(toDiagnostics(result.errors), null, 2)}`);
+      try {
+        const source = readSource(input);
+        const result = compile(source, {
+          runtimeSpecifier: "./runtime.js",
+          bundle: true,
+          readRuntimeBundle: nodeRuntimeBundleReader,
+          capabilities: capsForInput(input),
+        });
+        if (result.kind === "fail") {
+          return text(`build failed:\n${JSON.stringify(toDiagnostics(result.errors), null, 2)}`);
+        }
+        if (input.includeJs) return text(result.js);
+        return text(
+          `build ok — ${result.js.length} bytes of JS (pass includeJs=true for the source)`,
+        );
+      } catch (e) {
+        return text(errMsg(e));
       }
-      if (input.includeJs) return text(result.js);
-      return text(
-        `build ok — ${result.js.length} bytes of JS (pass includeJs=true for the source)`,
-      );
     },
   );
 
@@ -163,22 +181,31 @@ export function createServer(): McpServer {
       inputSchema: {
         source: z.string().optional(),
         path: z.string().optional(),
+        capabilities: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "Project-registered capabilities (when passing `source`). With `path`, a co-located kumiki.caps.json is read automatically.",
+          ),
       },
     },
     async (input) => {
-      const source = readSource(input);
-      const report = await smokeSource(source);
-      if (report.ok) {
-        return text(
-          `ok — mounted, rendered, ${report.interactions} interaction(s), no runtime errors`,
+      try {
+        const report = await smokeSource(readSource(input), capsForInput(input));
+        if (report.ok) {
+          return text(
+            `ok — mounted, rendered, ${report.interactions} interaction(s), no runtime errors`,
+          );
+        }
+        const lines = report.issues.map(
+          (i) => `[${i.phase}] ${i.message}${i.trigger ? ` (on ${i.trigger})` : ""}`,
         );
+        return text(
+          `runtime smoke failed (mounted=${report.mounted}, rendered=${report.rendered}):\n${lines.join("\n")}`,
+        );
+      } catch (e) {
+        return text(errMsg(e));
       }
-      const lines = report.issues.map(
-        (i) => `[${i.phase}] ${i.message}${i.trigger ? ` (on ${i.trigger})` : ""}`,
-      );
-      return text(
-        `runtime smoke failed (mounted=${report.mounted}, rendered=${report.rendered}):\n${lines.join("\n")}`,
-      );
     },
   );
 
@@ -198,11 +225,25 @@ export function createServer(): McpServer {
             defaultEffect: z.record(z.string(), z.unknown()).optional(),
           })
           .describe("The scenario to run"),
+        capabilities: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "Project-registered capabilities (when passing `source`). With `path`, a co-located kumiki.caps.json is read automatically.",
+          ),
       },
     },
     async (input) => {
-      const source = readSource(input);
-      const report = await runScenarioSource(source, input.scenario as unknown as Scenario);
+      let report: Awaited<ReturnType<typeof runScenarioSource>>;
+      try {
+        report = await runScenarioSource(
+          readSource(input),
+          input.scenario as unknown as Scenario,
+          capsForInput(input),
+        );
+      } catch (e) {
+        return text(errMsg(e));
+      }
       const lines = report.steps.map((s, i) => {
         const status = s.errors.length === 0 && s.failures.length === 0 ? "ok" : "FAIL";
         const head = `step ${i}${s.label ? ` (${s.label})` : ""}${s.action ? `: ${s.action}` : ""}`;

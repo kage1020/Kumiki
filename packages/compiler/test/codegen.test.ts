@@ -50,4 +50,41 @@ describe("codegen", () => {
     expect(result.js).toContain('_stops.push("t")');
     expect(result.js).toContain("stopTimers: _stops");
   });
+
+  it("compiles overlay to a z-axis stacking node", () => {
+    const src = `
+      slot open : Bool = false
+      reducer show on=ui.click(B) do= open := true
+      tile B = button(text="open", onClick=show)
+      tile M = card(text("modal"))
+      tile App = overlay(B, when(open, M())) {align: "top"}
+      app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+    `;
+    const result = compile(src, { runtimeSpecifier: "./runtime.js" });
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.js).toContain('kind: "overlay"');
+    expect(result.js).toContain('"top"');
+  });
+
+  it("keeps a bare tile-ref base child in overlay (parser builtin registration)", () => {
+    // Regression: `overlay` must be in the parser's BUILTIN_TILES too, so its
+    // children are parsed in tile context. Before the fix, the bare ref
+    // `Content` parsed as a value expression and was dropped by
+    // collectChildren, leaving the base layer empty.
+    const src = `
+      slot open : Bool = false
+      reducer show on=ui.click(OpenBtn) do= open := true
+      tile OpenBtn = button(text="Open", onClick=show)
+      tile Content = column(heading("BASE-LAYER"))
+      tile Modal = card(text("modal"))
+      tile App = overlay(Content, when(open, Modal()))
+      app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+    `;
+    const result = compile(src, { runtimeSpecifier: "./runtime.js" });
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    const overlayPart = result.js.split('kind: "overlay"')[1] ?? "";
+    expect(overlayPart).toContain("BASE-LAYER");
+  });
 });

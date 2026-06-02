@@ -180,7 +180,13 @@ grid(A, B, C) {cols: [1, "auto", 1], gap: "sm"}     ; number or array
 stack(Card1, Card2, Card3) {gap: "md"}
 ```
 
-> For z-axis stacking (overlays), specify `position` directly as a prop on `box`, or use the `overlay` builtin planned for the future.
+**Overlay (z-axis stacking).** Use the `overlay` builtin to stack children on the z-axis:
+
+```kumiki
+overlay(Content, when(modalOpen, Modal())) {align: "center"}
+```
+
+`overlay(...children)` renders a `position: relative` container. The **first child is the base layer** (normal document flow); **each subsequent child is an overlay** placed absolutely over the container, so it does not shift the base layer's layout. This is the substrate for modals, toasts, dropdowns, and tooltips. The `align` prop places the overlaid children: a vertical part (`top` / `bottom`, default centered) and a horizontal part (`left` / `right`, default centered) joined with `-`, e.g. `top-left`, `bottom`, or `center` (the default). An unrecognized token falls back to `center`. Toggling an overlay child with `when(...)` mounts/unmounts it without disturbing the base layer.
 
 ### 4.4.4 panel / region / scroll / fieldset
 

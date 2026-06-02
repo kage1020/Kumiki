@@ -1,0 +1,19 @@
+# Feature: overlay — z-axis stacking. A modal is layered over page content and
+# toggled with `when`. The base layer (Content) is unaffected by the overlay.
+
+slot open : Bool = false
+
+reducer show on=ui.click(OpenBtn)  do= open := true
+reducer hide on=ui.click(CloseBtn) do= open := false
+
+tile OpenBtn  = button(text="Open", onClick=show)
+tile CloseBtn = button(text="Close", onClick=hide)
+tile Modal   = card(heading("Hello"), text("I am a modal."), CloseBtn) {pad: "lg", gap: "md"}
+tile Content = column(heading("Page"), text("Background content."), OpenBtn) {pad: "lg", gap: "md"}
+
+tile App = overlay(Content, when(open, Modal())) {align: "center"}
+
+app OverlayFeature
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

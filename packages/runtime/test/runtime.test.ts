@@ -232,6 +232,103 @@ describe("named timers + stop-timer", () => {
   });
 });
 
+// An overlay whose second child (the modal) is gated by the `open` slot —
+// mirrors what codegen emits for `overlay(Content, when(open, Modal()))`.
+function makeOverlayApp(): AppShape {
+  const app: AppShape = {
+    slots: { open: { value: false } },
+    caps: [],
+    effects: {},
+    init: [],
+    reducers: [
+      {
+        name: "toggle",
+        selector: { tile: "Btn" },
+        event: { kind: "ui", ev: "click" },
+        apply: (live) => ({ slots: { open: !(live.open as boolean) }, emits: [] }),
+      },
+    ],
+    root: () => {
+      const open = (app.live as Record<string, unknown>).open as boolean;
+      return {
+        kind: "overlay",
+        props: { align: "top" },
+        children: [
+          {
+            kind: "column",
+            props: {},
+            children: [
+              { kind: "heading", text: "Base" },
+              {
+                kind: "button",
+                text: "toggle",
+                props: {
+                  onClick: () =>
+                    (
+                      app as unknown as {
+                        _dispatch: (n: string, el: Record<string, unknown>) => void;
+                      }
+                    )._dispatch("toggle", {}),
+                },
+              },
+            ],
+          },
+          open ? { kind: "card", props: {}, children: [{ kind: "text", text: "Modal" }] } : null,
+        ],
+      };
+    },
+  };
+  return app;
+}
+
+describe("overlay builtin", () => {
+  let root: HTMLElement;
+  beforeEach(() => {
+    root = document.createElement("div");
+    document.body.appendChild(root);
+  });
+  afterEach(() => {
+    root.remove();
+  });
+
+  const clickToggle = (r: HTMLElement): void => {
+    Array.from(r.querySelectorAll("button"))
+      .find((b) => b.textContent === "toggle")
+      ?.click();
+  };
+
+  it("stacks layers: base in flow, overlay absolutely positioned by align; when toggles it", () => {
+    const app = makeOverlayApp();
+    mount(app, root);
+
+    const overlay = root.querySelector('[data-kumiki-tile="overlay"]') as HTMLElement;
+    expect(overlay).toBeTruthy();
+    expect(overlay.style.position).toBe("relative");
+    // closed: base is present, no overlay layer yet
+    expect(overlay.textContent).toContain("Base");
+    expect(root.querySelector('[data-kumiki-tile="overlay-layer"]')).toBeNull();
+
+    // open: overlay layer mounts, absolutely positioned, aligned to top
+    clickToggle(root);
+    const layer = root.querySelector('[data-kumiki-tile="overlay-layer"]') as HTMLElement;
+    expect(layer).toBeTruthy();
+    expect(layer.style.position).toBe("absolute");
+    expect(layer.style.alignItems).toBe("flex-start"); // align "top"
+    expect(layer.style.justifyContent).toBe("center");
+    expect(layer.textContent).toContain("Modal");
+    // base layer unaffected
+    const overlay2 = root.querySelector('[data-kumiki-tile="overlay"]') as HTMLElement;
+    expect(overlay2.textContent).toContain("Base");
+
+    // close: overlay layer unmounts, base remains
+    clickToggle(root);
+    expect(root.querySelector('[data-kumiki-tile="overlay-layer"]')).toBeNull();
+    expect(
+      (root.querySelector('[data-kumiki-tile="overlay"]') as HTMLElement).textContent,
+    ).toContain("Base");
+  });
+});
+
 describe("stdlib collection methods (issue #5)", () => {
   it("listChunk splits into n-sized chunks; last may be shorter", () => {
     expect(_stdlib.listChunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);

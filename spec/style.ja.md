@@ -180,7 +180,13 @@ grid(A, B, C) {cols: [1, "auto", 1], gap: "sm"}     ; 数値 or 配列
 stack(Card1, Card2, Card3) {gap: "md"}
 ```
 
-> z 軸方向の重ね配置（オーバーレイ）は `box` に `position` を直接 prop で指定する方法、または将来追加予定の `overlay` builtin を使う。
+**オーバーレイ（z 軸方向の重ね配置）.** z 軸方向に子を重ねるには `overlay` builtin を使う：
+
+```kumiki
+overlay(Content, when(modalOpen, Modal())) {align: "center"}
+```
+
+`overlay(...children)` は `position: relative` のコンテナをレンダリングする。**最初の子がベース層**（通常の文書フロー）、**以降の子はオーバーレイ**としてコンテナ上に絶対配置されるため、ベース層のレイアウトをずらさない。モーダル・トースト・ドロップダウン・ツールチップの土台となる。`align` prop が重ねる子を配置する：縦方向（`top` / `bottom`、既定は中央）と横方向（`left` / `right`、既定は中央）を `-` で連結する（例：`top-left`、`bottom`、`center`〔既定〕）。認識できないトークンは `center` にフォールバックする。`when(...)` でオーバーレイの子を切り替えると、ベース層を乱さずに mount/unmount される。
 
 ### 4.4.4 panel / region / scroll / fieldset
 

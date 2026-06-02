@@ -29,6 +29,7 @@ const BUILTIN_TILES = new Set([
   "row",
   "column",
   "stack",
+  "overlay",
   "grid",
   "box",
   "card",

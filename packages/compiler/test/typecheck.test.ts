@@ -77,6 +77,18 @@ describe("typecheck", () => {
     expect(errors.some((e) => e.code === "E0002" && e.message.includes("dup"))).toBe(true);
   });
 
+  it("accepts the overlay builtin", () => {
+    const src = `
+      slot open : Bool = false
+      reducer show on=ui.click(B) do= open := true
+      tile B = button(text="open", onClick=show)
+      tile M = card(text("modal"))
+      tile App = overlay(B, when(open, M())) {align: "top"}
+      app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+    `;
+    expect(checkSrc(src)).toEqual([]);
+  });
+
   it("reports undefined slot reference (E0103)", () => {
     const src = `
       slot count : Int = 0

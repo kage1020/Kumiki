@@ -850,6 +850,7 @@ const BUILTIN_TILES = new Set([
   "panel",
   "grid",
   "stack",
+  "overlay",
   "region",
   "scroll",
   "divider",
@@ -956,6 +957,7 @@ function tileCallJs(
     case "box":
     case "grid":
     case "stack":
+    case "overlay":
     case "region":
     case "scroll":
     case "divider":

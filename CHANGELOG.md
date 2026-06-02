@@ -8,15 +8,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and adopts [S
 
 ### Planned — v0.2
 
-Scope, design, and acceptance criteria: [design-notes/roadmap-v0.2.md](./design-notes/roadmap-v0.2.md). Five items the spec already marks "planned for v0.2", shipped as independent milestones (M1–M5). M1 is shipped (see _Added_ below):
+Scope, design, and acceptance criteria: [design-notes/roadmap-v0.2.md](./design-notes/roadmap-v0.2.md). Five items the spec already marks "planned for v0.2", shipped as independent milestones (M1–M5). M1–M2 are shipped (see _Added_ below):
 
-- **M2 — `overlay` builtin**: z-axis stacking for modals / toasts / dropdowns (`spec/style.md §4.4.3`).
 - **M3 — Plugin capability registration**: a declarative manifest to register custom capabilities + effects without forking the compiler (`spec/stdlib.md §2.5`).
 - **M4 — `kumiki fix --auto-patch <test-name>`**: extend `fix` from typecheck errors to test failures, proposing and applying source patches (`spec/testing.md §8.7.1`).
 - **M5 — `motion` layer**: declarative, scoped transitions / keyframes with no global-CSS escape hatch (`spec/style.md §4.9`).
 
 ### Added
 
+- **v0.2 M2 — `overlay` builtin**: z-axis stacking via `overlay(...children)`. The first child is the base layer (normal flow); each later child is placed absolutely over the container (so the base layout never shifts) — the substrate for modals / toasts / dropdowns / tooltips. The `align` prop positions overlaid children (vertical `top`/`bottom` + horizontal `left`/`right` joined with `-`, e.g. `top-left`; default `center`; unknown → `center`). Composes with `when(...)` for mount/unmount; CSS is self-contained (no global-CSS escape hatch). New example `examples/features/26-overlay.kumiki`. ([spec/style.md](./spec/style.md) §4.4.3)
 - **v0.2 M1 — `stop-timer(name)`**: a timer trigger can be named with `timer(d, name=N)`, and a reducer can stop it with the `stop-timer(N)` statement. Timer names share one namespace and must be unique (duplicate → **E0002**); a `stop-timer` to an undeclared name is **E0106**. `stop-timer` is a pure control statement — the reducer returns `stopTimers` and the runtime clears the interval, so reducer purity is preserved. All timers (running or stopped) are cleared on `app` dispose. New example `examples/features/25-stop-timer.kumiki`. ([spec/lifecycle.md](./spec/lifecycle.md) §7.1.5)
 - pnpm + Turborepo monorepo structure (`@kumiki/compiler` / `@kumiki/runtime` / `@kumiki/cli` / `@kumiki/mcp`).
 - `@kumiki/mcp`: an MCP server exposing the compiler, AI editing, and spec search as MCP tools.

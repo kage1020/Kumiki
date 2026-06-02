@@ -50,4 +50,20 @@ describe("codegen", () => {
     expect(result.js).toContain('_stops.push("t")');
     expect(result.js).toContain("stopTimers: _stops");
   });
+
+  it("compiles overlay to a z-axis stacking node", () => {
+    const src = `
+      slot open : Bool = false
+      reducer show on=ui.click(B) do= open := true
+      tile B = button(text="open", onClick=show)
+      tile M = card(text("modal"))
+      tile App = overlay(B, when(open, M())) {align: "top"}
+      app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+    `;
+    const result = compile(src, { runtimeSpecifier: "./runtime.js" });
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.js).toContain('kind: "overlay"');
+    expect(result.js).toContain('"top"');
+  });
 });

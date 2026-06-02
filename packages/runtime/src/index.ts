@@ -67,7 +67,7 @@ export type TileNode =
     }
   | { kind: "radio"; props?: TileProps; group?: string; value?: unknown; selected?: boolean }
   | {
-      kind: "grid" | "stack" | "region" | "scroll" | "panel" | "fieldset";
+      kind: "grid" | "stack" | "region" | "scroll" | "panel" | "fieldset" | "overlay";
       children: TileNode[];
       props?: TileProps;
     }
@@ -730,6 +730,33 @@ function renderTile(node: TileNode): HTMLElement {
       }
       return div;
     }
+    case "overlay": {
+      // z-axis stacking: child[0] is the base layer (normal flow); later
+      // children are each wrapped in an absolutely-positioned layer covering
+      // the container, placed by the `align` prop. The base layer's layout is
+      // unaffected by the overlays (they are out of flow).
+      const div = document.createElement("div");
+      div.dataset.kumikiTile = "overlay";
+      div.style.position = "relative";
+      applyContainerProps(div, node.props);
+      const align = typeof node.props?.align === "string" ? (node.props.align as string) : "center";
+      const kids = node.children.filter((c): c is TileNode => c != null);
+      kids.forEach((child, i) => {
+        if (i === 0) {
+          div.appendChild(renderTile(child));
+          return;
+        }
+        const layer = document.createElement("div");
+        layer.dataset.kumikiTile = "overlay-layer";
+        layer.style.position = "absolute";
+        layer.style.inset = "0";
+        layer.style.display = "flex";
+        applyOverlayAlign(layer, align);
+        layer.appendChild(renderTile(child));
+        div.appendChild(layer);
+      });
+      return div;
+    }
     case "grid": {
       const div = document.createElement("div");
       div.dataset.kumikiTile = "grid";
@@ -1049,6 +1076,20 @@ function applyContainerProps(el: HTMLElement, props?: TileProps): void {
   if (typeof props.radius === "string") el.style.borderRadius = mapToken(props.radius as string);
   applyStateStyles(el, props);
   applyTransition(el, props);
+}
+
+/**
+ * Place an overlay layer inside its `position: relative` container via flexbox.
+ * The token combines a vertical part (`top` / `bottom`, default center) and a
+ * horizontal part (`left` / `right`, default center), e.g. `top-left`,
+ * `bottom`, `center`. Unknown parts fall back to center (consistent with how
+ * other style-prop tokens pass through without compile-time validation).
+ */
+function applyOverlayAlign(layer: HTMLElement, align: string): void {
+  const parts = align.split("-");
+  const has = (k: string): boolean => parts.includes(k);
+  layer.style.alignItems = has("top") ? "flex-start" : has("bottom") ? "flex-end" : "center";
+  layer.style.justifyContent = has("left") ? "flex-start" : has("right") ? "flex-end" : "center";
 }
 
 /** Apply a value that may be a literal or a responsive `{base, sm, md, lg, xl}` map. */

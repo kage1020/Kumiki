@@ -34,7 +34,7 @@ export function inlineRuntime(generatedJs: string, runtimeBundleJs: string): str
 export function compile(source: string, opts: ExtendedCodegenOptions): CompileResult {
   const tokens = lex(source);
   const program = parse(tokens);
-  const errors = check(program, { capabilities: opts.capabilities });
+  const errors = check(program, { capabilities: opts.capabilities ?? [] });
   if (errors.length > 0) return { kind: "fail", errors };
 
   const generated = codegen(program, opts);

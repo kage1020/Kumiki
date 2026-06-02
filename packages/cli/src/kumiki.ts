@@ -6,7 +6,7 @@ import { check, compile } from "@kumikijs/compiler";
 import { CapabilityManifestError, resolveCapabilities } from "@kumikijs/compiler/node";
 import { fixCmd } from "./fix.ts";
 import { addDef, removeDef, renameDef, replaceDef } from "./mutate.ts";
-import { runCmd, smokeCmd } from "./smoke.ts";
+import { runCmd, smokeCmd, testCmd } from "./smoke.ts";
 import { findReferences, listDefs, load, viewDef, viewWithDeps } from "./store.ts";
 
 const require = createRequire(import.meta.url);
@@ -20,6 +20,7 @@ function usage(): never {
   console.error("  kumiki check <input.kumiki> [--strict-a11y]");
   console.error("  kumiki smoke <input.kumiki>");
   console.error("  kumiki run <input.kumiki> <scenario.json>");
+  console.error("  kumiki test <input.kumiki> [name|prefix*]");
   process.exit(2);
 }
 
@@ -143,6 +144,14 @@ async function main(argv: string[]): Promise<void> {
       if (!input) usage();
       const inputPath = resolve(process.cwd(), input);
       await smokeCmd(inputPath, capsFor(inputPath));
+      return;
+    }
+    case "test": {
+      const input = argv[3];
+      if (!input) usage();
+      const inputPath = resolve(process.cwd(), input);
+      const filter = argv.find((a, i) => i > 3 && !a.startsWith("--"));
+      await testCmd(inputPath, filter, capsFor(inputPath));
       return;
     }
     case "run": {

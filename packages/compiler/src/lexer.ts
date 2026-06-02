@@ -8,6 +8,7 @@ const KEYWORDS = new Set([
   "tile",
   "fn",
   "app",
+  "test",
   "nominal",
   "where",
   "when",

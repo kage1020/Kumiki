@@ -19,6 +19,8 @@ test-expr ::= reducer-test | tile-test | episode-test | property-test
 
 `test` 定義は **6 つ目のレイヤ**。CRDT graph に格納され、`kumiki test` で実行される。本番ビルドには含まれない。
 
+> **実装状況（v0.2）.** `reducer-test`・`tile-test`・`kumiki test` ランナー（名前 / `prefix*` フィルタと §8.7.1 出力）は実装済み。**未実装**：`property-test` と `episode-test`、`expect` のワイルドカード（`<any-id>` / `<slots.X>`）、`reducer-test` 内の effect 結果モック（§8.5 の多段フロー — 現状は scenario ランナーがその形を担う）、`--watch` / `--coverage`。詳細は [design-notes/test-runner.md](../design-notes/test-runner.ja.md)。
+
 ## 8.2 Reducer テスト
 
 ```kumiki

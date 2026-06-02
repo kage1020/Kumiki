@@ -61,3 +61,29 @@ describe("kumiki smoke with a manifest-registered capability", () => {
     expect(out).toContain("ok");
   });
 });
+
+describe("kumiki test (in-language test runner)", () => {
+  const TESTS = resolve(here, "../../../examples/features/28-tests.kumiki");
+
+  it("runs reducer-test + tile-test definitions and reports pass", { timeout: 30000 }, () => {
+    const out = execFileSync("npx", ["tsx", CLI_PATH, "test", TESTS], {
+      stdio: "pipe",
+      shell: true,
+      encoding: "utf8",
+    });
+    expect(out).toContain("PASS  inc-increments");
+    expect(out).toContain("PASS  app-renders-count");
+    expect(out).toContain("3/3 passed");
+  });
+
+  it("filters by a name prefix", { timeout: 30000 }, () => {
+    const out = execFileSync("npx", ["tsx", CLI_PATH, "test", TESTS, "inc*"], {
+      stdio: "pipe",
+      shell: true,
+      encoding: "utf8",
+    });
+    expect(out).toContain("PASS  inc-increments");
+    expect(out).toContain("1/1 passed");
+    expect(out).not.toContain("dec-decrements");
+  });
+});

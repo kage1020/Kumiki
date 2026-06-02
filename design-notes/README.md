@@ -7,6 +7,7 @@ This is the **record of Kumiki's history and decisions**. Rather than the specif
 ## Roadmap
 
 - [v0.2 Roadmap](./roadmap-v0.2.md) — scope, design, and acceptance criteria for the v0.2 milestone (stop-timer / overlay / plugin capabilities / `fix --auto-patch` / `motion` layer)
+- [`test` layer & `kumiki test` runner](./test-runner.md) — M4 scope decision: the in-language test DSL + runner (prerequisite for `fix --auto-patch`)
 
 ## Design Rationale
 

@@ -7,6 +7,7 @@
 ## ロードマップ
 
 - [v0.2 ロードマップ](./roadmap-v0.2.ja.md) — v0.2 マイルストーンのスコープ・設計・受け入れ基準（stop-timer / overlay / プラグイン capability / `fix --auto-patch` / `motion` レイヤー）
+- [`test` レイヤー と `kumiki test` ランナー](./test-runner.ja.md) — M4 のスコープ判断：言語内テスト DSL + ランナー（`fix --auto-patch` の前提）
 
 ## 設計理念
 

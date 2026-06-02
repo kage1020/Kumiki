@@ -13,6 +13,7 @@ import type {
   Refinement,
   SlotDef,
   Statement,
+  TestDef,
   TileDef,
   TileExpr,
   TypeDef,
@@ -21,6 +22,8 @@ import type {
 
 export type CodegenOptions = {
   runtimeSpecifier: string;
+  /** Emit the in-language `test` definitions (`__kumikiTests`). Off for production builds. */
+  includeTests?: boolean;
 };
 
 export function codegen(program: Program, opts: CodegenOptions): string {
@@ -36,6 +39,7 @@ export function codegen(program: Program, opts: CodegenOptions): string {
   const themes = program.defs.filter(
     (d): d is import("./ast.ts").ThemeDef => d.kind === "ThemeDef",
   );
+  const tests = program.defs.filter((d): d is TestDef => d.kind === "TestDef");
   const app = apps[0];
   if (!app) throw new Error("No app definition found");
 
@@ -124,9 +128,100 @@ export function codegen(program: Program, opts: CodegenOptions): string {
   lines.push("");
 
   lines.push("globalThis.__kumikiApp = App;");
+
+  // In-language tests (`kumiki test`). Excluded from production builds.
+  if (opts.includeTests && tests.length > 0) {
+    lines.push("");
+    lines.push("const _tilesById = {");
+    for (const tile of tiles) {
+      lines.push(`  ${JSON.stringify(tile.name)}: (${jsName("$1")}) => ${genTile(tile, ctx)},`);
+    }
+    lines.push("};");
+    lines.push("void _tilesById;");
+    lines.push("const __kumikiTests = [");
+    for (const t of tests) lines.push(genTest(t, ctx));
+    lines.push("];");
+    lines.push("globalThis.__kumikiTests = __kumikiTests;");
+  }
+  lines.push("");
+
   lines.push(`mount(App, document.getElementById("root"));`);
 
   return lines.join("\n");
+}
+
+// ----- test layer -----
+
+function recordField(e: Expr | TileExpr, name: string): Expr | undefined {
+  if ((e as Expr).kind !== "RecordLit") return undefined;
+  return (e as Expr & { kind: "RecordLit" }).fields.find((f) => f.name === name)?.value;
+}
+
+function genTest(t: TestDef, gen: GenCtx): string {
+  const ctx = makeEvalCtx(gen, new Set());
+  const nameJs = JSON.stringify(t.name);
+  if (t.testKind === "reducer-test") {
+    const slots = recordField(t.given, "slots");
+    const event = recordField(t.given, "event");
+    const el = event ? recordField(event, "el") : undefined;
+    const slotsJs = slots ? jsOfExpr(slots, ctx) : "({})";
+    const elJs = el ? jsOfExpr(el, ctx) : "({})";
+    const panic = recordField(t.expect, "panic");
+    let expectJs: string;
+    if (panic) {
+      expectJs = `{ kind: "panic", message: ${jsOfExpr(panic, ctx)} }`;
+    } else {
+      const xs = recordField(t.expect, "slots");
+      const xe = recordField(t.expect, "effects");
+      const xsJs = xs ? jsOfExpr(xs, ctx) : "({})";
+      const effectsJs = xe ? effectListJs(xe, ctx) : "[]";
+      expectJs = `{ kind: "state", slots: ${xsJs}, effects: ${effectsJs} }`;
+    }
+    return `  {
+    name: ${nameJs},
+    kind: "reducer-test",
+    run: () => {
+      _s.resetLive(_live, _slots, ${slotsJs});
+      const _el = ${elJs};
+      const _r = _reducers.find((r) => r.name === ${JSON.stringify(t.target)});
+      if (!_r) throw new Error("reducer ${t.target} not found");
+      let _res = null, _panic = null;
+      try { _res = _r.apply(_live, { $el: _el, $event: _el }); }
+      catch (e) { _panic = (e && e.message) ? e.message : String(e); }
+      return _s.runReducerTest({ name: ${nameJs}, givenSlots: { ..._live }, result: _res, panic: _panic, expect: ${expectJs} });
+    },
+  },`;
+  }
+  // tile-test
+  const slots = recordField(t.given, "slots");
+  const slotsJs = slots ? jsOfExpr(slots, ctx) : "({})";
+  const expectedJs = tileExprJs(t.expect as TileExpr, gen, ctx);
+  return `  {
+    name: ${nameJs},
+    kind: "tile-test",
+    run: () => {
+      _s.resetLive(_live, _slots, ${slotsJs});
+      const _actual = _tilesById[${JSON.stringify(t.target)}]();
+      const _expected = ${expectedJs};
+      return _s.runTileTest({ name: ${nameJs}, actual: _actual, expected: _expected });
+    },
+  },`;
+}
+
+/** Compile a `[eff(a), ...]` expect.effects list into `[{effect, args}]`. */
+function effectListJs(e: Expr, ctx: EvalCtx): string {
+  if (e.kind !== "ListLit") return "[]";
+  const items = e.items.map((it) => {
+    if (it.kind === "Call") {
+      const args = it.args.map((a) => jsOfExpr(a, ctx)).join(", ");
+      return `{ effect: ${JSON.stringify(it.callee)}, args: [${args}] }`;
+    }
+    if (it.kind === "Ref") {
+      return `{ effect: ${JSON.stringify(it.name)}, args: [] }`;
+    }
+    return `{ effect: "?", args: [] }`;
+  });
+  return `[${items.join(", ")}]`;
 }
 
 type GenCtx = {

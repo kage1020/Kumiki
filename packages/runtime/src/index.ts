@@ -1474,7 +1474,9 @@ function deepEqualValue(a: unknown, b: unknown): boolean {
   const bo = b as Record<string, unknown>;
   const ak = Object.keys(ao);
   if (ak.length !== Object.keys(bo).length) return false;
-  return ak.every((k) => deepEqualValue(ao[k], bo[k]));
+  // Compare key presence too — `{a: undefined}` and `{b: undefined}` have equal
+  // key counts but are not equal.
+  return ak.every((k) => Object.hasOwn(bo, k) && deepEqualValue(ao[k], bo[k]));
 }
 
 function tileField(node: unknown, k: string): unknown {
@@ -1500,8 +1502,8 @@ function tileStructEqual(
     return expected === actual ? { ok: true } : { ok: false, path: path || "(root)" };
   }
   const ek = tileField(expected, "kind");
-  if (ek !== tileField(actual, "kind")) return { ok: false, path: `${path}.kind` };
-  const here = path || String(ek);
+  const here = path || String(ek ?? "(root)");
+  if (ek !== tileField(actual, "kind")) return { ok: false, path: `${here}.kind` };
   if (tileField(expected, "text") !== undefined) {
     if (String(tileField(expected, "text")) !== String(tileField(actual, "text"))) {
       return { ok: false, path: `${here}.text` };
@@ -1551,7 +1553,7 @@ export const _stdlib = {
       | {
           kind: "state";
           slots: Record<string, unknown>;
-          effects: { effect: string; args: unknown[] }[];
+          effects: { effect: string; args: unknown[]; argsSpecified?: boolean }[];
         };
   }): TestResult {
     const { name, givenSlots, result, panic, expect } = input;
@@ -1594,7 +1596,9 @@ export const _stdlib = {
             diffAt = `effects[${i}].effect`;
             break;
           }
-          if (ex.args.length > 0 && !deepEqualValue(ac.args, ex.args)) {
+          // A bare effect name (`persist`) matches by name only; `persist(...)`
+          // (even `persist()`) pins the exact argument list.
+          if (ex.argsSpecified && !deepEqualValue(ac.args, ex.args)) {
             diffAt = `effects[${i}].args`;
             break;
           }

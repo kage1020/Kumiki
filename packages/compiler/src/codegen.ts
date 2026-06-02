@@ -163,9 +163,8 @@ function genTest(t: TestDef, gen: GenCtx): string {
   if (t.testKind === "reducer-test") {
     const slots = recordField(t.given, "slots");
     const event = recordField(t.given, "event");
-    const el = event ? recordField(event, "el") : undefined;
     const slotsJs = slots ? jsOfExpr(slots, ctx) : "({})";
-    const elJs = el ? jsOfExpr(el, ctx) : "({})";
+    const elJs = eventPayloadJs(event, ctx);
     const panic = recordField(t.expect, "panic");
     let expectJs: string;
     if (panic) {
@@ -195,33 +194,54 @@ function genTest(t: TestDef, gen: GenCtx): string {
   // tile-test
   const slots = recordField(t.given, "slots");
   const slotsJs = slots ? jsOfExpr(slots, ctx) : "({})";
+  const inField = recordField(t.given, "in");
+  const inJs = inField ? jsOfExpr(inField, ctx) : "undefined";
   const expectedJs = tileExprJs(t.expect as TileExpr, gen, ctx);
   return `  {
     name: ${nameJs},
     kind: "tile-test",
     run: () => {
       _s.resetLive(_live, _slots, ${slotsJs});
-      const _actual = _tilesById[${JSON.stringify(t.target)}]();
+      const _actual = _tilesById[${JSON.stringify(t.target)}](${inJs});
       const _expected = ${expectedJs};
       return _s.runTileTest({ name: ${nameJs}, actual: _actual, expected: _expected });
     },
   },`;
 }
 
-/** Compile a `[eff(a), ...]` expect.effects list into `[{effect, args}]`. */
+/**
+ * Compile a `[eff(a), ...]` expect.effects list into `[{effect, args, argsSpecified}]`.
+ * A bare name (`persist`) matches by name only (`argsSpecified: false`); a call
+ * (`persist(x)`, even `persist()`) pins the exact arguments (`argsSpecified: true`).
+ */
 function effectListJs(e: Expr, ctx: EvalCtx): string {
   if (e.kind !== "ListLit") return "[]";
   const items = e.items.map((it) => {
     if (it.kind === "Call") {
       const args = it.args.map((a) => jsOfExpr(a, ctx)).join(", ");
-      return `{ effect: ${JSON.stringify(it.callee)}, args: [${args}] }`;
+      return `{ effect: ${JSON.stringify(it.callee)}, args: [${args}], argsSpecified: true }`;
     }
     if (it.kind === "Ref") {
-      return `{ effect: ${JSON.stringify(it.name)}, args: [] }`;
+      return `{ effect: ${JSON.stringify(it.name)}, args: [], argsSpecified: false }`;
     }
-    return `{ effect: "?", args: [] }`;
+    return `{ effect: "?", args: [], argsSpecified: false }`;
   });
   return `[${items.join(", ")}]`;
+}
+
+/**
+ * The reducer payload (`$el` / `$event`) for a reducer-test's `given.event`.
+ * Uses `el` when present (spec §8.5), otherwise the event's other fields
+ * (everything except `type` / `target`) so flat `{type, target, value}` forms
+ * still reach the reducer.
+ */
+function eventPayloadJs(event: Expr | undefined, ctx: EvalCtx): string {
+  if (!event || event.kind !== "RecordLit") return "({})";
+  const el = event.fields.find((f) => f.name === "el");
+  if (el) return jsOfExpr(el.value, ctx);
+  const rest = event.fields.filter((f) => f.name !== "type" && f.name !== "target");
+  if (rest.length === 0) return "({})";
+  return jsOfExpr({ kind: "RecordLit", fields: rest, pos: event.pos }, ctx);
 }
 
 type GenCtx = {

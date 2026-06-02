@@ -10,14 +10,13 @@ English · [日本語](./test-runner.ja.md)
 
 - The `test` definition layer: `test <name> = <test-expr>`. Stored like any definition; **excluded from the production build** (codegen emits tests to a separate `__kumikiTests`, never mounted).
 - **reducer-test** — `given = {slots, event}` → apply the named reducer once → `expect = {slots, effects}` (compare resulting slot values + emitted effect calls). Plus the panic form `expect = {panic: "msg"}`.
-- **tile-test** — `given = {slots}` → render the named tile → compare its structure to an `expect = <tile-expr>` (deep structural compare of the tile tree; only explicitly-specified props are compared, per spec §8.4).
+- **tile-test** — `given = {slots, in?}` → render the named tile (passing `in` as `$1`) → compare its structure to an `expect = <tile-expr>` (deep structural compare of the tile tree; only explicitly-specified props are compared, per spec §8.4).
 - **`kumiki test [filter]`** runner — discovers test definitions, runs each, prints the spec §8.7.1 PASS/FAIL output with a structural diff on failure, exits non-zero on any failure. `filter` is an exact name or a `prefix-*` wildcard.
 
 **Deferred (follow-ups, tracked here):**
 
 - **Wildcards** in `expect` (`<any-id>`, `<slots.X>` back-references) — needs lexer/parser support for `<…>` in value position. M4a requires exact expected values.
 - **Effect-result mocks inside reducer-test** (spec §8.5 multi-step flow) — a reducer-test in M4a is a single pure `apply`; the effect-round-trip flow (mock an effect's result so a `.ok` reducer runs) is deferred (the scenario runner already covers that shape).
-- **tile-test `given.in`** (passing the tile's `$1` input) — parses, but is not yet threaded into the rendered tile.
 - **property-test** (type-driven generators + shrinking, §8.3) and **episode-test** (log replay, §8.6).
 - **`--watch` / `--coverage`** (§8.7).
 

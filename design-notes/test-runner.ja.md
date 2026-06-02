@@ -10,14 +10,13 @@
 
 - `test` 定義レイヤー：`test <name> = <test-expr>`。他の定義同様に扱うが、**本番ビルドからは除外**（codegen はテストを別の `__kumikiTests` に emit し、mount しない）。
 - **reducer-test** — `given = {slots, event}` → 当該 reducer を 1 回 apply → `expect = {slots, effects}`（結果の slot 値 + emit された effect 呼び出しを比較）。panic 形式 `expect = {panic: "msg"}` も対応。
-- **tile-test** — `given = {slots}` → 当該 tile を render → 構造を `expect = <tile-expr>` と比較（tile ツリーの深い構造比較。spec §8.4 通り、明示指定した prop のみ比較）。
+- **tile-test** — `given = {slots, in?}` → 当該 tile を render（`in` を `$1` として渡す）→ 構造を `expect = <tile-expr>` と比較（tile ツリーの深い構造比較。spec §8.4 通り、明示指定した prop のみ比較）。
 - **`kumiki test [filter]`** ランナー — test 定義を発見して各々を実行し、spec §8.7.1 の PASS/FAIL 出力（失敗時は構造 diff）を表示、いずれか失敗で非ゼロ終了。`filter` は完全名または `prefix-*` ワイルドカード。
 
 **繰り延べ（後続、ここで追跡）：**
 
 - `expect` 内の**ワイルドカード**（`<any-id>`、`<slots.X>` 後方参照）— 値位置の `<…>` に lexer/parser 対応が必要。M4a は厳密一致を要求。
 - **reducer-test 内の effect 結果モック**（spec §8.5 の多段フロー）— M4a の reducer-test は単一の純粋 apply。effect の往復（結果をモックして `.ok` reducer を走らせる）は繰り延べ（scenario ランナーが既にその形を担う）。
-- **tile-test の `given.in`**（tile の `$1` 入力の受け渡し）— パースはされるが、render される tile にまだ渡していない。
 - **property-test**（型駆動ジェネレータ + 縮小、§8.3）と **episode-test**（ログ再生、§8.6）。
 - **`--watch` / `--coverage`**（§8.7）。
 

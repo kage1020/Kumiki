@@ -19,7 +19,7 @@ test-expr ::= reducer-test | tile-test | episode-test | property-test
 
 A `test` definition is **the sixth layer**. It is stored in the CRDT graph and run with `kumiki test`. It is not included in the production build.
 
-> **Implementation status (v0.2).** `reducer-test`, `tile-test`, and the `kumiki test` runner (name / `prefix*` filtering and the §8.7.1 output) are implemented. Still specified but **not yet implemented**: `property-test` and `episode-test`, `expect` wildcards (`<any-id>` / `<slots.X>`), effect-result mocks inside `reducer-test` (§8.5's multi-step flow — the [scenario runner](#88-integration-tests-browser-driven) covers that shape today), and `--watch` / `--coverage`. See [design-notes/test-runner.md](../design-notes/test-runner.md).
+> **Implementation status (v0.2).** `reducer-test`, `tile-test`, and the `kumiki test` runner (name / `prefix*` filtering) are implemented. The runner prints `PASS` / `FAIL` lines plus `expected` / `actual` / `diff at <path>` on failure — the §8.7.1 per-leaf value arrow (`"a" -> "b"`), per-test timings, and property-test case counts are **not yet** produced. Also still specified but **not yet implemented**: `property-test` and `episode-test`, `expect` wildcards (`<any-id>` / `<slots.X>`), effect-result mocks inside `reducer-test` (§8.5's multi-step flow — the [scenario runner](#88-integration-tests-browser-driven) covers that shape today), and `--watch` / `--coverage`. See [design-notes/test-runner.md](../design-notes/test-runner.md).
 
 ## 8.2 Reducer Tests
 

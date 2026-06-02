@@ -9,6 +9,7 @@ reducer dec on=ui.click(DecBtn) do= count := count - 1
 
 tile IncBtn = button(text="+1", onClick=inc)
 tile DecBtn = button(text="-1", onClick=dec)
+tile Greeting in=Text = heading("Hi, " + $1)
 tile App = column(heading("Count: " + count.show), row(DecBtn, IncBtn)) {pad: "lg", gap: "md"}
 
 app TestsFeature
@@ -30,3 +31,8 @@ test app-renders-count =
     tile-test App
         given  = {slots: {count: 5}}
         expect = column(heading("Count: 5"), row(button(text="-1"), button(text="+1")))
+
+test greeting-renders-input =
+    tile-test Greeting
+        given  = {slots: {}, in: "Ada"}
+        expect = heading("Hi, Ada")

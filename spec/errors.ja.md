@@ -43,6 +43,14 @@ type KumikiError = {
 
 **修正**：`route "/404" -> NotFound` のような 404 用 tile へのルートを追加する。詳細は [Routing](./routing.md)。
 
+### E0002 `duplicate-timer-name`
+
+2 つ以上の `timer(d, name=N)` トリガーが、同じタイマー名 `N` を宣言している。タイマー名は単一のネームスペースを共有し、`stop-timer(N)` が一意に定まるようアプリ内で一意でなければならない。
+
+> `Timer name "<name>" is declared more than once`
+
+**修正**：いずれかのタイマーを改名し、各 `name=` を一意にする。詳細は [Lifecycle](./lifecycle.md) §7.1.5。
+
 ## E01xx — 名前解決
 
 ### E0102 `undef-reducer`
@@ -67,6 +75,14 @@ type KumikiError = {
 `emit` の対象が未定義の effect を指している。
 
 > `Reference to undefined effect "<name>"`
+
+### E0106 `undef-timer`
+
+`stop-timer(N)` 文が、どの `timer(d, name=N)` トリガーも宣言していないタイマー名 `N` を参照している。
+
+> `stop-timer refers to undefined timer name "<name>"`
+
+**修正**：綴りを確認するか、`timer(d, name=N)` でタイマーを宣言する。詳細は [Lifecycle](./lifecycle.md) §7.1.5。
 
 ### E0105 `undef-tile`
 

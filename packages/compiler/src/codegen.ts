@@ -235,7 +235,8 @@ function genReducer(r: ReducerDef, gen: GenCtx): string {
   } else if (r.on.kind === "EffectEvent") {
     eventJs = `{ kind: "effect", effect: ${JSON.stringify(r.on.effect)}, outcome: ${JSON.stringify(r.on.outcome)} }`;
   } else if (r.on.kind === "TimerEvent") {
-    eventJs = `{ kind: "timer", intervalMs: ${r.on.intervalMs} }`;
+    const nameJs = r.on.name !== undefined ? `, name: ${JSON.stringify(r.on.name)}` : "";
+    eventJs = `{ kind: "timer", intervalMs: ${r.on.intervalMs}${nameJs} }`;
   } else {
     eventJs = `{ kind: "lifecycle", name: ${JSON.stringify(r.on.name)} }`;
   }
@@ -244,6 +245,7 @@ function genReducer(r: ReducerDef, gen: GenCtx): string {
   const stmtLines: string[] = [];
   stmtLines.push(`const _next = {};`);
   stmtLines.push(`const _emits = [];`);
+  stmtLines.push(`const _stops = [];`);
   // bind payload positional args. For effect events, $1, $2, etc. are payload props.
   if (r.on.kind === "EffectEvent") {
     for (let i = 0; i < r.on.binds.length; i++) {
@@ -258,7 +260,7 @@ function genReducer(r: ReducerDef, gen: GenCtx): string {
 
   for (const st of r.do) stmtLines.push(genStatement(st, ctx));
 
-  stmtLines.push(`return { slots: _next, emits: _emits };`);
+  stmtLines.push(`return { slots: _next, emits: _emits, stopTimers: _stops };`);
 
   return `  {
     name: ${JSON.stringify(r.name)},
@@ -326,6 +328,9 @@ function genStatement(s: Statement, ctx: EvalCtx): string {
   if (s.kind === "Emit") {
     const args = s.args.map((a) => jsOfExpr(a, ctx)).join(", ");
     return `_emits.push({ effect: ${JSON.stringify(s.effect)}, args: [${args}] });`;
+  }
+  if (s.kind === "StopTimer") {
+    return `_stops.push(${JSON.stringify(s.name)});`;
   }
   return genSlotAssign(s.lvalue, s.rhs, ctx);
 }

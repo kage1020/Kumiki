@@ -8,9 +8,8 @@
 
 ### Planned — v0.2
 
-スコープ・設計・受け入れ基準：[design-notes/roadmap-v0.2.ja.md](./design-notes/roadmap-v0.2.ja.md)。spec が既に「planned for v0.2」と明記している 5 項目を、独立したマイルストーン（M1–M5）として出荷する：
+スコープ・設計・受け入れ基準：[design-notes/roadmap-v0.2.ja.md](./design-notes/roadmap-v0.2.ja.md)。spec が既に「planned for v0.2」と明記している 5 項目を、独立したマイルストーン（M1–M5）として出荷する。M1 は出荷済み（下の _Added_ 参照）：
 
-- **M1 — `stop-timer(name)`**：名前付きタイマーと reducer からの明示停止（`spec/lifecycle.md §7.1.5`）。
 - **M2 — `overlay` builtin**：モーダル / トースト / ドロップダウン用の z 軸重ね（`spec/style.md §4.4.3`）。
 - **M3 — プラグインによる capability 登録**：コンパイラを fork せず独自 capability + effect を登録する宣言的マニフェスト（`spec/stdlib.md §2.5`）。
 - **M4 — `kumiki fix --auto-patch <test-name>`**：`fix` を typecheck エラーからテスト失敗まで拡張し、ソースパッチを提案・適用（`spec/testing.md §8.7.1`）。
@@ -18,6 +17,7 @@
 
 ### Added
 
+- **v0.2 M1 — `stop-timer(name)`**：タイマートリガーに `timer(d, name=N)` で名前を付与でき、reducer から `stop-timer(N)` 文で停止できる。タイマー名は単一ネームスペースを共有し一意でなければならない（重複は **E0002**）。未宣言の名前への `stop-timer` は **E0106**。`stop-timer` は純粋な制御文 — reducer は `stopTimers` を返し runtime が interval を clear するので、reducer の純粋性は保たれる。全タイマー（稼働中・停止中問わず）は `app` dispose 時に clear される。新規 example `examples/features/25-stop-timer.kumiki`。（[spec/lifecycle.md](./spec/lifecycle.md) §7.1.5）
 - pnpm + Turborepo モノレポ構成（`@kumiki/compiler` / `@kumiki/runtime` / `@kumiki/cli` / `@kumiki/mcp`）。
 - `@kumiki/mcp`: コンパイラと AI 編集・仕様検索を MCP ツールとして公開する MCP サーバー。
 - **ランタイム smoke テスト**: `@kumiki/runtime` の `smoke()`、CLI `kumiki smoke <file>`、MCP `kumiki_smoke`。headless DOM に mount して UI を操作し、`check`/`build` では捕まらないランタイム例外・空描画・未処理 rejection を検出。全 example が CI で smoke 検証される（`tests/smoke.test.ts`）。3 層検証モデルは [spec/testing.md](./spec/testing.md) §8.10。

@@ -113,4 +113,26 @@ reducer tick on=timer(250ms) do= x := x + 1`;
     if (r.on.kind !== "TimerEvent") throw new Error("expected TimerEvent");
     expect(r.on.intervalMs).toBe(250);
   });
+
+  it("parses a named timer event", () => {
+    const src = `slot x : Int = 0
+reducer tick on=timer(1s, name=countdown) do= x := x + 1`;
+    const program = parse(lex(src));
+    const r = program.defs[1] as ReducerDef;
+    if (r.on.kind !== "TimerEvent") throw new Error("expected TimerEvent");
+    expect(r.on.intervalMs).toBe(1000);
+    expect(r.on.name).toBe("countdown");
+  });
+
+  it("parses a stop-timer statement", () => {
+    const src = `slot x : Int = 0
+reducer tick on=timer(1s, name=t) do= x := x + 1
+reducer stop on=ui.click(B) do= stop-timer(t)`;
+    const program = parse(lex(src));
+    const r = program.defs[2] as ReducerDef;
+    const stmt = r.do[0];
+    expect(stmt.kind).toBe("StopTimer");
+    if (stmt.kind !== "StopTimer") throw new Error("expected StopTimer");
+    expect(stmt.name).toBe("t");
+  });
 });

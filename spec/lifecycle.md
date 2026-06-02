@@ -72,9 +72,25 @@ reducer poll
     do= emit fetchUpdates()
 ```
 
-`timer(d)` fires repeatedly at intervals of `d` from the app's mount time. The runtime implementation is `setInterval`-based and is automatically cleared on the `app`'s `dispose`. Explicit stopping via `stop-timer(name)` is planned for v0.2.
+`timer(d)` fires repeatedly at intervals of `d` from the app's mount time. The runtime implementation is `setInterval`-based and is automatically cleared on the `app`'s `dispose`.
 
 **duration literals**: can be written as an integer + unit (`ms` / `s` / `m`), as in `1ms`, `500ms`, `1s`, `30s`, `5m`.
+
+#### Named timers and `stop-timer`
+
+A timer can be given a name so that a reducer can stop it explicitly:
+
+```kumiki
+slot remaining : Int = 10
+
+reducer tick on=timer(1s, name=countdown) do= remaining := remaining - 1
+reducer stop on=ui.click(StopBtn)         do= stop-timer(countdown)
+```
+
+- `timer(d, name=N)` registers the interval under the identifier `N`. Timer names share a single namespace and must be unique across the app (a duplicate is [E0002](./errors.md)).
+- `stop-timer(N)` is a reducer statement that clears the interval named `N`; after it runs, that timer fires no more. Referencing an undeclared timer name is a compile error ([E0106](./errors.md)).
+- `stop-timer` is purely a control statement — it neither reads nor writes a slot nor emits an effect, so the reducer stays pure. The runtime clears the interval when it applies the reducer's result.
+- A stopped timer is **not** restarted automatically; it starts again only on remount. On `app` dispose, all timers (running or stopped) are cleared.
 
 ```kumiki
 reducer tick on=timer(1s)   do= elapsed := elapsed + 1

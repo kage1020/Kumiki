@@ -1,0 +1,15 @@
+# Feature: a named timer that a reducer stops explicitly with stop-timer.
+# `tick` counts down every 100ms; clicking Stop halts the `countdown` timer.
+
+slot remaining : Int = 5
+
+reducer tick on=timer(100ms, name=countdown) do= remaining := if remaining > 0 then remaining - 1 else remaining
+reducer stop on=ui.click(StopBtn)            do= stop-timer(countdown)
+
+tile StopBtn = button(text="Stop", onClick=stop)
+tile App = column(heading(remaining.show + " left"), StopBtn) {pad: "lg", gap: "md"}
+
+app StopTimerFeature
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

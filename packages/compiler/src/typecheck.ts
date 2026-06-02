@@ -89,6 +89,8 @@ type SymbolTable = {
   tiles: Map<string, TileDef>;
   fns: Map<string, FnDef>;
   effects: Map<string, EffectDef>;
+  /** Names declared by `timer(d, name=N)` triggers — the `stop-timer` namespace. */
+  timerNames: Set<string>;
   app?: AppDef;
 };
 
@@ -101,6 +103,7 @@ function checkAll(program: Program): KumikiError[] {
     tiles: new Map(),
     fns: new Map(),
     effects: new Map(),
+    timerNames: new Set(),
   };
 
   for (const def of program.defs) {
@@ -113,6 +116,18 @@ function checkAll(program: Program): KumikiError[] {
         break;
       case "ReducerDef":
         sym.reducers.set(def.name, def);
+        if (def.on.kind === "TimerEvent" && def.on.name !== undefined) {
+          if (sym.timerNames.has(def.on.name)) {
+            errors.push({
+              code: "E0002",
+              kind: "duplicate-timer-name",
+              message: `Timer name "${def.on.name}" is declared more than once`,
+              pos: def.on.pos,
+            });
+          } else {
+            sym.timerNames.add(def.on.name);
+          }
+        }
         break;
       case "TileDef":
         sym.tiles.set(def.name, def);
@@ -410,6 +425,17 @@ function checkStmt(
       });
     }
     for (const a of s.args) checkExpr(a, sym, errors, ctx);
+    return;
+  }
+  if (s.kind === "StopTimer") {
+    if (!sym.timerNames.has(s.name)) {
+      errors.push({
+        code: "E0106",
+        kind: "undef-timer",
+        message: `stop-timer refers to undefined timer name "${s.name}"`,
+        pos: s.pos,
+      });
+    }
     return;
   }
   // SlotAssign

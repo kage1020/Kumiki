@@ -43,6 +43,14 @@ An app that declares `app.routes` must include a route for the `/404` pattern. U
 
 **Fix**: Add a route to a 404 tile, such as `route "/404" -> NotFound`. See [Routing](./routing.md) for details.
 
+### E0002 `duplicate-timer-name`
+
+Two or more `timer(d, name=N)` triggers declare the same timer name `N`. Timer names share one namespace and must be unique across the app, so that `stop-timer(N)` is unambiguous.
+
+> `Timer name "<name>" is declared more than once`
+
+**Fix**: Rename one of the timers so each `name=` is unique. See [Lifecycle](./lifecycle.md) §7.1.5.
+
 ## E01xx — Name Resolution
 
 ### E0102 `undef-reducer`
@@ -67,6 +75,14 @@ An event handler argument / prop refers to a reducer name that does not exist.
 The target of an `emit` refers to an undefined effect.
 
 > `Reference to undefined effect "<name>"`
+
+### E0106 `undef-timer`
+
+A `stop-timer(N)` statement refers to a timer name `N` that no `timer(d, name=N)` trigger declares.
+
+> `stop-timer refers to undefined timer name "<name>"`
+
+**Fix**: Check the spelling, or declare the timer with `timer(d, name=N)`. See [Lifecycle](./lifecycle.md) §7.1.5.
 
 ### E0105 `undef-tile`
 

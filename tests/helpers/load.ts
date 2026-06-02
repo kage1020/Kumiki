@@ -6,7 +6,7 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { compile } from "@kumikijs/compiler";
-import { nodeRuntimeBundleReader } from "@kumikijs/compiler/node";
+import { nodeRuntimeBundleReader, resolveCapabilities } from "@kumikijs/compiler/node";
 import type { AppShape } from "@kumikijs/runtime";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -19,6 +19,7 @@ export async function loadApp(kumikiPath: string): Promise<AppShape> {
     runtimeSpecifier: "ignored",
     bundle: true,
     readRuntimeBundle: nodeRuntimeBundleReader,
+    capabilities: resolveCapabilities(kumikiPath),
   });
   if (result.kind !== "ok") {
     throw new Error(

@@ -1,0 +1,19 @@
+# Feature: a custom capability registered via kumiki.caps.json (this directory).
+# `track` (cap=telemetry.track) is emitted on click; its ok result bumps a
+# counter — proving a manifest-registered capability compiles, is emittable, and
+# is dispatched (and mockable in scenarios, exactly like a standard effect).
+
+slot sent : Int = 0
+
+effect track cap=telemetry.track in={name: Text} out=Unit
+
+reducer fire   on=ui.click(TrackBtn) do= emit track({name: "click"})
+reducer onSent on=track.ok(_, _)     do= sent := sent + 1
+
+tile TrackBtn = button(text="Track", onClick=fire)
+tile App = column(heading("sent: " + sent.show), TrackBtn) {pad: "lg", gap: "md"}
+
+app CustomCapFeature
+    caps   = [telemetry.track]
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

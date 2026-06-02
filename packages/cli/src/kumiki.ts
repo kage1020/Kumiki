@@ -3,6 +3,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { check, compile } from "@kumikijs/compiler";
+import { CapabilityManifestError, resolveCapabilities } from "@kumikijs/compiler/node";
 import { fixCmd } from "./fix.ts";
 import { addDef, removeDef, renameDef, replaceDef } from "./mutate.ts";
 import { runCmd, smokeCmd } from "./smoke.ts";
@@ -22,11 +23,27 @@ function usage(): never {
   process.exit(2);
 }
 
+/** Resolve manifest capabilities, exiting cleanly on a malformed manifest. */
+function capsFor(inputPath: string): string[] {
+  try {
+    return resolveCapabilities(inputPath);
+  } catch (e) {
+    if (e instanceof CapabilityManifestError) {
+      console.error(`capability manifest error: ${e.message}`);
+      process.exit(1);
+    }
+    throw e;
+  }
+}
+
 function buildCmd(inputArg: string, outdirArg: string): void {
   const inputPath = resolve(process.cwd(), inputArg);
   const outdir = resolve(process.cwd(), outdirArg);
   const source = readFileSync(inputPath, "utf8");
-  const result = compile(source, { runtimeSpecifier: "./runtime.js" });
+  const result = compile(source, {
+    runtimeSpecifier: "./runtime.js",
+    capabilities: capsFor(inputPath),
+  });
   if (result.kind === "fail") {
     for (const err of result.errors) {
       console.error(`${err.code} ${err.kind} at ${err.pos.line}:${err.pos.col}: ${err.message}`);
@@ -69,8 +86,9 @@ function refsCmd(inputArg: string, qname: string): void {
 }
 
 function checkCmd(inputArg: string, strictA11y: boolean): void {
-  const store = load(resolve(process.cwd(), inputArg));
-  const errors = check(store.program, { strictA11y });
+  const inputPath = resolve(process.cwd(), inputArg);
+  const store = load(inputPath);
+  const errors = check(store.program, { strictA11y, capabilities: capsFor(inputPath) });
   if (errors.length === 0) {
     console.log("ok");
     return;

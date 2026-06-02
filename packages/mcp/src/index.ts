@@ -27,7 +27,7 @@ type Scenario = Parameters<typeof runScenarioSource>[1];
 
 import type { KumikiError } from "@kumikijs/compiler";
 import { check, compile, lex, parse } from "@kumikijs/compiler";
-import { nodeRuntimeBundleReader } from "@kumikijs/compiler/node";
+import { nodeRuntimeBundleReader, resolveCapabilities } from "@kumikijs/compiler/node";
 import { z } from "zod";
 import { getSpecDoc, listSpecDocs, searchSpec } from "./spec.ts";
 
@@ -43,6 +43,18 @@ function readSource(input: { source?: string | undefined; path?: string | undefi
   throw new Error("provide either `source` or `path`");
 }
 
+/**
+ * Registered capabilities for an input: from the `kumiki.caps.json` next to a
+ * `path`, or an explicit `capabilities` list when only `source` is given.
+ */
+function capsForInput(input: {
+  path?: string | undefined;
+  capabilities?: string[] | undefined;
+}): string[] {
+  if (input.path) return resolveCapabilities(resolve(process.cwd(), input.path));
+  return input.capabilities ?? [];
+}
+
 function toDiagnostics(errors: KumikiError[]): Diagnostic[] {
   return errors.map((e) => ({
     code: e.code,
@@ -54,10 +66,13 @@ function toDiagnostics(errors: KumikiError[]): Diagnostic[] {
 }
 
 /** Parse + typecheck, normalizing parse exceptions into a single diagnostic. */
-function validate(source: string): { ok: boolean; diagnostics: Diagnostic[] } {
+function validate(
+  source: string,
+  capabilities: string[] = [],
+): { ok: boolean; diagnostics: Diagnostic[] } {
   try {
     const program = parse(lex(source));
-    const errors = check(program);
+    const errors = check(program, { capabilities });
     return { ok: errors.length === 0, diagnostics: toDiagnostics(errors) };
   } catch (e) {
     const pe = e as { message?: string; pos?: { line: number; col: number } };
@@ -88,10 +103,16 @@ export function createServer(): McpServer {
       inputSchema: {
         source: z.string().optional().describe("Full Kumiki source text"),
         path: z.string().optional().describe("Path to a .kumiki file (relative to cwd)"),
+        capabilities: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "Project-registered capabilities accepted in app.caps (when passing `source`). With `path`, a co-located kumiki.caps.json is read automatically.",
+          ),
       },
     },
     async (input) => {
-      const result = validate(readSource(input));
+      const result = validate(readSource(input), capsForInput(input));
       if (result.ok) return text("ok — no diagnostics");
       return text(JSON.stringify(result.diagnostics, null, 2));
     },
@@ -107,6 +128,12 @@ export function createServer(): McpServer {
         source: z.string().optional(),
         path: z.string().optional(),
         includeJs: z.boolean().optional().describe("Return full JS (default: only a summary)"),
+        capabilities: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "Project-registered capabilities accepted in app.caps (when passing `source`). With `path`, a co-located kumiki.caps.json is read automatically.",
+          ),
       },
     },
     async (input) => {
@@ -115,6 +142,7 @@ export function createServer(): McpServer {
         runtimeSpecifier: "./runtime.js",
         bundle: true,
         readRuntimeBundle: nodeRuntimeBundleReader,
+        capabilities: capsForInput(input),
       });
       if (result.kind === "fail") {
         return text(`build failed:\n${JSON.stringify(toDiagnostics(result.errors), null, 2)}`);

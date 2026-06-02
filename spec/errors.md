@@ -110,6 +110,14 @@ A capability required by an effect is not declared in `app.caps`.
 
 **Fix**: Add the required capability to `app.caps`. For details on the capability model, see [Lifecycle](./lifecycle.md).
 
+### E0302 `unknown-capability`
+
+An entry in `app.caps` is neither a standard capability ([Standard Library](./stdlib.md) §2.5) nor one registered in a `kumiki.caps.json` manifest.
+
+> `Unknown capability "<name>" in app.caps — use a standard capability or register it in kumiki.caps.json`
+
+**Fix**: Use a standard capability, correct the spelling, or register the custom capability in a `kumiki.caps.json` next to the `.kumiki` file. See [Standard Library](./stdlib.md) §2.5.
+
 ### E0305 `fn-impurity`
 
 A `fn` (pure function) is reading a slot. A `fn` must depend only on its arguments.

@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-03
+
+spec が繰り延べていた 5 機能（M1–M5）を独立マイルストーンとして出荷。ロードマップ：[design-notes/roadmap-v0.2.ja.md](./design-notes/roadmap-v0.2.ja.md)。
+
 ### Added
 
 - **v0.2 M5 — `motion` レイヤー**：`motion N = {keyframes:{from,to}, duration?, easing?, iteration?, direction?}` で宣言し任意の tile の `motion` プロップから参照する、再利用可能でスコープされたアニメーション。keyframe 文法は**閉じている**（アニメ可能集合 `opacity` / `translate-x` / `translate-y` / `scale` / `rotate`、閉じたタイミングトークン） — 生 CSS の抜け穴は無い。`motion` は `theme` を手本にしたトップレベル定義で、7 つのロジックレイヤーには**数えない**（ADR-001）。body がリテラルのみなので構文的に純粋（slot/effect 不可）。runtime は mount 時にスコープ済み `@keyframes` + クラスを注入し `prefers-reduced-motion` を尊重する。新エラー **E0401**（未知の keyframe プロパティ）、**E0402**（不正なタイミング）、**E0403**（不正な keyframes）、**E0107**（未定義 motion）。`when(...)` や `overlay` と合成可能。新規 example `examples/features/30-motion.kumiki`（＋ jsdom が観測できない「アニメーション稼働」を検証する `@kumikijs/e2e` ブラウザシナリオ。e2e 層に `animating` アサーションを追加）。M5 をもって **v0.2 の 5 マイルストーン（M1–M5）すべてが出荷済み**。（[spec/style.md](./spec/style.md) §4.9.1、[design-notes/adr-001-motion-layer.ja.md](./design-notes/adr-001-motion-layer.ja.md)）
@@ -14,6 +18,13 @@
 - **v0.2 M3 — プラグインによる capability 登録**：プロジェクトは `.kumiki` ファイルと同じディレクトリの `kumiki.caps.json` マニフェストで独自 capability を登録できる。登録名は `app.caps` で受理され、その effect は emit 可能になり capability 境界で dispatch される（標準 effect と同様 scenario でモック可能）。併せて spec が長らく定めていた「**未登録 capability はコンパイルエラー**」を実装した — 標準 capability セット + 新 **E0302 `unknown-capability`**（従来は任意の cap 文字列を受理しており `spec/stdlib.md §2.5` と乖離していた）。マニフェストは宣言的な capability 境界であって**新しい構文ではない**（rationale の非ゴールを維持）。CLI・MCP（`capabilities` 引数 / 同居マニフェスト）・テストハーネスが解決する。新規 example `examples/features/27-custom-capability.kumiki` + `kumiki.caps.json`。（[spec/stdlib.md](./spec/stdlib.md) §2.5）
 - **v0.2 M2 — `overlay` builtin**：`overlay(...children)` による z 軸重ね。最初の子がベース層（通常フロー）、以降の子はコンテナ上に絶対配置される（ベースのレイアウトは決してずれない）— モーダル / トースト / ドロップダウン / ツールチップの土台。`align` prop が重ねる子を配置（縦 `top`/`bottom` ＋ 横 `left`/`right` を `-` で連結、例 `top-left`、既定 `center`、未知は `center`）。`when(...)` と合成して mount/unmount。CSS は自己完結（グローバル CSS の抜け穴なし）。新規 example `examples/features/26-overlay.kumiki`。（[spec/style.md](./spec/style.md) §4.4.3）
 - **v0.2 M1 — `stop-timer(name)`**：タイマートリガーに `timer(d, name=N)` で名前を付与でき、reducer から `stop-timer(N)` 文で停止できる。タイマー名は単一ネームスペースを共有し一意でなければならない（重複は **E0002**）。未宣言の名前への `stop-timer` は **E0106**。`stop-timer` は純粋な制御文 — reducer は `stopTimers` を返し runtime が interval を clear するので、reducer の純粋性は保たれる。全タイマー（稼働中・停止中問わず）は `app` dispose 時に clear される。新規 example `examples/features/25-stop-timer.kumiki`。（[spec/lifecycle.md](./spec/lifecycle.md) §7.1.5）
+
+## [0.1.0]
+
+初期の実験的ベースライン（npm 公開済み、git では未タグ）。
+
+### Added
+
 - pnpm + Turborepo モノレポ構成（`@kumiki/compiler` / `@kumiki/runtime` / `@kumiki/cli` / `@kumiki/mcp`）。
 - `@kumiki/mcp`: コンパイラと AI 編集・仕様検索を MCP ツールとして公開する MCP サーバー。
 - **ランタイム smoke テスト**: `@kumiki/runtime` の `smoke()`、CLI `kumiki smoke <file>`、MCP `kumiki_smoke`。headless DOM に mount して UI を操作し、`check`/`build` では捕まらないランタイム例外・空描画・未処理 rejection を検出。全 example が CI で smoke 検証される（`tests/smoke.test.ts`）。3 層検証モデルは [spec/testing.md](./spec/testing.md) §8.10。

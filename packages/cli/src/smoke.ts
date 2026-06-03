@@ -183,6 +183,15 @@ export async function testFile(path: string, capabilities: string[] = []): Promi
   return runTestsSource(readFileSync(path, "utf8"), capabilities);
 }
 
+/** Render a scalar leaf value for the §8.7.1 value arrow (strings get quoted). */
+function leafStr(v: unknown): string {
+  try {
+    return JSON.stringify(v) ?? String(v);
+  } catch {
+    return String(v);
+  }
+}
+
 /** Match a test name against a filter: exact, or a `prefix-*` / `prefix*` wildcard. */
 function matchesFilter(name: string, filter: string | undefined): boolean {
   if (!filter) return true;
@@ -212,7 +221,12 @@ export async function testCmd(
     console.log(`FAIL  ${r.name}`);
     if (r.expected !== undefined) console.log(`  expected: ${r.expected}`);
     if (r.actual !== undefined) console.log(`  actual:   ${r.actual}`);
-    if (r.diffAt !== undefined) console.log(`  diff at:  ${r.diffAt}`);
+    if (r.diffAt !== undefined) {
+      // §8.7.1 value arrow: append the scalar leaf values when the runner
+      // isolated them (e.g. `[0].text  "Count: 5" -> "Count: 0"`).
+      const arrow = r.leaf ? `  ${leafStr(r.leaf.expected)} -> ${leafStr(r.leaf.actual)}` : "";
+      console.log(`  diff at:  ${r.diffAt}${arrow}`);
+    }
   }
   console.log(`\n${results.length - failed}/${results.length} passed`);
   if (failed > 0) process.exit(1);

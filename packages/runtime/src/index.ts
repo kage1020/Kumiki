@@ -1450,6 +1450,12 @@ export type TestResult = {
   expected?: string;
   actual?: string;
   diffAt?: string;
+  /**
+   * The scalar values at the divergence point (`diffAt`), when the runner can
+   * isolate one. Powers the §8.7.1 value arrow (`expected -> actual`) and lets
+   * `kumiki fix --auto-patch` find the responsible source literal.
+   */
+  leaf?: { expected: unknown; actual: unknown };
 };
 
 function _jsonStr(v: unknown): string {
@@ -1497,7 +1503,7 @@ function tileStructEqual(
   expected: unknown,
   actual: unknown,
   path = "",
-): { ok: boolean; path?: string } {
+): { ok: boolean; path?: string; expectedLeaf?: unknown; actualLeaf?: unknown } {
   if (expected == null || actual == null) {
     return expected === actual ? { ok: true } : { ok: false, path: path || "(root)" };
   }
@@ -1505,8 +1511,12 @@ function tileStructEqual(
   const here = path || String(ek ?? "(root)");
   if (ek !== tileField(actual, "kind")) return { ok: false, path: `${here}.kind` };
   if (tileField(expected, "text") !== undefined) {
-    if (String(tileField(expected, "text")) !== String(tileField(actual, "text"))) {
-      return { ok: false, path: `${here}.text` };
+    const et = String(tileField(expected, "text"));
+    const at = String(tileField(actual, "text"));
+    if (et !== at) {
+      // Carry the scalar leaf values so the runner can print the §8.7.1 value
+      // arrow and `kumiki fix --auto-patch` can locate the responsible literal.
+      return { ok: false, path: `${here}.text`, expectedLeaf: et, actualLeaf: at };
     }
   }
   const ec = tileChildren(expected);
@@ -1578,9 +1588,11 @@ export const _stdlib = {
     }
     const finalSlots = { ...givenSlots, ...(result?.slots ?? {}) };
     let diffAt: string | undefined;
+    let leaf: { expected: unknown; actual: unknown } | undefined;
     for (const k of Object.keys(expect.slots)) {
       if (!deepEqualValue(finalSlots[k], expect.slots[k])) {
         diffAt = `slots.${k}`;
+        leaf = { expected: expect.slots[k], actual: finalSlots[k] };
         break;
       }
     }
@@ -1616,6 +1628,7 @@ export const _stdlib = {
       expected: `slots=${_jsonStr(expect.slots)} effects=${_jsonStr(expect.effects.map((e) => e.effect))}`,
       actual: `slots=${_jsonStr(pickExpected(finalSlots))} effects=${_jsonStr(emits.map((e) => e.effect))}`,
       ...(diffAt ? { diffAt } : {}),
+      ...(leaf ? { leaf } : {}),
     };
   },
   /** Structurally compare a rendered tile against the expected tile structure. */
@@ -1627,6 +1640,9 @@ export const _stdlib = {
       expected: serializeTileNode(input.expected),
       actual: serializeTileNode(input.actual),
       ...(cmp.path ? { diffAt: cmp.path } : {}),
+      ...(cmp.expectedLeaf !== undefined || cmp.actualLeaf !== undefined
+        ? { leaf: { expected: cmp.expectedLeaf, actual: cmp.actualLeaf } }
+        : {}),
     };
   },
   mapSize(m: unknown): number {

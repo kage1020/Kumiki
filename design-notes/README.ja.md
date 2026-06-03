@@ -8,6 +8,7 @@
 
 - [v0.2 ロードマップ](./roadmap-v0.2.ja.md) — v0.2 マイルストーンのスコープ・設計・受け入れ基準（stop-timer / overlay / プラグイン capability / `fix --auto-patch` / `motion` レイヤー）
 - [`test` レイヤー と `kumiki test` ランナー](./test-runner.ja.md) — M4 のスコープ判断：言語内テスト DSL + ランナー（`fix --auto-patch` の前提）
+- [`kumiki fix --auto-patch <test-name>`](./fix-from-test.ja.md) — M4b のスコープ判断：どのテスト失敗が決定論的に修復可能で、なぜ残りは報告に留めるか
 
 ## 設計理念
 

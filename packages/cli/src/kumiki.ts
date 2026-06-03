@@ -4,7 +4,7 @@ import { createRequire } from "node:module";
 import { resolve } from "node:path";
 import { check, compile } from "@kumikijs/compiler";
 import { CapabilityManifestError, resolveCapabilities } from "@kumikijs/compiler/node";
-import { fixCmd } from "./fix.ts";
+import { fixCmd, fixFromTest } from "./fix.ts";
 import { addDef, removeDef, renameDef, replaceDef } from "./mutate.ts";
 import { runCmd, smokeCmd, testCmd } from "./smoke.ts";
 import { findReferences, listDefs, load, viewDef, viewWithDeps } from "./store.ts";
@@ -21,6 +21,8 @@ function usage(): never {
   console.error("  kumiki smoke <input.kumiki>");
   console.error("  kumiki run <input.kumiki> <scenario.json>");
   console.error("  kumiki test <input.kumiki> [name|prefix*]");
+  console.error("  kumiki fix <input.kumiki> [--apply] [<code>]");
+  console.error("  kumiki fix <input.kumiki> --auto-patch <test-name> [--apply]");
   process.exit(2);
 }
 
@@ -230,9 +232,22 @@ async function main(argv: string[]): Promise<void> {
       const file = argv[3];
       if (!file) {
         console.error("Usage: kumiki fix <file> [--apply] [<code>]");
+        console.error("       kumiki fix <file> --auto-patch <test-name> [--apply]");
         process.exit(2);
       }
       const apply = argv.includes("--apply");
+      const autoIdx = argv.indexOf("--auto-patch");
+      if (autoIdx !== -1) {
+        const testName = argv[autoIdx + 1];
+        if (!testName || testName.startsWith("--")) {
+          console.error("Usage: kumiki fix <file> --auto-patch <test-name> [--apply]");
+          process.exit(2);
+        }
+        const fixPath = resolve(process.cwd(), file);
+        const outcome = await fixFromTest(fixPath, testName, apply, capsFor(fixPath));
+        if (!outcome.ok) process.exitCode = 1;
+        return;
+      }
       const code = argv.find((a, i) => i > 3 && a !== "--apply");
       fixCmd(resolve(process.cwd(), file), apply, code);
       return;

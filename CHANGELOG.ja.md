@@ -8,13 +8,13 @@
 
 ### Planned — v0.2
 
-スコープ・設計・受け入れ基準：[design-notes/roadmap-v0.2.ja.md](./design-notes/roadmap-v0.2.ja.md)。spec が既に「planned for v0.2」と明記している 5 項目を、独立したマイルストーン（M1–M5）として出荷する。M1–M3 と M4a は出荷済み（下の _Added_ 参照）：
+スコープ・設計・受け入れ基準：[design-notes/roadmap-v0.2.ja.md](./design-notes/roadmap-v0.2.ja.md)。spec が既に「planned for v0.2」と明記している 5 項目を、独立したマイルストーン（M1–M5）として出荷する。M1–M3 と M4（M4a + M4b）は出荷済み（下の _Added_ 参照）：
 
-- **M4b — `kumiki fix --auto-patch <test-name>`**：`fix` を typecheck エラーからテスト失敗まで拡張し、ソースパッチを提案・適用。M4a のテストランナー上に構築（`spec/testing.md §8.7.1`）。
 - **M5 — `motion` レイヤー**：グローバル CSS の抜け穴のない、宣言的でスコープされた transition / keyframes（`spec/style.md §4.9`）。
 
 ### Added
 
+- **v0.2 M4b — `kumiki fix --auto-patch <test-name>`**：`fix` が typecheck エラーだけでなく失敗した `test` からも修復するようになった。2 段構成：ファイルがコンパイル不能なら `planFixes`（did-you-mean / `/404` 欠落）を再利用してテストを走らせる。tile-test / reducer-test が、実際値が*一意の*ソースリテラルである**文字列リーフ**で失敗した場合、そのリテラルを期待値に置換する（§8.7.1 のスナップショット事例）。`--apply` はパッチを書き込みテストを再実行し、通るようになったか・他テストが退行したかを報告。dry-run（`--apply` なし）は提案のみ。リテラルでない乖離（数値 slot、誤った演算子、effect リスト不一致）は推測せず diff として報告する。ランナーはスカラーのリーフを特定できる場合に §8.7.1 の値矢印（`expected -> actual`）も表示する。（[spec/testing.md](./spec/testing.md) §8.7.2、[design-notes/fix-from-test.ja.md](./design-notes/fix-from-test.ja.md)）
 - **v0.2 M4a — `test` レイヤー + `kumiki test` ランナー**：言語内テストを `kumiki test [name|prefix*]` で実行。`reducer-test R given={slots,event} expect={slots,effects}` は reducer の純粋出力を検証（または `expect={panic:"…"}`）、`tile-test T given={slots} expect=<tile-expr>` は render した tile を構造比較（spec §8.4 通り props/handler は無視）。出力は spec §8.7.1 の PASS/FAIL + `expected`/`actual`/`diff at`、失敗時は非ゼロ終了。テストは `kumiki build` から除外（codegen `includeTests`）。record リテラルがキーワードのフィールド名（`type:` / `in:` 等）を受理するようになった。新規 example `examples/features/28-tests.kumiki`。_未実装_：`property-test`、`episode-test`、`expect` ワイルドカード、reducer-test の effect 結果モック、`--watch`/`--coverage`（[design-notes/test-runner.ja.md](./design-notes/test-runner.ja.md)）。（[spec/testing.md](./spec/testing.md) §8）
 - **v0.2 M3 — プラグインによる capability 登録**：プロジェクトは `.kumiki` ファイルと同じディレクトリの `kumiki.caps.json` マニフェストで独自 capability を登録できる。登録名は `app.caps` で受理され、その effect は emit 可能になり capability 境界で dispatch される（標準 effect と同様 scenario でモック可能）。併せて spec が長らく定めていた「**未登録 capability はコンパイルエラー**」を実装した — 標準 capability セット + 新 **E0302 `unknown-capability`**（従来は任意の cap 文字列を受理しており `spec/stdlib.md §2.5` と乖離していた）。マニフェストは宣言的な capability 境界であって**新しい構文ではない**（rationale の非ゴールを維持）。CLI・MCP（`capabilities` 引数 / 同居マニフェスト）・テストハーネスが解決する。新規 example `examples/features/27-custom-capability.kumiki` + `kumiki.caps.json`。（[spec/stdlib.md](./spec/stdlib.md) §2.5）
 - **v0.2 M2 — `overlay` builtin**：`overlay(...children)` による z 軸重ね。最初の子がベース層（通常フロー）、以降の子はコンテナ上に絶対配置される（ベースのレイアウトは決してずれない）— モーダル / トースト / ドロップダウン / ツールチップの土台。`align` prop が重ねる子を配置（縦 `top`/`bottom` ＋ 横 `left`/`right` を `-` で連結、例 `top-left`、既定 `center`、未知は `center`）。`when(...)` と合成して mount/unmount。CSS は自己完結（グローバル CSS の抜け穴なし）。新規 example `examples/features/26-overlay.kumiki`。（[spec/style.md](./spec/style.md) §4.4.3）

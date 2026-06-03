@@ -44,4 +44,4 @@
 
 ## M4a の後
 
-M4b は `kumiki fix --auto-patch <test-name>`（[roadmap](./roadmap-v0.2.ja.md) M4）を実装する：当該テストを実行し、既知の修正可能エラーコードに対応する失敗には `planFixes` を再利用して提案・適用・再実行し、決定論的パッチが無い場合は明確な diff を報告する。
+M4b は `kumiki fix --auto-patch <test-name>`（[roadmap](./roadmap-v0.2.ja.md) M4）を実装する：当該テストを実行し、既知の修正可能エラーコードに対応する失敗には `planFixes` を再利用して提案・適用・再実行し、決定論的パッチが無い場合は明確な diff を報告する。**出荷済み** — どの失敗が決定論的に修復可能かのスコープ判断は [fix-from-test.ja.md](./fix-from-test.ja.md) に記録した。

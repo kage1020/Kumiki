@@ -9,6 +9,7 @@ import {
   listDefs,
   load,
   planFixes,
+  planTestPatch,
   removeDef,
   renameDef,
   replaceDef,
@@ -167,6 +168,131 @@ app Counter
     const store = load(file);
     expect(check(store.program)).toEqual([]);
     rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+// M4b: `planTestPatch` is the deterministic core of `kumiki fix --auto-patch`.
+// It is a pure function (no DOM / no test execution), so it is unit-tested here;
+// the end-to-end fix-from-test loop is covered by subprocess tests in cli.test.ts.
+describe("planTestPatch: deterministic literal repair from a failing test", () => {
+  it("proposes replacing a unique source literal with the expected text", () => {
+    const source = `tile Title = heading("Helo")\n`;
+    const patch = planTestPatch(source, {
+      name: "title-text",
+      pass: false,
+      diffAt: "heading.text",
+      leaf: { expected: "Hello", actual: "Helo" },
+    });
+    expect(patch).not.toBeNull();
+    expect(patch?.description).toContain('replace "Helo" with "Hello"');
+    expect(patch?.apply(source)).toBe(`tile Title = heading("Hello")\n`);
+  });
+
+  it("returns null when the actual text is not a verbatim source literal", () => {
+    // The rendered text was assembled by concatenation, so "Count: 5" never
+    // appears as a literal — nothing deterministic to patch.
+    const source = `tile App = heading("Count: " + count.show)\n`;
+    const patch = planTestPatch(source, {
+      name: "t",
+      pass: false,
+      diffAt: "heading.text",
+      leaf: { expected: "Count: 5", actual: "Count: 0" },
+    });
+    expect(patch).toBeNull();
+  });
+
+  it("returns null when the literal occurs more than once (ambiguous target)", () => {
+    const source = `tile A = heading("Helo")\ntile B = label("Helo")\n`;
+    const patch = planTestPatch(source, {
+      name: "t",
+      pass: false,
+      diffAt: "heading.text",
+      leaf: { expected: "Hello", actual: "Helo" },
+    });
+    expect(patch).toBeNull();
+  });
+
+  it("returns null for a non-string leaf (numeric mismatch is not literal-repairable)", () => {
+    const source = `reducer dec on=ui.click(B) do= count := count - 1\n`;
+    const patch = planTestPatch(source, {
+      name: "t",
+      pass: false,
+      diffAt: "slots.count",
+      leaf: { expected: 1, actual: -1 },
+    });
+    expect(patch).toBeNull();
+  });
+
+  it("does not mis-handle a `$` in the expected replacement text", () => {
+    const source = `tile Price = label("USD 9")\n`;
+    const patch = planTestPatch(source, {
+      name: "t",
+      pass: false,
+      diffAt: "label.text",
+      leaf: { expected: "$9", actual: "USD 9" },
+    });
+    expect(patch?.apply(source)).toBe(`tile Price = label("$9")\n`);
+  });
+
+  it("skips a literal that lives only in a test body (no fixture self-patch)", () => {
+    // The rendered text comes from the test's own `given` slot data, so "Helo"
+    // appears only inside the `test` body — patching it would mutate the fixture
+    // into passing without touching any production definition.
+    const source = [
+      "tile Msg = heading(msg.show)",
+      "test t =",
+      "    tile-test Msg",
+      '        given  = {slots: {msg: "Helo"}}',
+      '        expect = heading("Hello")',
+      "",
+    ].join("\n");
+    const patch = planTestPatch(
+      source,
+      {
+        name: "t",
+        pass: false,
+        diffAt: "heading.text",
+        leaf: { expected: "Hello", actual: "Helo" },
+      },
+      [[2, 5]], // the `test t` body spans lines 2-5
+    );
+    expect(patch).toBeNull();
+  });
+
+  it("still patches a production literal when a test body also exists", () => {
+    const source = [
+      'tile Title = heading("Helo")',
+      "test t =",
+      "    tile-test Title",
+      "        given  = {slots: {}}",
+      '        expect = heading("Hello")',
+      "",
+    ].join("\n");
+    const patch = planTestPatch(
+      source,
+      {
+        name: "t",
+        pass: false,
+        diffAt: "heading.text",
+        leaf: { expected: "Hello", actual: "Helo" },
+      },
+      [[2, 5]],
+    );
+    expect(patch).not.toBeNull();
+    expect(patch?.apply(source)).toContain('tile Title = heading("Hello")');
+  });
+
+  it("returns null when the expected text needs an escape Kumiki cannot represent", () => {
+    // Backspace (0x08) is not in the lexer's escape set (\n \t \r \" \\), so
+    // emitting it as a literal would produce an invalid .kumiki file.
+    const source = `tile T = heading("a")\n`;
+    const patch = planTestPatch(source, {
+      name: "t",
+      pass: false,
+      diffAt: "heading.text",
+      leaf: { expected: "a\bc", actual: "a" },
+    });
+    expect(patch).toBeNull();
   });
 });
 

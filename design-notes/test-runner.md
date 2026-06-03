@@ -44,4 +44,4 @@ These are additive; each can land later with its own examples + tests, consisten
 
 ## After M4a
 
-M4b implements `kumiki fix --auto-patch <test-name>` ([roadmap](./roadmap-v0.2.md) M4): run the named test, and on a failure that maps to a known fixable error code reuse `planFixes` to propose/apply/re-run; report a clear diff when no deterministic patch applies.
+M4b implements `kumiki fix --auto-patch <test-name>` ([roadmap](./roadmap-v0.2.md) M4): run the named test, and on a failure that maps to a known fixable error code reuse `planFixes` to propose/apply/re-run; report a clear diff when no deterministic patch applies. **Shipped** — the scope decision (which failures are deterministically repairable) is recorded in [fix-from-test.md](./fix-from-test.md).

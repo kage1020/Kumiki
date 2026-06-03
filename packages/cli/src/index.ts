@@ -1,6 +1,13 @@
 // Public API of @kumikijs/cli — the programmatic surface behind the `kumiki` command.
 
-export { type AutoPatch, fixCmd, planFixes } from "./fix.ts";
+export {
+  type AutoPatch,
+  type FixFromTestOutcome,
+  fixCmd,
+  fixFromTest,
+  planFixes,
+  planTestPatch,
+} from "./fix.ts";
 export { addDef, removeDef, renameDef, replaceDef } from "./mutate.ts";
 export { runCmd, runScenarioSource, smokeCmd, smokeFile, smokeSource } from "./smoke.ts";
 export {

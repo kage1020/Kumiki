@@ -450,6 +450,43 @@ describe("in-language test runner helpers", () => {
     _stdlib.resetLive(live, { count: { value: 0 }, name: { value: "x" } }, { count: 5 });
     expect(live).toEqual({ count: 5, name: "x" });
   });
+
+  // M4b: the runner carries the scalar leaf values at the divergence point, so
+  // `kumiki test` can print the §8.7.1 value arrow and `fix --auto-patch` can
+  // locate the responsible source literal.
+  it("runTileTest exposes the leaf text values on a `.text` mismatch", () => {
+    const r = _stdlib.runTileTest({
+      name: "t",
+      actual: { kind: "heading", text: "Cont: 5" },
+      expected: { kind: "heading", text: "Count: 5" },
+    });
+    expect(r.pass).toBe(false);
+    expect(r.diffAt).toContain("text");
+    expect(r.leaf).toEqual({ expected: "Count: 5", actual: "Cont: 5" });
+  });
+
+  it("runReducerTest exposes the leaf slot values on a slot mismatch", () => {
+    const r = _stdlib.runReducerTest({
+      name: "t",
+      givenSlots: { msg: "Helo" },
+      result: { slots: { msg: "Helo" }, emits: [] },
+      panic: null,
+      expect: { kind: "state", slots: { msg: "Hello" }, effects: [] },
+    });
+    expect(r.pass).toBe(false);
+    expect(r.diffAt).toBe("slots.msg");
+    expect(r.leaf).toEqual({ expected: "Hello", actual: "Helo" });
+  });
+
+  it("runTileTest leaves `leaf` unset for a kind mismatch (not literal-repairable)", () => {
+    const r = _stdlib.runTileTest({
+      name: "t",
+      actual: { kind: "row" },
+      expected: { kind: "column" },
+    });
+    expect(r.pass).toBe(false);
+    expect(r.leaf).toBeUndefined();
+  });
 });
 
 describe("stdlib collection methods (issue #5)", () => {

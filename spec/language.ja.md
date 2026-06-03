@@ -31,6 +31,8 @@ definition  ::= type-def | slot-def | effect-def | reducer-def | tile-def | fn-d
 | `fn` | 補助の純粋関数 | 純粋 |
 | `app` | アプリのエントリ | 宣言 |
 
+この 7 つが**ロジック/データ/UI のコア** — 振る舞いを表現するために学ぶべきもの。Kumiki にはこれに加えて、そのコアを膨らませずに傍らに在る**補助的な表示用・メタ定義**がある：`theme`（[style.ja.md §4.2](./style.ja.md)）、`motion`（[style.ja.md §4.9.1](./style.ja.md)）、`test`（[testing.ja.md §8](./testing.ja.md)）。いずれも実在のトップレベル定義だが 7 レイヤーには数えない。上の生成文法 EBNF はコアのみを列挙する。詳細は [design-notes/adr-001-motion-layer.ja.md](../design-notes/adr-001-motion-layer.ja.md)。
+
 ---
 
 ## 1.2 字句

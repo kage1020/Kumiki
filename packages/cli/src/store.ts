@@ -37,6 +37,7 @@ const LAYER_OF: Record<string, string> = {
   FnDef: "fn",
   AppDef: "app",
   ThemeDef: "theme",
+  MotionDef: "motion",
 };
 
 export function load(path: string): Store {

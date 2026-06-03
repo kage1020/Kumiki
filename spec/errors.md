@@ -29,6 +29,7 @@ A parse error is `throw`n as a `ParseError` (`message` + `pos`). Because the par
 | `E01xx` | Name resolution (undefined references) |
 | `E02xx` | Type mismatch |
 | `E03xx` | Capabilities and purity |
+| `E04xx` | Motion |
 | `E06xx` | reducer write rules |
 | `E07xx` | Accessibility (a11y) |
 | `E08xx` | Runtime hazards (code that compiles but breaks at runtime) |
@@ -91,6 +92,14 @@ A tile reference, or the target of a route definition, refers to an undefined ti
 > `Reference to undefined tile "<name>"`
 > `Route "<path>" targets undefined tile "<name>"`
 
+### E0107 `undef-motion`
+
+A tile's `motion: "<name>"` prop refers to a motion that no `motion <name> = {…}` definition declares.
+
+> `Reference to undefined motion "<name>"`
+
+**Fix**: Check the spelling, or declare the motion. See [Style](./style.md) §4.9.1.
+
 ## E02xx — Types
 
 ### E0201 `type-mismatch`
@@ -125,6 +134,34 @@ A `fn` (pure function) is reading a slot. A `fn` must depend only on its argumen
 > `fn "<name>" must not read slot "<name>"`
 
 **Fix**: Pass the required slot value as an argument.
+
+## E04xx — Motion
+
+Validity of a `motion` definition's closed grammar ([Style](./style.md) §4.9.1).
+
+### E0401 `motion-unknown-property`
+
+A keyframe stop uses a property outside the closed animatable set (`opacity`, `translate-x`, `translate-y`, `scale`, `rotate`), or gives one a non-number value.
+
+> `motion "<name>": unknown keyframe property "<prop>" (allowed: …)`
+
+**Fix**: Use a supported property, or express the effect with one.
+
+### E0402 `motion-invalid-timing`
+
+A timing field is outside its closed set: `duration` (a number of ms or `fast`/`normal`/`slow`), `easing` (`linear`/`ease`/`ease-in`/`ease-out`/`ease-in-out`), `iteration` (a positive Int or `infinite`), `direction` (`normal`/`reverse`/`alternate`/`alternate-reverse`) — or the field name itself is unknown.
+
+> `motion "<name>": easing must be one of …`
+
+**Fix**: Use a value (or field) from the closed set.
+
+### E0403 `motion-malformed`
+
+A `motion` is missing its `keyframes` record, or the keyframes lack a `from` / `to` stop (or use a stop other than `from` / `to`).
+
+> `motion "<name>" keyframes must include a "to" record`
+
+**Fix**: Provide `keyframes: {from: {…}, to: {…}}`.
 
 ## E06xx — reducer Write Rules
 

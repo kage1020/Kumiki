@@ -10,6 +10,10 @@ This is the **record of Kumiki's history and decisions**. Rather than the specif
 - [`test` layer & `kumiki test` runner](./test-runner.md) — M4 scope decision: the in-language test DSL + runner (prerequisite for `fix --auto-patch`)
 - [`kumiki fix --auto-patch <test-name>`](./fix-from-test.md) — M4b scope decision: which test failures are deterministically repairable, and why the rest are reported
 
+## Architecture Decision Records (ADR)
+
+- [ADR 001 — `motion` is a sibling of `theme`, not an 8th layer](./adr-001-motion-layer.md) — M5: why the motion feature is an auxiliary presentational definition outside the 7-layer model, plus the closed motion grammar
+
 ## Design Rationale
 
 - [Rationale](./rationale.md) — Kumiki's design rationale and premises

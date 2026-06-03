@@ -13,7 +13,7 @@ Instead:
 3. Express **layout via tile primitives** (`row` / `column` / `grid`) props
 4. Pass through with `class` / `style` props **only when absolutely necessary**
 
-This covers the visual needs of an ordinary SPA. Complex animations and elaborate decoration are planned as a `motion` layer in v0.2.
+This covers the visual needs of an ordinary SPA. Reusable, arbitrary animations are provided by the `motion` definition (§4.9.1).
 
 ---
 
@@ -349,7 +349,37 @@ Applied automatically to tiles whose visibility is toggled with `when`:
 when(modalOpen, Modal() {transition: "slide-up", transition-duration: "normal"})
 ```
 
-Arbitrary CSS transitions / keyframes will be introduced in the v0.2 `motion` layer.
+### 4.9.1 The `motion` definition (v0.2)
+
+For reusable, arbitrary (but still closed-grammar) animations — spinners, pulses, custom enter/exit — declare a **`motion`**. It is a top-level definition, a sibling of `theme` (a purely presentational definition, **not** one of the seven logic layers — see [language.md §1.1.1](./language.md)). It is referenced from any tile's `motion` prop.
+
+```kumiki
+motion Spin = {
+    keyframes: {from: {rotate: 0}, to: {rotate: 360}},
+    duration:  "slow",        # "fast" | "normal" | "slow", or a positive Int (milliseconds)
+    easing:    "linear",      # linear | ease | ease-in | ease-out | ease-in-out
+    iteration: "infinite",    # a positive Int, or "infinite"
+    direction: "normal"       # normal | reverse | alternate | alternate-reverse
+}
+
+tile Loader = box(icon(name="spinner")) {motion: "Spin"}
+```
+
+- **`keyframes`** (required) has a `from` and a `to` record over the **closed animatable property set** (no raw CSS):
+
+  | property | unit | animates |
+  |---|---|---|
+  | `opacity` | 0..1 | opacity |
+  | `translate-x` / `translate-y` | px (number) | position |
+  | `scale` | number | size |
+  | `rotate` | deg (number) | rotation |
+
+  Multiple transform properties on one stop compose. An unknown property is a compile error (**E0401**); malformed keyframes (no `from`/`to`) are **E0403**.
+- The timing fields are optional (defaults `duration:"normal"`, `easing:"ease"`, `iteration:1`, `direction:"normal"`); a value outside its closed set is **E0402**.
+- A `motion: "X"` prop naming an undefined motion is **E0107**.
+- Because the body is a literal record, a motion **cannot read/write slots or emit effects** — it is purely presentational. It composes with `when(...)` and `overlay`, and the generated keyframes are scoped (no global-CSS leak, §4.10). `prefers-reduced-motion: reduce` disables motion (and the v0.1 transitions above).
+
+Scope and the layer-vs-extension decision are recorded in [design-notes/adr-001-motion-layer.md](../design-notes/adr-001-motion-layer.md). Deferred: multi-stop percentage keyframes, color/blur/skew properties.
 
 ---
 
@@ -384,6 +414,7 @@ app TodoApp
 | Express layout via tile structure | Eliminates the need for the AI to learn layout CSS |
 | Ban global CSS | Always ties "where a style came from" to the parent tile |
 | Limit animation in v0.1 | Too many choices destabilize the AI's decisions |
+| `motion` is a closed-grammar definition, not raw CSS | Keeps animations statically locatable and AI-editable; preserves the no-global-CSS invariant |
 
 ---
 

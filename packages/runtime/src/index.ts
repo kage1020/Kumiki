@@ -146,6 +146,8 @@ export type AppShape = {
   themes?: Record<string, Theme>;
   /** Phase 4: selected theme name. */
   themeName?: string | null;
+  /** v0.2 M5: reusable scoped animations by name (closed-grammar keyframes + timing). */
+  motions?: Record<string, unknown>;
   root?: () => TileNode;
   live?: Record<string, unknown>;
   _rerender?: () => void;
@@ -210,6 +212,8 @@ export function mount(app: AppShape, target: HTMLElement): { dispose: () => void
   if (!("route" in app.live)) {
     app.live.route = emptyRoute();
   }
+  // Inject the app's `motion` keyframes (+ prefers-reduced-motion guard) once.
+  ensureMotionStyles(app);
   const slotValues = app.live;
 
   const caps = makeCapabilityRegistry(app.caps);
@@ -678,6 +682,14 @@ function _setPathHelper(obj: unknown, path: string[], value: unknown): unknown {
 }
 
 function renderTile(node: TileNode): HTMLElement {
+  const el = renderTileNode(node);
+  // A `motion` prop applies to any tile uniformly (M5). The keyframes/classes
+  // are injected once at mount by ensureMotionStyles.
+  applyMotion(el, node.props);
+  return el;
+}
+
+function renderTileNode(node: TileNode): HTMLElement {
   switch (node.kind) {
     case "page":
     case "column": {
@@ -1146,6 +1158,80 @@ function applyTransition(el: HTMLElement, props?: TileProps): void {
   el.classList.add("kumiki-anim", `kumiki-anim-${t}`);
   const d = props["transition-duration"];
   if (typeof d === "string") el.classList.add(`kumiki-anim-${d}`);
+}
+
+// ----- motion layer (v0.2 M5) -----
+// Reusable, scoped animations declared with `motion N = {...}` and referenced
+// from a tile's `motion` prop. Codegen puts the parsed definitions on
+// `App.motions`; the runtime turns each into a scoped `@keyframes` + class at
+// mount, honoring `prefers-reduced-motion`. See design-notes/adr-001-motion-layer.md.
+
+/** Map a duration token (or a raw ms number) to a CSS duration. */
+function motionDuration(d: unknown): string {
+  if (typeof d === "number") return `${d}ms`;
+  if (d === "fast") return "150ms";
+  if (d === "slow") return "600ms";
+  return "300ms"; // "normal" / default
+}
+
+/** Build the CSS declarations for one keyframe stop from the closed prop set. */
+function motionStopCss(stop: unknown): string {
+  const s = (stop ?? {}) as Record<string, unknown>;
+  const decls: string[] = [];
+  const transform: string[] = [];
+  if (typeof s.opacity === "number") decls.push(`opacity: ${s.opacity}`);
+  if (typeof s["translate-x"] === "number") transform.push(`translateX(${s["translate-x"]}px)`);
+  if (typeof s["translate-y"] === "number") transform.push(`translateY(${s["translate-y"]}px)`);
+  if (typeof s.scale === "number") transform.push(`scale(${s.scale})`);
+  if (typeof s.rotate === "number") transform.push(`rotate(${s.rotate}deg)`);
+  if (transform.length > 0) decls.push(`transform: ${transform.join(" ")}`);
+  return decls.join("; ");
+}
+
+/** Build the `@keyframes` + class CSS for one motion definition. */
+function motionCss(name: string, spec: unknown): string {
+  const s = (spec ?? {}) as Record<string, unknown>;
+  const kf = (s.keyframes ?? {}) as Record<string, unknown>;
+  const from = motionStopCss(kf.from);
+  const to = motionStopCss(kf.to);
+  const easing = typeof s.easing === "string" ? s.easing : "ease";
+  const iteration =
+    s.iteration === "infinite"
+      ? "infinite"
+      : typeof s.iteration === "number"
+        ? String(s.iteration)
+        : "1";
+  const direction = typeof s.direction === "string" ? s.direction : "normal";
+  const cls = `kumiki-motion-${name}`;
+  return [
+    `@keyframes ${cls} { from { ${from} } to { ${to} } }`,
+    `.${cls} { animation-name: ${cls}; animation-duration: ${motionDuration(s.duration)}; animation-timing-function: ${easing}; animation-iteration-count: ${iteration}; animation-direction: ${direction}; animation-fill-mode: both; }`,
+  ].join("\n");
+}
+
+/** Inject the app's motion keyframes + a `prefers-reduced-motion` guard at mount. */
+function ensureMotionStyles(app: AppShape): void {
+  const motions = app.motions ?? {};
+  const rules = Object.entries(motions).map(([name, spec]) => motionCss(name, spec));
+  // a11y (M5 AC5): disable motion AND the v0.1 transitions when the user asks.
+  rules.push(
+    `@media (prefers-reduced-motion: reduce) { .kumiki-motion, .kumiki-anim { animation: none !important } }`,
+  );
+  let style = document.getElementById("kumiki-motions") as HTMLStyleElement | null;
+  if (!style) {
+    style = document.createElement("style");
+    style.id = "kumiki-motions";
+    document.head.appendChild(style);
+  }
+  style.textContent = rules.join("\n");
+}
+
+/** Add the generated motion class to a tile that carries a `motion: "Name"` prop. */
+function applyMotion(el: HTMLElement, props?: TileProps): void {
+  if (!props) return;
+  const m = props.motion;
+  if (typeof m !== "string") return;
+  el.classList.add("kumiki-motion", `kumiki-motion-${m}`);
 }
 
 let stateStyleSeq = 0;

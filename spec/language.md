@@ -31,6 +31,8 @@ Definitions are unordered and may be forward-referenced. The compiler performs a
 | `fn` | Auxiliary pure functions | Pure |
 | `app` | Application entry | Declaration |
 
+These seven are the **logic/data/UI core** — what an author must learn to express behavior. Kumiki also has **auxiliary presentational/meta definitions** that sit alongside the seven without expanding that core: `theme` ([style.md §4.2](./style.md)), `motion` ([style.md §4.9.1](./style.md)), and `test` ([testing.md §8](./testing.md)). They are real top-level definitions but are not counted among the seven layers; the production-grammar EBNF above lists only the core. See [design-notes/adr-001-motion-layer.md](../design-notes/adr-001-motion-layer.md).
+
 ---
 
 ## 1.2 Lexical

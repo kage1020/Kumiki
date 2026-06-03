@@ -207,4 +207,30 @@ test dec-should-add =
     // File untouched — no guessing.
     expect(readFileSync(file, "utf8")).toBe(source);
   });
+
+  // Regression (PR #18 review, Codex P2): when the failing text comes from the
+  // test's own `given` data, the literal lives only in the `test` body. Patching
+  // it would fake a PASS without fixing any production definition — so test
+  // bodies are excluded from the literal search and no patch is offered.
+  it("does not patch a literal that lives only in a test fixture", { timeout: 30000 }, () => {
+    const file = join(dir, "fixture-only.kumiki");
+    const source = `slot msg : Text = "x"
+tile Msg = heading(msg.show)
+tile App = column(Msg)
+app FixDemo
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []
+test msg-text =
+    tile-test Msg
+        given  = {slots: {msg: "Helo"}}
+        expect = heading("Hello")
+`;
+    writeFileSync(file, source);
+    const { out, code } = runCli(["fix", file, "--auto-patch", "msg-text", "--apply"]);
+    expect(code).toBe(1);
+    expect(out).toContain("no auto-patch available");
+    // The fixture's "Helo" must be left intact — no self-mutating PASS.
+    expect(readFileSync(file, "utf8")).toBe(source);
+  });
 });

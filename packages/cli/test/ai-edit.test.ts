@@ -233,6 +233,67 @@ describe("planTestPatch: deterministic literal repair from a failing test", () =
     });
     expect(patch?.apply(source)).toBe(`tile Price = label("$9")\n`);
   });
+
+  it("skips a literal that lives only in a test body (no fixture self-patch)", () => {
+    // The rendered text comes from the test's own `given` slot data, so "Helo"
+    // appears only inside the `test` body — patching it would mutate the fixture
+    // into passing without touching any production definition.
+    const source = [
+      "tile Msg = heading(msg.show)",
+      "test t =",
+      "    tile-test Msg",
+      '        given  = {slots: {msg: "Helo"}}',
+      '        expect = heading("Hello")',
+      "",
+    ].join("\n");
+    const patch = planTestPatch(
+      source,
+      {
+        name: "t",
+        pass: false,
+        diffAt: "heading.text",
+        leaf: { expected: "Hello", actual: "Helo" },
+      },
+      [[2, 5]], // the `test t` body spans lines 2-5
+    );
+    expect(patch).toBeNull();
+  });
+
+  it("still patches a production literal when a test body also exists", () => {
+    const source = [
+      'tile Title = heading("Helo")',
+      "test t =",
+      "    tile-test Title",
+      "        given  = {slots: {}}",
+      '        expect = heading("Hello")',
+      "",
+    ].join("\n");
+    const patch = planTestPatch(
+      source,
+      {
+        name: "t",
+        pass: false,
+        diffAt: "heading.text",
+        leaf: { expected: "Hello", actual: "Helo" },
+      },
+      [[2, 5]],
+    );
+    expect(patch).not.toBeNull();
+    expect(patch?.apply(source)).toContain('tile Title = heading("Hello")');
+  });
+
+  it("returns null when the expected text needs an escape Kumiki cannot represent", () => {
+    // Backspace (0x08) is not in the lexer's escape set (\n \t \r \" \\), so
+    // emitting it as a literal would produce an invalid .kumiki file.
+    const source = `tile T = heading("a")\n`;
+    const patch = planTestPatch(source, {
+      name: "t",
+      pass: false,
+      diffAt: "heading.text",
+      leaf: { expected: "a\bc", actual: "a" },
+    });
+    expect(patch).toBeNull();
+  });
 });
 
 describe("parallel op merge", () => {

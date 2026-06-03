@@ -249,7 +249,8 @@ async function main(argv: string[]): Promise<void> {
         return;
       }
       const code = argv.find((a, i) => i > 3 && a !== "--apply");
-      fixCmd(resolve(process.cwd(), file), apply, code);
+      const plainPath = resolve(process.cwd(), file);
+      fixCmd(plainPath, apply, code, capsFor(plainPath));
       return;
     }
     default:

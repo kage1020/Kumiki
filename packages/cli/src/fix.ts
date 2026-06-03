@@ -104,9 +104,16 @@ export function planFixes(store: Store, errors: KumikiError[]): AutoPatch[] {
   return patches;
 }
 
-export function fixCmd(path: string, apply: boolean, onlyCode?: string): void {
+export function fixCmd(
+  path: string,
+  apply: boolean,
+  onlyCode?: string,
+  capabilities: string[] = [],
+): void {
   const store = load(path);
-  const errors = check(store.program);
+  // Thread manifest capabilities so a file using a registered cap is not falsely
+  // reported as E0302 (and so the planned patches match what `check`/`build` see).
+  const errors = check(store.program, { capabilities });
   if (errors.length === 0) {
     console.log("no errors");
     return;
@@ -133,7 +140,7 @@ export function fixCmd(path: string, apply: boolean, onlyCode?: string): void {
   // Re-validate
   try {
     const next = parse(lex(text));
-    const after = check(next);
+    const after = check(next, { capabilities });
     if (after.length === 0) console.log(`applied ${patches.length} fix(es) — file now clean`);
     else console.log(`applied ${patches.length} fix(es) — ${after.length} error(s) remain`);
   } catch (e) {
@@ -172,32 +179,88 @@ export type FixFromTestOutcome = {
 };
 
 /**
+ * Render a string as a Kumiki source literal, or null if it needs an escape the
+ * lexer can't represent. The lexer supports only `\n` / `\t` / `\r` / `\"` /
+ * `\\` (lexer.ts) — emitting a JSON `\uXXXX` (e.g. for a control char) would
+ * produce an invalid `.kumiki` file, so we bail rather than write garbage.
+ */
+function kumikiStringLit(s: string): string | null {
+  let out = '"';
+  for (const ch of s) {
+    const code = ch.codePointAt(0) ?? 0;
+    if (ch === "\\") out += "\\\\";
+    else if (ch === '"') out += '\\"';
+    else if (ch === "\n") out += "\\n";
+    else if (ch === "\t") out += "\\t";
+    else if (ch === "\r") out += "\\r";
+    else if (code < 0x20)
+      return null; // control char Kumiki cannot escape
+    else out += ch;
+  }
+  return `${out}"`;
+}
+
+/** 1-based line number of a character offset in `source`. */
+function lineOfOffset(source: string, offset: number): number {
+  let line = 1;
+  const end = Math.min(offset, source.length);
+  for (let i = 0; i < end; i++) if (source[i] === "\n") line++;
+  return line;
+}
+
+/**
  * A deterministic patch from a failing test, when one is provable: the failing
  * leaf is a string whose *actual* value appears verbatim, exactly once, as a
- * source string literal. Replacing it with the *expected* value is unambiguous.
- * Returns null when no such patch exists — the caller reports the diff instead.
+ * source string literal **in implementation code** (tile / reducer), not in a
+ * `test` body. `excludedLineRanges` are the 1-based inclusive line spans of the
+ * file's `test` definitions; a match inside one is skipped, because patching a
+ * test's own `given` / `expect` data would mutate the fixture into passing
+ * without touching any production definition. Returns null when no such patch
+ * exists — the caller reports the diff instead.
  */
-export function planTestPatch(source: string, r: TestResult): AutoPatch | null {
+export function planTestPatch(
+  source: string,
+  r: TestResult,
+  excludedLineRanges: Array<[number, number]> = [],
+): AutoPatch | null {
   if (r.pass || !r.leaf) return null;
   const { expected, actual } = r.leaf;
   if (typeof actual !== "string" || typeof expected !== "string" || actual === expected) {
     return null;
   }
-  const actualLit = JSON.stringify(actual);
-  const expectedLit = JSON.stringify(expected);
-  // Determinism guard: the actual text must be a verbatim literal occurring
-  // exactly once. Assembled text (concatenation) won't be found; more than one
-  // occurrence is ambiguous — both fall through to "no auto-patch".
-  if (source.split(actualLit).length - 1 !== 1) return null;
+  const actualLit = kumikiStringLit(actual);
+  const expectedLit = kumikiStringLit(expected);
+  if (actualLit === null || expectedLit === null) return null;
+
+  // Collect occurrences outside any `test` body. Determinism requires exactly
+  // one: assembled text (concatenation) is never found; a fixture-only literal
+  // yields zero implementation hits; duplicates are ambiguous — all → null.
+  const inExcluded = (offset: number): boolean => {
+    const line = lineOfOffset(source, offset);
+    return excludedLineRanges.some(([lo, hi]) => line >= lo && line <= hi);
+  };
+  const hits: number[] = [];
+  for (let idx = source.indexOf(actualLit); idx !== -1; idx = source.indexOf(actualLit, idx + 1)) {
+    if (!inExcluded(idx)) hits.push(idx);
+  }
+  if (hits.length !== 1) return null;
+  const hit = hits[0]!;
   const at = r.diffAt ?? "(leaf)";
   return {
     code: "TEST",
     message: `test "${r.name}" failed at ${at}`,
     description: `replace ${actualLit} with ${expectedLit} (from failing test "${r.name}" @ ${at})`,
-    // Function replacer so a `$` in the expected text is not treated as a
-    // String.replace substitution pattern.
-    apply: (text: string) => text.replace(actualLit, () => expectedLit),
+    // Positional splice at the proven offset — avoids String.replace's first-
+    // match-anywhere (which could hit a test body) and `$`-substitution.
+    apply: (text: string) => text.slice(0, hit) + expectedLit + text.slice(hit + actualLit.length),
   };
+}
+
+/** 1-based inclusive line spans of every `test` definition in `store`. */
+function testBodyLineRanges(store: Store): Array<[number, number]> {
+  return store.defs
+    .filter((e) => e.def.kind === "TestDef")
+    .map((e): [number, number] => [e.range.startLine, e.range.endLine]);
 }
 
 export async function fixFromTest(
@@ -231,7 +294,17 @@ export async function fixFromTest(
     for (const p of patches) text = p.apply(text);
     writeFileSync(path, text);
     compileFixes = patches.length;
-    const remaining = check(parse(lex(text)), { capabilities });
+    // Guard the re-check: a patch could (defensively) yield invalid syntax, and
+    // the file is already written — surface that instead of throwing.
+    let remaining: ReturnType<typeof check>;
+    try {
+      remaining = check(parse(lex(text)), { capabilities });
+    } catch (e) {
+      console.log(
+        `applied ${compileFixes} compile fix(es) but they broke the file (${String(e)}); cannot run "${testName}"`,
+      );
+      return { ok: false, status: "compile-remaining", compileFixes };
+    }
     if (remaining.length > 0) {
       console.log(
         `applied ${compileFixes} compile fix(es) — ${remaining.length} error(s) remain; cannot run "${testName}"`,
@@ -265,8 +338,11 @@ export async function fixFromTest(
     };
   }
 
-  // Tier 2: behavioral, deterministic literal repair.
-  const patch = planTestPatch(readFileSync(path, "utf8"), target);
+  // Tier 2: behavioral, deterministic literal repair. Re-load from the current
+  // (possibly Tier-1-patched) file so the source and the `test` body line ranges
+  // used to exclude fixture literals are consistent.
+  const curSource = readFileSync(path, "utf8");
+  const patch = planTestPatch(curSource, target, testBodyLineRanges(load(path)));
   if (!patch) {
     console.log(`(no auto-patch available) for failing test "${testName}":`);
     if (target.expected !== undefined) console.log(`  expected: ${target.expected}`);
@@ -279,7 +355,7 @@ export async function fixFromTest(
     console.log(`  ${patch.description}`);
     return { ok: true, status: "proposed", patch, ...(compileFixes ? { compileFixes } : {}) };
   }
-  writeFileSync(path, patch.apply(readFileSync(path, "utf8")));
+  writeFileSync(path, patch.apply(curSource));
   const after = await testFile(path, capabilities);
   const nowPass = after.find((r) => r.name === testName)?.pass === true;
   const regressed = after

@@ -55,9 +55,9 @@ describe("argument-less stdlib methods (issue #7)", () => {
     expect(js).toContain("_s.parseFloatOpt(");
     expect(js).toContain("Math.abs(");
     expect(js).toContain("Math.trunc(");
-    // The old silent-failure fallthrough `(base)["head"]` must NOT be emitted.
-    expect(js).not.toContain('["head"]');
-    expect(js).not.toContain('["parse-int"]');
+    // None of the 12 may fall through to the record-field accessor `(base)["m"]`
+    // (the old silent-`undefined` bug). Guards against a future forgotten case.
+    for (const m of ARGLESS) expect(js, m).not.toContain(`["${m}"]`);
   });
 
   it("the parenthesized form lowers identically", () => {

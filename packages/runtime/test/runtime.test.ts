@@ -620,11 +620,14 @@ describe("stdlib argument-less methods (issue #7)", () => {
     expect(_stdlib.listTail(null)).toEqual([]);
   });
 
-  it("toList: Option → [v]/[], Set object → keys, array → itself", () => {
+  it("toList: Option → [v]/[], Set object → keys, array → fresh copy (no aliasing)", () => {
     expect(_stdlib.toList(_stdlib.Some(7))).toEqual([7]);
     expect(_stdlib.toList(_stdlib.None)).toEqual([]);
     expect(_stdlib.toList({ a: true, b: true })).toEqual(["a", "b"]);
-    expect(_stdlib.toList([1, 2])).toEqual([1, 2]);
+    const src = [1, 2];
+    const out = _stdlib.toList(src);
+    expect(out).toEqual([1, 2]);
+    expect(out).not.toBe(src); // copy, not the same reference
   });
 
   it("toOption: Ok → Some, Err → None", () => {

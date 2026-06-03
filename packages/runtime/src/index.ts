@@ -2040,7 +2040,9 @@ export const _stdlib = {
       const o = v as { _tag: string; _0?: unknown };
       return o._tag === "Some" ? [o._0] : [];
     }
-    if (Array.isArray(v)) return v;
+    // Return a fresh copy so the result never aliases a slot array, matching
+    // listHead/listTail/listLast which all produce new values.
+    if (Array.isArray(v)) return [...v];
     // Set is stored as `{ [key]: true }` (keys are stringified, like the other set ops).
     if (v && typeof v === "object") return Object.keys(v as Record<string, unknown>);
     return [];

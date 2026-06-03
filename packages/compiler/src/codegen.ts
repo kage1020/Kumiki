@@ -39,6 +39,9 @@ export function codegen(program: Program, opts: CodegenOptions): string {
   const themes = program.defs.filter(
     (d): d is import("./ast.ts").ThemeDef => d.kind === "ThemeDef",
   );
+  const motions = program.defs.filter(
+    (d): d is import("./ast.ts").MotionDef => d.kind === "MotionDef",
+  );
   const tests = program.defs.filter((d): d is TestDef => d.kind === "TestDef");
   const app = apps[0];
   if (!app) throw new Error("No app definition found");
@@ -113,6 +116,15 @@ export function codegen(program: Program, opts: CodegenOptions): string {
   const themeRef = app.theme ? JSON.stringify(app.theme) : "null";
   lines.push("");
 
+  // Motion registry — reusable, scoped animations (M5). The runtime turns each
+  // into a `@keyframes` + class block at mount. See ADR-001.
+  lines.push("const _motions = {");
+  for (const m of motions) {
+    lines.push(`  ${JSON.stringify(m.name)}: ${JSON.stringify(m.body)},`);
+  }
+  lines.push("};");
+  lines.push("");
+
   // App object passed to mount
   lines.push("const App = {");
   lines.push("  slots: _slots,");
@@ -124,6 +136,7 @@ export function codegen(program: Program, opts: CodegenOptions): string {
   lines.push("  live: _live,");
   lines.push("  themes: _themes,");
   lines.push(`  themeName: ${themeRef},`);
+  lines.push("  motions: _motions,");
   lines.push("};");
   lines.push("");
 
@@ -236,7 +249,7 @@ function effectListJs(e: Expr, ctx: EvalCtx): string {
  * still reach the reducer.
  */
 function eventPayloadJs(event: Expr | undefined, ctx: EvalCtx): string {
-  if (!event || event.kind !== "RecordLit") return "({})";
+  if (event?.kind !== "RecordLit") return "({})";
   const el = event.fields.find((f) => f.name === "el");
   if (el) return jsOfExpr(el.value, ctx);
   const rest = event.fields.filter((f) => f.name !== "type" && f.name !== "target");

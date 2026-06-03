@@ -199,6 +199,10 @@ class Parser {
         defs.push(this.parseThemeDef());
         continue;
       }
+      if (this.matchT("ident", "motion")) {
+        defs.push(this.parseMotionDef());
+        continue;
+      }
       defs.push(this.parseDef());
     }
     return { kind: "Program", defs };
@@ -210,6 +214,17 @@ class Parser {
     this.eat("op", "=");
     const body = this.parseThemeRecord();
     return { kind: "ThemeDef", name, body, pos: start.pos };
+  }
+
+  // `motion N = { keyframes: {...}, duration: ..., ... }`. The body reuses the
+  // theme-record grammar (literals + nested records only), which is exactly why
+  // a motion can't reference slots/effects — purity is structural (M5 AC4).
+  private parseMotionDef(): Def {
+    const start = this.eat("ident", "motion");
+    const name = this.eat("ident").value;
+    this.eat("op", "=");
+    const body = this.parseThemeRecord();
+    return { kind: "MotionDef", name, body, pos: start.pos };
   }
 
   private parseThemeRecord(): { [k: string]: import("./ast.ts").ThemeValue } {

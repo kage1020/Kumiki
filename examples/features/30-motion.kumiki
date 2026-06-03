@@ -1,0 +1,37 @@
+# Feature: the `motion` layer (v0.2). Reusable, scoped animations are declared
+# with `motion N = {...}` (closed grammar: a from/to keyframe over a closed
+# property set + timing) and referenced from any tile's `motion` prop. Motion
+# composes with `when(...)` and `overlay`, and honors prefers-reduced-motion.
+
+slot open : Bool = false
+
+reducer show on=ui.click(OpenBtn)  do= open := true
+reducer hide on=ui.click(CloseBtn) do= open := false
+
+# A continuous spinner: rotate 0 -> 360, forever, linear.
+motion Spin = {
+    keyframes: {from: {rotate: 0}, to: {rotate: 360}},
+    duration:  "slow",
+    easing:    "linear",
+    iteration: "infinite"
+}
+
+# A one-shot enter animation for the modal: rise + fade in.
+motion SlideIn = {
+    keyframes: {from: {translate-y: 16, opacity: 0}, to: {translate-y: 0, opacity: 1}},
+    duration:  "normal",
+    easing:    "ease-out"
+}
+
+tile Spinner  = box(text("Loading")) {motion: "Spin"}
+tile OpenBtn  = button(text="Open", onClick=show)
+tile CloseBtn = button(text="Close", onClick=hide)
+tile Modal    = card(heading("Hello"), text("I animate in."), CloseBtn) {motion: "SlideIn", pad: "lg", gap: "md"}
+tile Content  = column(heading("Motion demo"), Spinner, OpenBtn) {pad: "lg", gap: "md"}
+
+tile App = overlay(Content, when(open, Modal())) {align: "center"}
+
+app MotionDemo
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

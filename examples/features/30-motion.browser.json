@@ -1,0 +1,13 @@
+{
+  "steps": [
+    {
+      "label": "the spinner carries a running keyframe animation (jsdom cannot observe this)",
+      "expect": { "noErrors": true, "animating": [".kumiki-motion-Spin"] }
+    },
+    {
+      "label": "opening the modal mounts an animated card over the content",
+      "do": { "clickText": "Open" },
+      "expect": { "visible": ["I animate in."], "animating": [".kumiki-motion-SlideIn"] }
+    }
+  ]
+}

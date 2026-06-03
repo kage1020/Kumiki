@@ -10,6 +10,10 @@
 - [`test` レイヤー と `kumiki test` ランナー](./test-runner.ja.md) — M4 のスコープ判断：言語内テスト DSL + ランナー（`fix --auto-patch` の前提）
 - [`kumiki fix --auto-patch <test-name>`](./fix-from-test.ja.md) — M4b のスコープ判断：どのテスト失敗が決定論的に修復可能で、なぜ残りは報告に留めるか
 
+## アーキテクチャ決定記録（ADR）
+
+- [ADR 001 — `motion` は `theme` と同格、8 番目のレイヤーではない](./adr-001-motion-layer.ja.md) — M5：motion 機能を 7 レイヤー外の補助的表示用定義とする理由と、閉じた motion 文法
+
 ## 設計理念
 
 - [Rationale](./rationale.md) — Kumiki の設計理念と前提

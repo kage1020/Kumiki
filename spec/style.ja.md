@@ -13,7 +13,7 @@ Kumiki は **CSS を直接書かせない**。CSS のカスケード・特異度
 3. **レイアウトはタイルプリミティブ**（`row` / `column` / `grid`）の props で表現
 4. **どうしても必要なときだけ** `class` / `style` props で素通し
 
-これで普通の SPA に必要な見た目はカバーできる。複雑なアニメーションや凝った装飾は v0.2 で `motion` レイヤを追加予定。
+これで普通の SPA に必要な見た目はカバーできる。再利用可能で任意のアニメーションは `motion` 定義（§4.9.1）が提供する。
 
 ---
 
@@ -349,7 +349,37 @@ v0.1 では以下のみ：
 when(modalOpen, Modal() {transition: "slide-up", transition-duration: "normal"})
 ```
 
-任意の CSS transition / keyframe は v0.2 の `motion` レイヤで導入。
+### 4.9.1 `motion` 定義 (v0.2)
+
+再利用可能で任意（ただし閉じた文法）のアニメーション — スピナー、パルス、独自の入退場 — には **`motion`** を宣言する。これは `theme` と同格のトップレベル定義（純粋に表示用の定義で、7 つのロジックレイヤーには**含めない** — [language.ja.md §1.1.1](./language.ja.md) 参照）であり、任意の tile の `motion` プロップから参照する。
+
+```kumiki
+motion Spin = {
+    keyframes: {from: {rotate: 0}, to: {rotate: 360}},
+    duration:  "slow",        # "fast" | "normal" | "slow"、または正の Int（ミリ秒）
+    easing:    "linear",      # linear | ease | ease-in | ease-out | ease-in-out
+    iteration: "infinite",    # 正の Int、または "infinite"
+    direction: "normal"       # normal | reverse | alternate | alternate-reverse
+}
+
+tile Loader = box(icon(name="spinner")) {motion: "Spin"}
+```
+
+- **`keyframes`**（必須）は `from` と `to` のレコードを持ち、各々は**閉じたアニメ可能プロパティ集合**上のレコード（生 CSS 無し）：
+
+  | プロパティ | 単位 | アニメ対象 |
+  |---|---|---|
+  | `opacity` | 0..1 | 不透明度 |
+  | `translate-x` / `translate-y` | px（数値） | 位置 |
+  | `scale` | 数値 | 大きさ |
+  | `rotate` | deg（数値） | 回転 |
+
+  1 ストップ上の複数 transform プロパティは、記述順によらず**固定順** — `translate-x` → `translate-y` → `scale` → `rotate` — で単一の `transform` に合成される（CSS `transform` は非可換なので、決定論のため順序を固定している）。未知プロパティはコンパイルエラー（**E0401**）、不正な keyframes（`from`/`to` 無し）は **E0403**。
+- タイミングフィールドは任意（既定 `duration:"normal"`、`easing:"ease"`、`iteration:1`、`direction:"normal"`）。閉じた集合外の値は **E0402**。
+- 未定義の motion を指す `motion: "X"` プロップは **E0107**。
+- body はリテラルレコードなので、motion は **slot の読み書きや effect emit ができない** — 純粋に表示用。`when(...)` や `overlay` と合成でき、生成 keyframes はスコープされる（グローバル CSS を漏らさない、§4.10）。`prefers-reduced-motion: reduce` で motion（と上記 v0.1 transition）を無効化する。
+
+スコープとレイヤー vs 拡張の判断は [design-notes/adr-001-motion-layer.ja.md](../design-notes/adr-001-motion-layer.ja.md) に記録。繰り延べ：多段パーセンテージ keyframes、色/blur/skew プロパティ。
 
 ---
 
@@ -384,6 +414,7 @@ app TodoApp
 | レイアウトはタイル構造で表現 | レイアウト用 CSS を AI が学ぶ必要をなくす |
 | グローバル CSS 禁止 | 「どこから来たスタイルか」を必ず親 tile に紐付ける |
 | アニメーション v0.1 は限定 | 多すぎる選択肢は AI の判断を不安定にする |
+| `motion` は生 CSS でなく閉じた文法の定義 | アニメーションを静的に特定でき AI が編集しやすい。グローバル CSS 無しの不変条件を維持 |
 
 ---
 

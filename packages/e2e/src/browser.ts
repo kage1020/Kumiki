@@ -26,6 +26,12 @@ export type Expect = {
   visible?: string[];
   /** Browser-only: text that must NOT be visible. */
   hidden?: string[];
+  /**
+   * Browser-only: CSS selectors that must carry a running keyframe animation
+   * (`getComputedStyle().animationName !== "none"`). jsdom can't observe this —
+   * it's the verification tier for the v0.2 `motion` layer.
+   */
+  animating?: string[];
 };
 
 export type ScenarioStep = { label?: string; do?: Action; expect?: Expect };
@@ -231,6 +237,17 @@ async function evaluateExpect(
       .isVisible()
       .catch(() => false);
     if (vis) failures.push(`"${t}" should be hidden`);
+  }
+  for (const sel of expect.animating ?? []) {
+    const isAnimating = await page
+      .evaluate((s: string) => {
+        const el = document.querySelector(s);
+        if (!el) return false;
+        const name = getComputedStyle(el).animationName;
+        return name !== "" && name !== "none";
+      }, sel)
+      .catch(() => false);
+    if (!isAnimating) failures.push(`"${sel}" should carry a running animation`);
   }
   return failures;
 }

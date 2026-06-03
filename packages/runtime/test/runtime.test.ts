@@ -329,6 +329,77 @@ describe("overlay builtin", () => {
   });
 });
 
+function makeMotionApp(): AppShape {
+  const app: AppShape = {
+    slots: {},
+    caps: [],
+    effects: {},
+    init: [],
+    reducers: [],
+    motions: {
+      Spin: {
+        keyframes: { from: { rotate: 0 }, to: { rotate: 360 } },
+        duration: "slow",
+        easing: "linear",
+        iteration: "infinite",
+      },
+      Fade: {
+        keyframes: {
+          from: { opacity: 0, "translate-y": 16 },
+          to: { opacity: 1, "translate-y": 0 },
+        },
+      },
+    },
+    root: () => ({
+      kind: "column",
+      props: {},
+      children: [
+        { kind: "box", props: { motion: "Spin" }, children: [{ kind: "text", text: "spin" }] },
+        { kind: "card", props: { motion: "Fade" }, children: [{ kind: "text", text: "fade" }] },
+      ],
+    }),
+  };
+  return app;
+}
+
+describe("motion layer (v0.2 M5)", () => {
+  let root: HTMLElement;
+  beforeEach(() => {
+    root = document.createElement("div");
+    document.body.appendChild(root);
+  });
+  afterEach(() => {
+    root.remove();
+    document.getElementById("kumiki-motions")?.remove();
+  });
+
+  it("injects scoped @keyframes + classes from App.motions and tags the tiles", () => {
+    mount(makeMotionApp(), root);
+    const css = document.getElementById("kumiki-motions")?.textContent ?? "";
+
+    // Spin: rotate 0 -> 360, slow (600ms), linear, infinite.
+    expect(css).toContain("@keyframes kumiki-motion-Spin");
+    expect(css).toContain("rotate(360deg)");
+    expect(css).toContain("animation-duration: 600ms");
+    expect(css).toContain("animation-iteration-count: infinite");
+    expect(css).toContain("animation-timing-function: linear");
+
+    // Fade: default duration (300ms), opacity + translateY transform.
+    expect(css).toContain("@keyframes kumiki-motion-Fade");
+    expect(css).toContain("opacity: 0");
+    expect(css).toContain("translateY(16px)");
+
+    // a11y (AC5): prefers-reduced-motion guard present.
+    expect(css).toContain("prefers-reduced-motion: reduce");
+
+    // The tiles carry both the marker class and the per-motion class.
+    const spin = root.querySelector(".kumiki-motion-Spin");
+    expect(spin).toBeTruthy();
+    expect(spin?.classList.contains("kumiki-motion")).toBe(true);
+    expect(root.querySelector(".kumiki-motion-Fade")).toBeTruthy();
+  });
+});
+
 describe("in-language test runner helpers", () => {
   it("runReducerTest passes when slots + effects match", () => {
     const r = _stdlib.runReducerTest({

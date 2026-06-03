@@ -24,6 +24,7 @@ export type Def =
   | EffectDef
   | AppDef
   | ThemeDef
+  | MotionDef
   | TestDef;
 
 // ----- test layer (in-language tests; excluded from the production build) -----
@@ -45,6 +46,17 @@ export type ThemeValue = string | number | { [k: string]: ThemeValue };
 
 export type ThemeDef = {
   kind: "ThemeDef";
+  name: string;
+  body: { [k: string]: ThemeValue };
+  pos: Pos;
+};
+
+// ----- motion layer (reusable, scoped animations; v0.2 M5) -----
+// A purely-presentational definition modeled on `theme`: the body is a record
+// literal (so it cannot reference slots/effects — purity is structural). See
+// design-notes/adr-001-motion-layer.md.
+export type MotionDef = {
+  kind: "MotionDef";
   name: string;
   body: { [k: string]: ThemeValue };
   pos: Pos;

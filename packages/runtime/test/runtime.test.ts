@@ -329,6 +329,129 @@ describe("overlay builtin", () => {
   });
 });
 
+describe("in-language test runner helpers", () => {
+  it("runReducerTest passes when slots + effects match", () => {
+    const r = _stdlib.runReducerTest({
+      name: "t",
+      givenSlots: { count: 0 },
+      result: { slots: { count: 1 }, emits: [] },
+      panic: null,
+      expect: { kind: "state", slots: { count: 1 }, effects: [] },
+    });
+    expect(r.pass).toBe(true);
+  });
+
+  it("runReducerTest reports the diff path on a slot mismatch", () => {
+    const r = _stdlib.runReducerTest({
+      name: "t",
+      givenSlots: { count: 0 },
+      result: { slots: { count: 1 }, emits: [] },
+      panic: null,
+      expect: { kind: "state", slots: { count: 2 }, effects: [] },
+    });
+    expect(r.pass).toBe(false);
+    expect(r.diffAt).toBe("slots.count");
+  });
+
+  it("runReducerTest compares emitted effect names", () => {
+    const r = _stdlib.runReducerTest({
+      name: "t",
+      givenSlots: {},
+      result: { slots: {}, emits: [{ effect: "persist", args: [] }] },
+      panic: null,
+      expect: { kind: "state", slots: {}, effects: [] },
+    });
+    expect(r.pass).toBe(false);
+    expect(r.diffAt).toBe("effects.length");
+  });
+
+  it("runReducerTest matches an expected panic by substring", () => {
+    expect(
+      _stdlib.runReducerTest({
+        name: "t",
+        givenSlots: {},
+        result: null,
+        panic: "draft cannot be empty",
+        expect: { kind: "panic", message: "cannot be empty" },
+      }).pass,
+    ).toBe(true);
+  });
+
+  it("runTileTest compares structure, ignoring props and handlers", () => {
+    const actual = {
+      kind: "column",
+      children: [{ kind: "button", text: "+1", props: { onClick: () => undefined } }],
+    };
+    const expected = { kind: "column", children: [{ kind: "button", text: "+1", props: {} }] };
+    expect(_stdlib.runTileTest({ name: "t", actual, expected }).pass).toBe(true);
+
+    const mismatch = { kind: "column", children: [{ kind: "button", text: "-1" }] };
+    const res = _stdlib.runTileTest({ name: "t", actual: mismatch, expected });
+    expect(res.pass).toBe(false);
+    expect(res.diffAt).toContain("text");
+  });
+
+  it("runReducerTest: a bare effect name matches by name only", () => {
+    expect(
+      _stdlib.runReducerTest({
+        name: "t",
+        givenSlots: {},
+        result: { slots: {}, emits: [{ effect: "persist", args: [{ x: 1 }] }] },
+        panic: null,
+        expect: {
+          kind: "state",
+          slots: {},
+          effects: [{ effect: "persist", args: [], argsSpecified: false }],
+        },
+      }).pass,
+    ).toBe(true);
+  });
+
+  it("runReducerTest: a parenthesised effect pins its args (so persist() rejects persist(x))", () => {
+    const r = _stdlib.runReducerTest({
+      name: "t",
+      givenSlots: {},
+      result: { slots: {}, emits: [{ effect: "persist", args: [1] }] },
+      panic: null,
+      expect: {
+        kind: "state",
+        slots: {},
+        effects: [{ effect: "persist", args: [], argsSpecified: true }],
+      },
+    });
+    expect(r.pass).toBe(false);
+    expect(r.diffAt).toContain("args");
+  });
+
+  it("runReducerTest: objects with different keys are not equal (undefined-value guard)", () => {
+    const r = _stdlib.runReducerTest({
+      name: "t",
+      givenSlots: {},
+      result: { slots: { s: { a: undefined } }, emits: [] },
+      panic: null,
+      expect: { kind: "state", slots: { s: { b: undefined } }, effects: [] },
+    });
+    expect(r.pass).toBe(false);
+  });
+
+  it("runTileTest: a root kind mismatch yields a path without a leading dot", () => {
+    const r = _stdlib.runTileTest({
+      name: "t",
+      actual: { kind: "row" },
+      expected: { kind: "column" },
+    });
+    expect(r.pass).toBe(false);
+    expect(r.diffAt?.startsWith(".")).toBe(false);
+    expect(r.diffAt).toContain("kind");
+  });
+
+  it("resetLive clears, seeds defaults, then applies given", () => {
+    const live: Record<string, unknown> = { stale: 1 };
+    _stdlib.resetLive(live, { count: { value: 0 }, name: { value: "x" } }, { count: 5 });
+    expect(live).toEqual({ count: 5, name: "x" });
+  });
+});
+
 describe("stdlib collection methods (issue #5)", () => {
   it("listChunk splits into n-sized chunks; last may be shorter", () => {
     expect(_stdlib.listChunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);

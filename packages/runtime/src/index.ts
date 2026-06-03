@@ -1444,7 +1444,191 @@ function mapSize(s: string): string {
 
 // ----- Collection helpers used by generated code -----
 
+export type TestResult = {
+  name: string;
+  pass: boolean;
+  expected?: string;
+  actual?: string;
+  diffAt?: string;
+};
+
+function _jsonStr(v: unknown): string {
+  try {
+    return JSON.stringify(v);
+  } catch {
+    return String(v);
+  }
+}
+
+/** Deep structural equality for slot values (records / lists / primitives). */
+function deepEqualValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a === null || b === null || typeof a !== "object" || typeof b !== "object") return false;
+  const aArr = Array.isArray(a);
+  const bArr = Array.isArray(b);
+  if (aArr || bArr) {
+    if (!aArr || !bArr || a.length !== b.length) return false;
+    return a.every((x, i) => deepEqualValue(x, (b as unknown[])[i]));
+  }
+  const ao = a as Record<string, unknown>;
+  const bo = b as Record<string, unknown>;
+  const ak = Object.keys(ao);
+  if (ak.length !== Object.keys(bo).length) return false;
+  // Compare key presence too — `{a: undefined}` and `{b: undefined}` have equal
+  // key counts but are not equal.
+  return ak.every((k) => Object.hasOwn(bo, k) && deepEqualValue(ao[k], bo[k]));
+}
+
+function tileField(node: unknown, k: string): unknown {
+  return (node as Record<string, unknown> | null | undefined)?.[k];
+}
+
+function tileChildren(node: unknown): unknown[] {
+  const c = tileField(node, "children");
+  return Array.isArray(c) ? c.filter((x) => x != null) : [];
+}
+
+/**
+ * Structural tile comparison for tile-tests: compares `kind`, `text`, and
+ * `children` recursively. Props (styles, onClick handlers, …) are out of scope,
+ * per spec §8.4. Returns the first differing path on mismatch.
+ */
+function tileStructEqual(
+  expected: unknown,
+  actual: unknown,
+  path = "",
+): { ok: boolean; path?: string } {
+  if (expected == null || actual == null) {
+    return expected === actual ? { ok: true } : { ok: false, path: path || "(root)" };
+  }
+  const ek = tileField(expected, "kind");
+  const here = path || String(ek ?? "(root)");
+  if (ek !== tileField(actual, "kind")) return { ok: false, path: `${here}.kind` };
+  if (tileField(expected, "text") !== undefined) {
+    if (String(tileField(expected, "text")) !== String(tileField(actual, "text"))) {
+      return { ok: false, path: `${here}.text` };
+    }
+  }
+  const ec = tileChildren(expected);
+  const ac = tileChildren(actual);
+  if (ec.length !== ac.length) return { ok: false, path: `${here}.children.length` };
+  for (let i = 0; i < ec.length; i++) {
+    const r = tileStructEqual(ec[i], ac[i], `${here}[${i}]`);
+    if (!r.ok) return r;
+  }
+  return { ok: true };
+}
+
+function serializeTileNode(node: unknown): string {
+  if (node == null) return "null";
+  const kind = String(tileField(node, "kind"));
+  const kids = tileChildren(node);
+  if (tileField(node, "text") !== undefined && kids.length === 0) {
+    return `${kind}(${_jsonStr(tileField(node, "text"))})`;
+  }
+  if (kids.length === 0) return `${kind}()`;
+  return `${kind}(${kids.map(serializeTileNode).join(", ")})`;
+}
+
 export const _stdlib = {
+  // ----- in-language test runner (`kumiki test`) -----
+  /** Reset live slot state to slot defaults, then apply the test's `given` slots. */
+  resetLive(
+    live: Record<string, unknown>,
+    slots: Record<string, { value: unknown }>,
+    given: Record<string, unknown>,
+  ): void {
+    for (const k of Object.keys(live)) delete live[k];
+    for (const [k, v] of Object.entries(slots)) live[k] = v.value;
+    Object.assign(live, given);
+  },
+  /** Compare a reducer's resulting slots + emitted effects (or a panic) to `expect`. */
+  runReducerTest(input: {
+    name: string;
+    givenSlots: Record<string, unknown>;
+    result: { slots: Record<string, unknown>; emits: { effect: string; args: unknown[] }[] } | null;
+    panic: string | null;
+    expect:
+      | { kind: "panic"; message: string }
+      | {
+          kind: "state";
+          slots: Record<string, unknown>;
+          effects: { effect: string; args: unknown[]; argsSpecified?: boolean }[];
+        };
+  }): TestResult {
+    const { name, givenSlots, result, panic, expect } = input;
+    if (expect.kind === "panic") {
+      const pass = panic !== null && String(panic).includes(expect.message);
+      return {
+        name,
+        pass,
+        expected: `panic: ${_jsonStr(expect.message)}`,
+        actual: panic === null ? "(no panic)" : `panic: ${_jsonStr(panic)}`,
+        ...(pass ? {} : { diffAt: "(panic)" }),
+      };
+    }
+    if (panic !== null) {
+      return {
+        name,
+        pass: false,
+        expected: _jsonStr(expect.slots),
+        actual: `panic: ${_jsonStr(panic)}`,
+        diffAt: "(unexpected panic)",
+      };
+    }
+    const finalSlots = { ...givenSlots, ...(result?.slots ?? {}) };
+    let diffAt: string | undefined;
+    for (const k of Object.keys(expect.slots)) {
+      if (!deepEqualValue(finalSlots[k], expect.slots[k])) {
+        diffAt = `slots.${k}`;
+        break;
+      }
+    }
+    const emits = result?.emits ?? [];
+    if (diffAt === undefined) {
+      if (emits.length !== expect.effects.length) {
+        diffAt = "effects.length";
+      } else {
+        for (let i = 0; i < expect.effects.length; i++) {
+          const ex = expect.effects[i];
+          const ac = emits[i];
+          if (!ex || !ac || ex.effect !== ac.effect) {
+            diffAt = `effects[${i}].effect`;
+            break;
+          }
+          // A bare effect name (`persist`) matches by name only; `persist(...)`
+          // (even `persist()`) pins the exact argument list.
+          if (ex.argsSpecified && !deepEqualValue(ac.args, ex.args)) {
+            diffAt = `effects[${i}].args`;
+            break;
+          }
+        }
+      }
+    }
+    const pickExpected = (s: Record<string, unknown>): Record<string, unknown> => {
+      const o: Record<string, unknown> = {};
+      for (const k of Object.keys(expect.slots)) o[k] = s[k];
+      return o;
+    };
+    return {
+      name,
+      pass: diffAt === undefined,
+      expected: `slots=${_jsonStr(expect.slots)} effects=${_jsonStr(expect.effects.map((e) => e.effect))}`,
+      actual: `slots=${_jsonStr(pickExpected(finalSlots))} effects=${_jsonStr(emits.map((e) => e.effect))}`,
+      ...(diffAt ? { diffAt } : {}),
+    };
+  },
+  /** Structurally compare a rendered tile against the expected tile structure. */
+  runTileTest(input: { name: string; actual: unknown; expected: unknown }): TestResult {
+    const cmp = tileStructEqual(input.expected, input.actual);
+    return {
+      name: input.name,
+      pass: cmp.ok,
+      expected: serializeTileNode(input.expected),
+      actual: serializeTileNode(input.actual),
+      ...(cmp.path ? { diffAt: cmp.path } : {}),
+    };
+  },
   mapSize(m: unknown): number {
     if (m instanceof Map) return m.size;
     if (m && typeof m === "object") return Object.keys(m as object).length;

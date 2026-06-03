@@ -17,6 +17,7 @@ import type {
   RetryExpr,
   SlotDef,
   Statement,
+  TestDef,
   TileArg,
   TileDef,
   TileExpr,
@@ -266,6 +267,8 @@ class Parser {
         return this.parseEffect();
       case "app":
         return this.parseApp();
+      case "test":
+        return this.parseTest();
       default:
         throw new ParseError(`Unsupported definition keyword "${t.value}"`, t.pos);
     }
@@ -1082,10 +1085,13 @@ class Parser {
       this.next();
       return { kind: "MapLit", entries: [], pos: start.pos };
     }
-    // Heuristic: if the first key is an identifier followed by `=`, `:`, `,`, or `}`,
-    // treat the whole literal as a record. Otherwise it's a map.
+    // Heuristic: if the first key is a field name (identifier or keyword, e.g.
+    // `type` / `in`) followed by `=`, `:`, `,`, or `}`, treat the whole literal
+    // as a record. Otherwise it's a map. A bare keyword key is never a valid map
+    // key, so this stays unambiguous.
     let isRecord = false;
-    if (this.peek().kind === "ident") {
+    const k0 = this.peek();
+    if (k0.kind === "ident" || k0.kind === "kw") {
       const peek1 = this.peek(1);
       if (
         peek1.kind === "op" &&
@@ -1097,15 +1103,21 @@ class Parser {
     if (isRecord) {
       const fields: { name: string; value: Expr }[] = [];
       while (true) {
-        const nameTok = this.eat("ident");
+        const keyTok = this.peek();
+        if (keyTok.kind !== "ident" && keyTok.kind !== "kw") {
+          throw new ParseError("Expected a record field name", keyTok.pos);
+        }
+        const fieldName = keyTok.value;
+        const fieldPos = keyTok.pos;
+        this.next();
         let value: Expr;
         if (this.matchOp("=") || this.matchOp(":")) {
           this.next();
           value = this.parseExpr();
         } else {
-          value = { kind: "Ref", name: nameTok.value, pos: nameTok.pos };
+          value = { kind: "Ref", name: fieldName, pos: fieldPos };
         }
-        fields.push({ name: nameTok.value, value });
+        fields.push({ name: fieldName, value });
         if (!this.matchOp(",")) break;
         this.next();
       }
@@ -1539,6 +1551,46 @@ class Parser {
     if (t.kind === "eof") return true;
     if (t.kind === "kw") return true;
     return false;
+  }
+
+  // ----- test -----
+
+  private parseTest(): TestDef {
+    const start = this.eat("kw", "test");
+    const name = this.eat("ident").value;
+    this.eat("op", "=");
+    const kindTok = this.eat("ident");
+    if (kindTok.value !== "reducer-test" && kindTok.value !== "tile-test") {
+      throw new ParseError(
+        `Unknown test kind "${kindTok.value}" (expected reducer-test or tile-test)`,
+        kindTok.pos,
+      );
+    }
+    const target = this.eat("ident").value;
+
+    const givenKw = this.eat("ident");
+    if (givenKw.value !== "given") {
+      throw new ParseError(`Expected "given" in test "${name}"`, givenKw.pos);
+    }
+    this.eat("op", "=");
+    const given = this.parseExpr();
+
+    const expectKw = this.eat("ident");
+    if (expectKw.value !== "expect") {
+      throw new ParseError(`Expected "expect" in test "${name}"`, expectKw.pos);
+    }
+    this.eat("op", "=");
+    const expect = kindTok.value === "tile-test" ? this.parseTileExpr() : this.parseExpr();
+
+    return {
+      kind: "TestDef",
+      name,
+      testKind: kindTok.value,
+      target,
+      given,
+      expect,
+      pos: start.pos,
+    };
   }
 
   private parseQualifiedList(): string[] {

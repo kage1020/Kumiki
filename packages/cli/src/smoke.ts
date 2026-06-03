@@ -15,6 +15,7 @@ import {
   type ScenarioReport,
   type SmokeReport,
   smoke,
+  type TestResult,
 } from "@kumikijs/runtime";
 import { JSDOM } from "jsdom";
 
@@ -60,12 +61,17 @@ function ensureDom(): void {
   domReady = true;
 }
 
-async function loadApp(source: string, capabilities: string[] = []): Promise<AppShape> {
+async function loadApp(
+  source: string,
+  capabilities: string[] = [],
+  opts: { includeTests?: boolean } = {},
+): Promise<AppShape> {
   const result = compile(source, {
     runtimeSpecifier: "ignored",
     bundle: true,
     readRuntimeBundle: nodeRuntimeBundleReader,
     capabilities,
+    includeTests: opts.includeTests === true,
   });
   if (result.kind !== "ok") {
     throw new Error(
@@ -156,4 +162,58 @@ export async function runCmd(
   }
   console.log(report.ok ? "\nscenario passed" : "\nscenario FAILED");
   if (!report.ok) process.exit(1);
+}
+
+// ----- `kumiki test` — run in-language `test` definitions -----
+
+type TestRunner = { name: string; kind: string; run: () => TestResult };
+
+/** Compile a source with tests included, import it, and run every `test` definition. */
+export async function runTestsSource(
+  source: string,
+  capabilities: string[] = [],
+): Promise<TestResult[]> {
+  ensureDom();
+  await loadApp(source, capabilities, { includeTests: true });
+  const tests = (globalThis as unknown as { __kumikiTests?: TestRunner[] }).__kumikiTests ?? [];
+  return tests.map((t) => t.run());
+}
+
+export async function testFile(path: string, capabilities: string[] = []): Promise<TestResult[]> {
+  return runTestsSource(readFileSync(path, "utf8"), capabilities);
+}
+
+/** Match a test name against a filter: exact, or a `prefix-*` / `prefix*` wildcard. */
+function matchesFilter(name: string, filter: string | undefined): boolean {
+  if (!filter) return true;
+  if (filter.endsWith("*")) return name.startsWith(filter.slice(0, -1));
+  return name === filter;
+}
+
+/** CLI entry: run `test` definitions, print the §8.7.1 report, exit non-zero on any failure. */
+export async function testCmd(
+  path: string,
+  filter: string | undefined,
+  capabilities: string[] = [],
+): Promise<void> {
+  const all = await testFile(path, capabilities);
+  const results = all.filter((r) => matchesFilter(r.name, filter));
+  if (results.length === 0) {
+    console.log(filter ? `no tests match "${filter}"` : "no tests found");
+    return;
+  }
+  let failed = 0;
+  for (const r of results) {
+    if (r.pass) {
+      console.log(`PASS  ${r.name}`);
+      continue;
+    }
+    failed++;
+    console.log(`FAIL  ${r.name}`);
+    if (r.expected !== undefined) console.log(`  expected: ${r.expected}`);
+    if (r.actual !== undefined) console.log(`  actual:   ${r.actual}`);
+    if (r.diffAt !== undefined) console.log(`  diff at:  ${r.diffAt}`);
+  }
+  console.log(`\n${results.length - failed}/${results.length} passed`);
+  if (failed > 0) process.exit(1);
 }

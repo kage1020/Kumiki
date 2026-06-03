@@ -9,6 +9,7 @@ import type {
   ReducerDef,
   SlotDef,
   Statement,
+  TestDef,
   TileDef,
   TileExpr,
   TypeDef,
@@ -161,6 +162,7 @@ function checkAll(program: Program, registeredCaps: Set<string>): KumikiError[] 
     if (def.kind === "FnDef") checkFn(def, sym, errors);
     if (def.kind === "EffectDef") checkEffect(def, sym, errors);
     if (def.kind === "AppDef") checkApp(def, sym, errors, registeredCaps);
+    if (def.kind === "TestDef") checkTest(def, sym, errors);
   }
 
   return errors;
@@ -629,6 +631,31 @@ function checkEffect(eff: EffectDef, sym: SymbolTable, errors: KumikiError[]): v
       kind: "slot-init", // treat as pure context (no slots, no fns)
       localBinds: new Set(["$1"]),
     });
+}
+
+function checkTest(t: TestDef, sym: SymbolTable, errors: KumikiError[]): void {
+  if (t.testKind === "reducer-test") {
+    if (!sym.reducers.has(t.target)) {
+      errors.push({
+        code: "E0102",
+        kind: "undef-reducer",
+        message: `Reference to undefined reducer "${t.target}"`,
+        pos: t.pos,
+      });
+    }
+    return;
+  }
+  // tile-test
+  if (!BUILTIN_TILES.has(t.target) && !sym.tiles.has(t.target)) {
+    errors.push({
+      code: "E0105",
+      kind: "undef-tile",
+      message: `Reference to undefined tile "${t.target}"`,
+      pos: t.pos,
+    });
+  }
+  // The `expect` is a tile expression — validate its tile references.
+  checkTileExpr(t.expect as TileExpr, sym, errors, { kind: "tile", localBinds: new Set() });
 }
 
 function checkApp(

@@ -15,7 +15,31 @@ export type Program = {
   defs: Def[];
 };
 
-export type Def = TypeDef | SlotDef | ReducerDef | TileDef | FnDef | EffectDef | AppDef | ThemeDef;
+export type Def =
+  | TypeDef
+  | SlotDef
+  | ReducerDef
+  | TileDef
+  | FnDef
+  | EffectDef
+  | AppDef
+  | ThemeDef
+  | TestDef;
+
+// ----- test layer (in-language tests; excluded from the production build) -----
+
+export type TestDef = {
+  kind: "TestDef";
+  name: string;
+  /** `reducer-test` targets a reducer name; `tile-test` targets a tile name. */
+  testKind: "reducer-test" | "tile-test";
+  target: string;
+  /** The `given = { ... }` record literal (interpreted, not codegen'd as-is). */
+  given: Expr;
+  /** `expect = { slots, effects }` / `{ panic }` (record) for reducer-test; a tile expression for tile-test. */
+  expect: Expr | TileExpr;
+  pos: Pos;
+};
 
 export type ThemeValue = string | number | { [k: string]: ThemeValue };
 

@@ -183,6 +183,10 @@ const MOTION_DURATION_TOKENS = new Set(["fast", "normal", "slow"]);
 const MOTION_DIRECTIONS = new Set(["normal", "reverse", "alternate", "alternate-reverse"]);
 const MOTION_TIMING_KEYS = new Set(["duration", "easing", "iteration", "direction"]);
 
+/** `duration` (ms) and `iteration` are spec'd as positive integers (no 0 / negative / float). */
+const isPositiveInt = (v: unknown): boolean =>
+  typeof v === "number" && Number.isInteger(v) && v > 0;
+
 type MotionBody = { [k: string]: import("./ast.ts").ThemeValue };
 
 /**
@@ -257,11 +261,11 @@ function checkMotion(def: import("./ast.ts").MotionDef, errors: KumikiError[]): 
     }
   }
   const dur = body.duration;
-  if (dur !== undefined && !(typeof dur === "number" || MOTION_DURATION_TOKENS.has(String(dur)))) {
+  if (dur !== undefined && !(isPositiveInt(dur) || MOTION_DURATION_TOKENS.has(String(dur)))) {
     errors.push({
       code: "E0402",
       kind: "motion-invalid-timing",
-      message: `motion "${def.name}": duration must be a number (ms) or one of fast/normal/slow`,
+      message: `motion "${def.name}": duration must be a positive Int (ms) or one of fast/normal/slow`,
       pos: def.pos,
     });
   }
@@ -275,7 +279,7 @@ function checkMotion(def: import("./ast.ts").MotionDef, errors: KumikiError[]): 
     });
   }
   const iter = body.iteration;
-  if (iter !== undefined && !(typeof iter === "number" || iter === "infinite")) {
+  if (iter !== undefined && !(isPositiveInt(iter) || iter === "infinite")) {
     errors.push({
       code: "E0402",
       kind: "motion-invalid-timing",

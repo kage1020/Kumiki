@@ -374,7 +374,7 @@ tile Loader = box(icon(name="spinner")) {motion: "Spin"}
   | `scale` | 数値 | 大きさ |
   | `rotate` | deg（数値） | 回転 |
 
-  1 ストップ上の複数 transform プロパティは合成される。未知プロパティはコンパイルエラー（**E0401**）、不正な keyframes（`from`/`to` 無し）は **E0403**。
+  1 ストップ上の複数 transform プロパティは、記述順によらず**固定順** — `translate-x` → `translate-y` → `scale` → `rotate` — で単一の `transform` に合成される（CSS `transform` は非可換なので、決定論のため順序を固定している）。未知プロパティはコンパイルエラー（**E0401**）、不正な keyframes（`from`/`to` 無し）は **E0403**。
 - タイミングフィールドは任意（既定 `duration:"normal"`、`easing:"ease"`、`iteration:1`、`direction:"normal"`）。閉じた集合外の値は **E0402**。
 - 未定義の motion を指す `motion: "X"` プロップは **E0107**。
 - body はリテラルレコードなので、motion は **slot の読み書きや effect emit ができない** — 純粋に表示用。`when(...)` や `overlay` と合成でき、生成 keyframes はスコープされる（グローバル CSS を漏らさない、§4.10）。`prefers-reduced-motion: reduce` で motion（と上記 v0.1 transition）を無効化する。

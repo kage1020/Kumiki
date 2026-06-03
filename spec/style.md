@@ -374,7 +374,7 @@ tile Loader = box(icon(name="spinner")) {motion: "Spin"}
   | `scale` | number | size |
   | `rotate` | deg (number) | rotation |
 
-  Multiple transform properties on one stop compose. An unknown property is a compile error (**E0401**); malformed keyframes (no `from`/`to`) are **E0403**.
+  Multiple transform properties on one stop compose into a single `transform` in a **fixed order** — `translate-x`, `translate-y`, `scale`, `rotate` — regardless of the order you write them (CSS `transform` is not commutative, so the order is fixed for determinism). An unknown property is a compile error (**E0401**); malformed keyframes (no `from`/`to`) are **E0403**.
 - The timing fields are optional (defaults `duration:"normal"`, `easing:"ease"`, `iteration:1`, `direction:"normal"`); a value outside its closed set is **E0402**.
 - A `motion: "X"` prop naming an undefined motion is **E0107**.
 - Because the body is a literal record, a motion **cannot read/write slots or emit effects** — it is purely presentational. It composes with `when(...)` and `overlay`, and the generated keyframes are scoped (no global-CSS leak, §4.10). `prefers-reduced-motion: reduce` disables motion (and the v0.1 transitions above).

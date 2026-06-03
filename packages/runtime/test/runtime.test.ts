@@ -603,3 +603,46 @@ describe("stdlib collection methods (issue #5)", () => {
     expect(_stdlib.diff({ a: true, b: true }, { b: true })).toEqual({ a: true });
   });
 });
+
+describe("stdlib argument-less methods (issue #7)", () => {
+  it("listHead / listLast return Option; empty → None", () => {
+    expect(_stdlib.listHead([1, 2, 3])).toEqual(_stdlib.Some(1));
+    expect(_stdlib.listLast([1, 2, 3])).toEqual(_stdlib.Some(3));
+    expect(_stdlib.listHead([])).toEqual(_stdlib.None);
+    expect(_stdlib.listLast([])).toEqual(_stdlib.None);
+    expect(_stdlib.listHead(null)).toEqual(_stdlib.None);
+  });
+
+  it("listTail drops the first element (empty stays empty)", () => {
+    expect(_stdlib.listTail([1, 2, 3])).toEqual([2, 3]);
+    expect(_stdlib.listTail([1])).toEqual([]);
+    expect(_stdlib.listTail([])).toEqual([]);
+    expect(_stdlib.listTail(null)).toEqual([]);
+  });
+
+  it("toList: Option → [v]/[], Set object → keys, array → itself", () => {
+    expect(_stdlib.toList(_stdlib.Some(7))).toEqual([7]);
+    expect(_stdlib.toList(_stdlib.None)).toEqual([]);
+    expect(_stdlib.toList({ a: true, b: true })).toEqual(["a", "b"]);
+    expect(_stdlib.toList([1, 2])).toEqual([1, 2]);
+  });
+
+  it("toOption: Ok → Some, Err → None", () => {
+    expect(_stdlib.toOption(_stdlib.Ok(5))).toEqual(_stdlib.Some(5));
+    expect(_stdlib.toOption(_stdlib.Err("boom"))).toEqual(_stdlib.None);
+  });
+
+  it("getErr returns the Err payload and panics on Ok", () => {
+    expect(_stdlib.getErr(_stdlib.Err("boom"))).toBe("boom");
+    expect(() => _stdlib.getErr(_stdlib.Ok(1))).toThrow();
+  });
+
+  it("parseIntOpt / parseFloatOpt return Option, None on non-numeric", () => {
+    expect(_stdlib.parseIntOpt("42")).toEqual(_stdlib.Some(42));
+    expect(_stdlib.parseIntOpt("3.7")).toEqual(_stdlib.Some(3)); // truncated
+    expect(_stdlib.parseIntOpt("x")).toEqual(_stdlib.None);
+    expect(_stdlib.parseIntOpt("")).toEqual(_stdlib.None);
+    expect(_stdlib.parseFloatOpt("3.5")).toEqual(_stdlib.Some(3.5));
+    expect(_stdlib.parseFloatOpt("nope")).toEqual(_stdlib.None);
+  });
+});

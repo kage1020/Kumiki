@@ -570,6 +570,21 @@ function jsOfExpr(e: Expr, ctx: EvalCtx): string {
       if (e.field === "unique") return `[...new Set((${baseJs}) ?? [])]`;
       if (e.field === "reverse") return `[...((${baseJs}) ?? [])].reverse()`;
       if (e.field === "sort") return `[...((${baseJs}) ?? [])].sort()`;
+      // Issue #7: argument-less spec stdlib methods in the parenthesis-free form
+      // (spec/stdlib.md §2.2.3 — the recommended shortcut). Kept in exact sync
+      // with the MethodCall (paren) cases in methodCallJs + KNOWN_METHODS.
+      if (e.field === "head") return `_s.listHead(${baseJs})`;
+      if (e.field === "tail") return `_s.listTail(${baseJs})`;
+      if (e.field === "last") return `_s.listLast(${baseJs})`;
+      if (e.field === "to-list") return `_s.toList(${baseJs})`;
+      if (e.field === "get-err") return `_s.getErr(${baseJs})`;
+      if (e.field === "to-option") return `_s.toOption(${baseJs})`;
+      if (e.field === "parse-int") return `_s.parseIntOpt(${baseJs})`;
+      if (e.field === "parse-float") return `_s.parseFloatOpt(${baseJs})`;
+      if (e.field === "abs") return `Math.abs(${baseJs})`;
+      if (e.field === "neg") return `(-(${baseJs}))`;
+      if (e.field === "to-float") return `(${baseJs})`;
+      if (e.field === "to-int") return `Math.trunc(${baseJs})`;
       return `(${baseJs})[${JSON.stringify(e.field)}]`;
     }
     case "Index": {
@@ -708,6 +723,21 @@ export const KNOWN_METHODS: ReadonlySet<string> = new Set([
   "min", // Int/Float.min(b)
   "max", // Int/Float.max(b)
   "clamp", // Int/Float.clamp(lo, hi)
+  // Issue #7: spec/stdlib.md §2.2 argument-less methods. These also parse as the
+  // parenthesis-free FieldAccess form (handled in jsOfExpr); listing them here
+  // makes the `recv.method()` shape compile instead of tripping E0801.
+  "head", // List(T).head → Option(T)
+  "tail", // List(T).tail → List(T)
+  "last", // List(T).last → Option(T)
+  "to-list", // Set(T).to-list / Option(T).to-list → List(T)
+  "get-err", // Result(T,E).get-err → E (panics if Ok)
+  "to-option", // Result(T,E).to-option → Option(T)
+  "parse-int", // Text.parse-int → Option(Int)
+  "parse-float", // Text.parse-float → Option(Float)
+  "abs", // Int/Float.abs
+  "neg", // Int/Float.neg
+  "to-float", // Int.to-float → Float
+  "to-int", // Float.to-int → Int (truncated)
 ]);
 
 function methodCallJs(recv: Expr, method: string, args: Expr[], ctx: EvalCtx): string {
@@ -866,6 +896,32 @@ function methodCallJs(recv: Expr, method: string, args: Expr[], ctx: EvalCtx): s
     case "clamp":
       // Int/Float.clamp(lo, hi)
       return `Math.min(Math.max((${recvJs}), (${argRaw(args[0]!)})), (${argRaw(args[1]!)}))`;
+    // ----- Issue #7: argument-less stdlib methods (parenthesized form). Kept in
+    // sync with the FieldAccess (no-paren) cases in jsOfExpr + KNOWN_METHODS. -----
+    case "head":
+      return `_s.listHead(${recvJs})`;
+    case "tail":
+      return `_s.listTail(${recvJs})`;
+    case "last":
+      return `_s.listLast(${recvJs})`;
+    case "to-list":
+      return `_s.toList(${recvJs})`;
+    case "get-err":
+      return `_s.getErr(${recvJs})`;
+    case "to-option":
+      return `_s.toOption(${recvJs})`;
+    case "parse-int":
+      return `_s.parseIntOpt(${recvJs})`;
+    case "parse-float":
+      return `_s.parseFloatOpt(${recvJs})`;
+    case "abs":
+      return `Math.abs(${recvJs})`;
+    case "neg":
+      return `(-(${recvJs}))`;
+    case "to-float":
+      return `(${recvJs})`;
+    case "to-int":
+      return `Math.trunc(${recvJs})`;
     default:
       // generic fallback: receiver.method(...args)
       return `(${recvJs}).${jsName(method)}(${args.map(argRaw).join(", ")})`;

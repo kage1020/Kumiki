@@ -2014,6 +2014,65 @@ export const _stdlib = {
     }
     return _stdlib.setDiff(a as Record<string, true>, b as Record<string, true>);
   },
+
+  // ----- Issue #7: argument-less spec stdlib methods (spec/stdlib.md §2.2).
+  // Callable both parenthesis-free (`xs.head`) and parenthesized (`xs.head()`);
+  // codegen lowers both shapes to these. -----
+
+  /** List(T).head → Option(T). */
+  listHead(xs: unknown[] | undefined | null): unknown {
+    const a = xs ?? [];
+    return a.length > 0 ? _stdlib.Some(a[0]) : _stdlib.None;
+  },
+  /** List(T).tail → List(T) (all but the first; empty list stays empty). */
+  listTail(xs: unknown[] | undefined | null): unknown[] {
+    return (xs ?? []).slice(1);
+  },
+  /** List(T).last → Option(T). */
+  listLast(xs: unknown[] | undefined | null): unknown {
+    const a = xs ?? [];
+    return a.length > 0 ? _stdlib.Some(a[a.length - 1]) : _stdlib.None;
+  },
+  /** Set(T).to-list / Option(T).to-list → List(T). */
+  toList(v: unknown): unknown[] {
+    if (v && typeof v === "object" && "_tag" in (v as Record<string, unknown>)) {
+      // Option: Some(x) → [x], None → [].
+      const o = v as { _tag: string; _0?: unknown };
+      return o._tag === "Some" ? [o._0] : [];
+    }
+    if (Array.isArray(v)) return v;
+    // Set is stored as `{ [key]: true }` (keys are stringified, like the other set ops).
+    if (v && typeof v === "object") return Object.keys(v as Record<string, unknown>);
+    return [];
+  },
+  /** Result(T,E).get-err → E; panics if the value is Ok. */
+  getErr(r: unknown): unknown {
+    if (r && typeof r === "object" && "_tag" in (r as Record<string, unknown>)) {
+      const t = r as { _tag: string; _0?: unknown };
+      if (t._tag === "Err") return t._0;
+    }
+    throw new Error("get-err called on a non-Err value");
+  },
+  /** Result(T,E).to-option → Option(T): Ok(v) → Some(v), Err(_) → None. */
+  toOption(r: unknown): unknown {
+    if (r && typeof r === "object" && "_tag" in (r as Record<string, unknown>)) {
+      const t = r as { _tag: string; _0?: unknown };
+      if (t._tag === "Ok") return _stdlib.Some(t._0);
+    }
+    return _stdlib.None;
+  },
+  /** Text.parse-int → Option(Int) (truncates; mirrors `Int.parse`). */
+  parseIntOpt(s: unknown): unknown {
+    const n = Number(s);
+    return String(s).trim() !== "" && Number.isFinite(n)
+      ? _stdlib.Some(Math.trunc(n))
+      : _stdlib.None;
+  },
+  /** Text.parse-float → Option(Float) (mirrors `Float.parse`). */
+  parseFloatOpt(s: unknown): unknown {
+    const n = Number(s);
+    return String(s).trim() !== "" && Number.isFinite(n) ? _stdlib.Some(n) : _stdlib.None;
+  },
 };
 
 // ----- Built-in capability handlers -----

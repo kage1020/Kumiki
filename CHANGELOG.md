@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and adopts [S
 
 ## [Unreleased]
 
+### Fixed
+
+- **Issue #7 — argument-less stdlib methods** (`spec/stdlib.md` §2.2): `head` / `tail` / `last` / `to-list` / `get-err` / `to-option` / `parse-int` / `parse-float` / `abs` / `neg` / `to-float` / `to-int` were unimplemented, so the **parenthesis-free form the spec recommends** (`list.head`) compiled clean but evaluated to `undefined` at runtime (silent wrong result), while the parenthesized form (`list.head()`) was hard-rejected with **E0801**. Both shapes now lower to runtime helpers (`_stdlib.listHead`/`listTail`/`listLast`/`toList`/`getErr`/`toOption`/`parseIntOpt`/`parseFloatOpt`; `Math.abs`/`Math.trunc` for the numerics) and are added to `KNOWN_METHODS`. New example `examples/features/31-argless-methods.kumiki`. _Deferred_: validating the no-paren form so an unknown `recv.bogus` errors instead of silently producing `undefined` — that needs receiver type inference the checker doesn't yet have (it can't distinguish a record field from a method shortcut). Follow-up to #5.
+
 ## [0.2.0] - 2026-06-03
 
 The five spec-deferred features (M1–M5) shipped as independent milestones. Roadmap: [design-notes/roadmap-v0.2.md](./design-notes/roadmap-v0.2.md).

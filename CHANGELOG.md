@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and adopts [S
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-04
+
 v0.3 — the type-soundness & robustness milestone — is complete (both items shipped). See the [v0.3 Roadmap](design-notes/roadmap-v0.3.md).
 
 ### Fixed
@@ -17,7 +19,7 @@ v0.3 — the type-soundness & robustness milestone — is complete (both items s
 
 ### Fixed
 
-- **Issue #7 — argument-less stdlib methods** (`spec/stdlib.md` §2.2): `head` / `tail` / `last` / `to-list` / `get-err` / `to-option` / `parse-int` / `parse-float` / `abs` / `neg` / `to-float` / `to-int` were unimplemented, so the **parenthesis-free form the spec recommends** (`list.head`) compiled clean but evaluated to `undefined` at runtime (silent wrong result), while the parenthesized form (`list.head()`) was hard-rejected with **E0801**. Both shapes now lower to runtime helpers (`_stdlib.listHead`/`listTail`/`listLast`/`toList`/`getErr`/`toOption`/`parseIntOpt`/`parseFloatOpt`; `Math.abs`/`Math.trunc` for the numerics) and are added to `KNOWN_METHODS`. New example `examples/features/31-argless-methods.kumiki`. Follow-up to #5. _(The method-shortcut-shadows-a-field limitation noted here was resolved in v0.3 M2 / #23 — see Unreleased.)_
+- **Issue #7 — argument-less stdlib methods** (`spec/stdlib.md` §2.2): `head` / `tail` / `last` / `to-list` / `get-err` / `to-option` / `parse-int` / `parse-float` / `abs` / `neg` / `to-float` / `to-int` were unimplemented, so the **parenthesis-free form the spec recommends** (`list.head`) compiled clean but evaluated to `undefined` at runtime (silent wrong result), while the parenthesized form (`list.head()`) was hard-rejected with **E0801**. Both shapes now lower to runtime helpers (`_stdlib.listHead`/`listTail`/`listLast`/`toList`/`getErr`/`toOption`/`parseIntOpt`/`parseFloatOpt`; `Math.abs`/`Math.trunc` for the numerics) and are added to `KNOWN_METHODS`. New example `examples/features/31-argless-methods.kumiki`. Follow-up to #5. _(The method-shortcut-shadows-a-field limitation noted here was resolved in v0.3 M2 / #23 — see [0.3.0].)_
 
 ## [0.2.0] - 2026-06-03
 

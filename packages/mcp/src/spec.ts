@@ -1,17 +1,17 @@
-// Spec access for the MCP server: locate the spec/ directory, list documents,
-// fetch one, and run a simple keyword search across them.
+// Spec access for the MCP server: locate the docs/spec directory, list
+// documents, fetch one, and run a simple keyword search across them.
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-/** Resolve the repo's spec/ directory. Override with KUMIKI_SPEC_DIR. */
+/** Resolve the repo's docs/spec directory. Override with KUMIKI_SPEC_DIR. */
 export function specDir(): string {
   const env = process.env.KUMIKI_SPEC_DIR;
   if (env) return env;
-  // From packages/mcp/src, walk up to the repo root.
+  // From packages/mcp/src, walk up to the repo root, then into docs/spec.
   const here = dirname(fileURLToPath(import.meta.url));
-  const candidate = join(here, "..", "..", "..", "spec");
+  const candidate = join(here, "..", "..", "..", "docs", "spec");
   return candidate;
 }
 

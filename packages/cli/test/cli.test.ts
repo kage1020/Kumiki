@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const COUNTER_PATH = resolve(here, "../../../examples/apps/01-counter/app.kumiki");
+const COUNTER_PATH = resolve(here, "../../examples/apps/01-counter/app.kumiki");
 const CLI_PATH = resolve(here, "../src/kumiki.ts");
 
 describe("kumiki build CLI", () => {
@@ -50,7 +50,7 @@ describe("kumiki build CLI", () => {
 // Otherwise a file using a manifest capability passes `check`/`build` but fails
 // with E0302 before smoke/scenario can run.
 describe("kumiki smoke with a manifest-registered capability", () => {
-  const CUSTOM_CAP = resolve(here, "../../../examples/features/27-custom-capability.kumiki");
+  const CUSTOM_CAP = resolve(here, "../../examples/features/27-custom-capability.kumiki");
 
   it("smokes a file whose capability is declared in kumiki.caps.json", { timeout: 30000 }, () => {
     const out = execFileSync("npx", ["tsx", CLI_PATH, "smoke", CUSTOM_CAP], {
@@ -63,7 +63,7 @@ describe("kumiki smoke with a manifest-registered capability", () => {
 });
 
 describe("kumiki test (in-language test runner)", () => {
-  const TESTS = resolve(here, "../../../examples/features/28-tests.kumiki");
+  const TESTS = resolve(here, "../../examples/features/28-tests.kumiki");
 
   it("runs reducer-test + tile-test definitions and reports pass", { timeout: 30000 }, () => {
     const out = execFileSync("npx", ["tsx", CLI_PATH, "test", TESTS], {

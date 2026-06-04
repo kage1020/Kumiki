@@ -5,8 +5,8 @@ import { compile, lex, parse } from "@kumikijs/compiler";
 import { describe, expect, it } from "vitest";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const COUNTER = resolve(here, "../../../examples/apps/01-counter/app.kumiki");
-const TODOMVC = resolve(here, "../../../examples/apps/02-todomvc/app.kumiki");
+const COUNTER = resolve(here, "../../examples/apps/01-counter/app.kumiki");
+const TODOMVC = resolve(here, "../../examples/apps/02-todomvc/app.kumiki");
 
 const STRIP_RX = /\s+/g;
 const norm = (s: string): string => s.replace(STRIP_RX, " ").trim();

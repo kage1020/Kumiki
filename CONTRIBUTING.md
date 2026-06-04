@@ -8,11 +8,11 @@ Kumiki is experimental OSS, and its operating policy is somewhat unusual. Please
 
 The goal of this repository is that "**looking at it resolves your question**". Therefore:
 
-- **When a question comes in** → add the relevant minimal example to `examples/features/` (if it doesn't exist).
-- **When a bug report comes in** → add a minimal reproduction to `examples/`, add a regression test to `tests/`, and then fix it.
-- **When you add a new feature** → update `spec/` and add a working example to `examples/`.
+- **When a question comes in** → add the relevant minimal example to `packages/examples/features/` (if it doesn't exist).
+- **When a bug report comes in** → add a minimal reproduction to `packages/examples/`, add a regression test to `packages/tests/`, and then fix it.
+- **When you add a new feature** → update `docs/spec/` and add a working example to `packages/examples/`.
 
-The spec (`spec/`) is authoritative, and the implementation (`packages/`) follows it. When you find a discrepancy, record the design decision of which to fix in [`design-notes/`](./design-notes/).
+The spec (`docs/spec/`) is authoritative, and the implementation (`packages/`) follows it. When you find a discrepancy, record the design decision of which to fix in [`docs/design-notes/`](./docs/design-notes/).
 
 ## Development flow (TDD)
 
@@ -42,7 +42,7 @@ pnpm exec turbo run typecheck test lint build
 
 Everything must be green. In particular:
 
-- **Every new example must pass check + build + smoke** (`tests/` verifies this automatically). `check`/`build` only guarantee syntax, types, and codegen. Whether it **actually mounts and survives interaction** is verified by `kumiki smoke <file>` (= the runtime smoke in `tests/`). "Compiles but errors / renders nothing when run" bugs are caught here.
+- **Every new example must pass check + build + smoke** (`packages/tests/` verifies this automatically). `check`/`build` only guarantee syntax, types, and codegen. Whether it **actually mounts and survives interaction** is verified by `kumiki smoke <file>` (= the runtime smoke in `packages/tests/`). "Compiles but errors / renders nothing when run" bugs are caught here.
 - **Inline lint suppression (`@biome-ignore`, etc.) is forbidden**. If you want to add one, fix the design instead.
 - **Don't hardcode dependency versions**. Install the latest with `pnpm add`, and put shared versions in the catalog of `pnpm-workspace.yaml`.
 
@@ -55,9 +55,9 @@ Everything must be green. In particular:
 
 | Change | Location |
 |---|---|
-| Language/runtime spec | `spec/` |
-| Usage / tutorials | `guide/` |
-| Working examples | `examples/features/` or `examples/apps/` |
+| Language/runtime spec | `docs/spec/` |
+| Usage / tutorials | `docs/guide/` |
+| Working examples | `packages/examples/features/` or `packages/examples/apps/` |
 | Implementation | `packages/*/src/` |
-| Tests | per-package `test/`, cross-cutting in `tests/` |
-| Design rationale / measurements | `design-notes/` |
+| Tests | per-package `test/`, cross-cutting in `packages/tests/` |
+| Design rationale / measurements | `docs/design-notes/` |

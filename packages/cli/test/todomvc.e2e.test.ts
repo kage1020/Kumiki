@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildAndLoad } from "./helpers/build-and-load.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const TODOMVC = resolve(here, "../../../examples/apps/02-todomvc/app.kumiki");
+const TODOMVC = resolve(here, "../../examples/apps/02-todomvc/app.kumiki");
 
 const flush = (ms = 0) => new Promise<void>((r) => setTimeout(r, ms));
 

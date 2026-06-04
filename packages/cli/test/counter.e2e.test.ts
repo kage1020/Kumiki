@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { buildAndLoad } from "./helpers/build-and-load.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const COUNTER = resolve(here, "../../../examples/apps/01-counter/app.kumiki");
+const COUNTER = resolve(here, "../../examples/apps/01-counter/app.kumiki");
 
 describe("counter e2e (built from .kumiki)", () => {
   let root: HTMLElement;

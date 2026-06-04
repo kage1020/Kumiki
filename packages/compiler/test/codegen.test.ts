@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { compile } from "@kumikijs/compiler";
 import { describe, expect, it } from "vitest";
 
-const COUNTER_PATH = resolve(__dirname, "../../../examples/apps/01-counter/app.kumiki");
+const COUNTER_PATH = resolve(__dirname, "../../examples/apps/01-counter/app.kumiki");
 
 describe("codegen", () => {
   it("compiles counter to a runnable JS module", () => {

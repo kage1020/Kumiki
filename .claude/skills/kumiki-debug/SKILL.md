@@ -11,9 +11,9 @@ description: Diagnose and fix Kumiki compiler errors. Use when `kumiki check`/`b
 pnpm --filter @kumiki/cli exec tsx src/kumiki.ts check <file>
 ```
 
-Or `kumiki_check` via `@kumiki/mcp`. Each diagnostic has a stable `code` (E0xxx) documented in `spec/errors.md`. Read that entry first — it states the rule and the fix.
+Or `kumiki_check` via `@kumiki/mcp`. Each diagnostic has a stable `code` (E0xxx) documented in `docs/spec/errors.md`. Read that entry first — it states the rule and the fix.
 
-## Error code map (see spec/errors.md for detail)
+## Error code map (see docs/spec/errors.md for detail)
 
 | code | meaning | usual fix |
 |---|---|---|
@@ -27,7 +27,7 @@ Or `kumiki_check` via `@kumiki/mcp`. Each diagnostic has a stable `code` (E0xxx)
 | `E0305` | a `fn` reads a slot | pass the value as an argument |
 | `E0601` | a slot path-shape is written twice in one reducer | chain the writes into one assignment |
 | `E0701`–`E0703` | a11y: button/image/link missing text/alt/aria | add visible text or `aria-label`/`alt` |
-| `E0801` | `obj.method(...)` calls a method the runtime doesn't implement (typo, or unimplemented/wrong-type method like `Option.to-result`) | fix the name or rewrite with an implemented op (`match`, `fold`, …); see `KNOWN_METHODS` / spec/stdlib.md |
+| `E0801` | `obj.method(...)` calls a method the runtime doesn't implement (typo, or unimplemented/wrong-type method like `Option.to-result`) | fix the name or rewrite with an implemented op (`match`, `fold`, …); see `KNOWN_METHODS` / docs/spec/stdlib.md |
 | `E0000` | parse error (from the lexer/parser) | check the position; look for a missing `)` / wrong keyword |
 
 ## Auto-fix
@@ -55,6 +55,6 @@ There are three verification layers; each catches what the previous cannot:
 
 1. **`check` / `build`** — syntax, types, codegen.
 2. **`smoke`** — *does it run?* mount + auto-exercise; catches runtime throws / empty render. Generic, no per-app knowledge.
-3. **example-specific assertions** (in `tests/` or `packages/cli/test/`) — *is the result correct?* the only layer that catches wrong-but-non-throwing behavior (e.g. a select that always yields the last option). Smoke cannot judge correctness, only liveness.
+3. **example-specific assertions** (in `packages/tests/` or `packages/cli/test/`) — *is the result correct?* the only layer that catches wrong-but-non-throwing behavior (e.g. a select that always yields the last option). Smoke cannot judge correctness, only liveness.
 
-When you find a runtime bug: add a minimal reproducing `examples/features/*.kumiki` (CI smoke-tests it automatically), then fix. Most runtime bugs are a wrong method dispatch (List vs Map vs Option), a method the runtime doesn't implement, a missing `key=` on a `for`-rendered tile, or a bind-path issue. Runtime fixes live in `packages/runtime/src/index.ts`; codegen fixes in `packages/compiler/src/codegen.ts`. Keep `pnpm exec turbo run test` green.
+When you find a runtime bug: add a minimal reproducing `packages/examples/features/*.kumiki` (CI smoke-tests it automatically), then fix. Most runtime bugs are a wrong method dispatch (List vs Map vs Option), a method the runtime doesn't implement, a missing `key=` on a `for`-rendered tile, or a bind-path issue. Runtime fixes live in `packages/runtime/src/index.ts`; codegen fixes in `packages/compiler/src/codegen.ts`. Keep `pnpm exec turbo run test` green.

@@ -576,7 +576,7 @@ function jsOfExpr(e: Expr, ctx: EvalCtx): string {
       if (e.field === "reverse") return `[...((${baseJs}) ?? [])].reverse()`;
       if (e.field === "sort") return `[...((${baseJs}) ?? [])].sort()`;
       // Issue #7: argument-less spec stdlib methods in the parenthesis-free form
-      // (spec/stdlib.md §2.2.3 — the recommended shortcut). Kept in exact sync
+      // (docs/spec/stdlib.md §2.2.3 — the recommended shortcut). Kept in exact sync
       // with the MethodCall (paren) cases in methodCallJs + KNOWN_METHODS.
       if (e.field === "head") return `_s.listHead(${baseJs})`;
       if (e.field === "tail") return `_s.listTail(${baseJs})`;
@@ -637,7 +637,7 @@ function jsOfExpr(e: Expr, ctx: EvalCtx): string {
         return `_s.fmt ? _s.fmt(${args.join(", ")}) : ${args[0] ?? '""'}`;
       }
       // `panic(message)` — Kumiki's controlled stop-the-program signal
-      // (spec/stdlib.md §2.2). Lowers to the runtime helper that throws a
+      // (docs/spec/stdlib.md §2.2). Lowers to the runtime helper that throws a
       // KumikiPanic, which the live dispatch / render boundary catches.
       if (cn === "panic") {
         const a = e.args[0] ? jsOfExpr(e.args[0], ctx) : '""';
@@ -717,7 +717,7 @@ export const KNOWN_METHODS: ReadonlySet<string> = new Set([
   "plus",
   "minus",
   "diff",
-  // Issue #5: spec/stdlib.md §2.2 methods that were missing here and therefore
+  // Issue #5: docs/spec/stdlib.md §2.2 methods that were missing here and therefore
   // wrongly rejected with E0801. All take ≥1 argument, so they always parse as
   // MethodCall (never the parenthesis-free FieldAccess form).
   "concat", // List(T).concat(other)
@@ -735,7 +735,7 @@ export const KNOWN_METHODS: ReadonlySet<string> = new Set([
   "min", // Int/Float.min(b)
   "max", // Int/Float.max(b)
   "clamp", // Int/Float.clamp(lo, hi)
-  // Issue #7: spec/stdlib.md §2.2 argument-less methods. These also parse as the
+  // Issue #7: docs/spec/stdlib.md §2.2 argument-less methods. These also parse as the
   // parenthesis-free FieldAccess form (handled in jsOfExpr); listing them here
   // makes the `recv.method()` shape compile instead of tripping E0801.
   "head", // List(T).head → Option(T)

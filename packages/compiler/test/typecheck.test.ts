@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { check, lex, parse } from "@kumikijs/compiler";
 import { describe, expect, it } from "vitest";
 
-const COUNTER_PATH = resolve(__dirname, "../../../examples/apps/01-counter/app.kumiki");
+const COUNTER_PATH = resolve(__dirname, "../../examples/apps/01-counter/app.kumiki");
 
 const checkSrc = (src: string) => check(parse(lex(src)));
 
@@ -190,7 +190,7 @@ describe("typecheck", () => {
   });
 
   it("does not flag the stdlib methods restored in issue #5 (no E0801)", () => {
-    // Each fn exercises one previously-missing spec/stdlib.md §2.2 method.
+    // Each fn exercises one previously-missing docs/spec/stdlib.md §2.2 method.
     const decls = [
       `fn f(xs: List(Int), ys: List(Int)) -> List(Int) = xs.concat(ys)`,
       `fn f(xs: List(Int)) -> List(Int) = xs.prepend(0)`,

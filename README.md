@@ -24,18 +24,14 @@ Kumiki has none of the "optimized for human cognition" machinery like JSX, Hooks
 
 ## Why Kumiki
 
-Cross-vendor measurements confirm that LLMs can write Kumiki apps up to a scale of 1300 lines from the specification alone ([design-notes/learning-cost-v4.md](./design-notes/learning-cost-v4.md)). Token efficiency is also high compared to React ([design-notes/benchmark.md](./design-notes/benchmark.md)).
+Cross-vendor measurements confirm that LLMs can write Kumiki apps up to a scale of 1300 lines from the specification alone ([docs/design-notes/learning-cost-v4.md](./docs/design-notes/learning-cost-v4.md)). Token efficiency is also high compared to React ([docs/design-notes/benchmark.md](./docs/design-notes/benchmark.md)).
 
 ## Repository layout
 
 | Directory | Role |
 |---|---|
-| [`spec/`](./spec/) | **Normative spec**. language, stdlib, routing, style, forms, http, lifecycle, runtime, ai-edit, errors |
-| [`guide/`](./guide/) | Tutorials and how-tos (getting started / first app / mental model / recipes) |
-| [`examples/`](./examples/) | Comprehensive examples. `features/` (per-feature minimal) + `apps/` (complete apps ordered by size) |
-| [`packages/`](./packages/) | Implementation. `compiler` / `runtime` / `cli` / `mcp` |
-| [`tests/`](./tests/) | Cross-cutting tests. Guarantee parsing, type checking, and build for all examples |
-| [`design-notes/`](./design-notes/) | Design rationale and benchmark records |
+| [`docs/`](./docs/) | Documentation site (VitePress). `spec/` (**normative spec**) · `guide/` (tutorials) · `design-notes/` (rationale & benchmarks). Japanese pages under `ja/`. |
+| [`packages/`](./packages/) | Implementation and supporting code. `compiler` / `runtime` / `cli` / `mcp` / `syntax`, plus `examples` / `tests` / `benchmarks` |
 
 ## Quick Start
 
@@ -45,11 +41,11 @@ pnpm build          # build all packages
 pnpm test           # all tests
 
 # Check and build a Kumiki program (run from the repo root)
-pnpm kumiki check examples/apps/01-counter/app.kumiki
-pnpm kumiki build examples/apps/01-counter/app.kumiki ./out
+pnpm kumiki check packages/examples/apps/01-counter/app.kumiki
+pnpm kumiki build packages/examples/apps/01-counter/app.kumiki ./out
 ```
 
-If you're new, go to [guide/getting-started.md](./guide/getting-started.md) → [guide/your-first-app.md](./guide/your-first-app.md).
+If you're new, go to [docs/guide/getting-started.md](./docs/guide/getting-started.md) → [docs/guide/your-first-app.md](./docs/guide/your-first-app.md).
 
 ## Packages
 

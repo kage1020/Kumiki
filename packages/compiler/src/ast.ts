@@ -54,7 +54,7 @@ export type ThemeDef = {
 // ----- motion layer (reusable, scoped animations; v0.2 M5) -----
 // A purely-presentational definition modeled on `theme`: the body is a record
 // literal (so it cannot reference slots/effects — purity is structural). See
-// design-notes/adr-001-motion-layer.md.
+// docs/design-notes/adr-001-motion-layer.md.
 export type MotionDef = {
   kind: "MotionDef";
   name: string;

@@ -55,7 +55,7 @@ are deterministic and hermetic.
 ## Stopping rules (don't loop forever)
 
 - Cap at ~5 rounds. If the **same** failure survives two patches, stop guessing:
-  re-read the relevant `spec/` section, or reconsider whether the bug is in your
+  re-read the relevant `docs/spec/` section, or reconsider whether the bug is in your
   Kumiki or in the framework (`packages/runtime` / `packages/compiler`).
 - A failure you can't express as a state/DOM assertion usually means the requirement
   is underspecified — ask the user, don't invent behavior.
@@ -64,6 +64,6 @@ are deterministic and hermetic.
 ## When a framework bug is the cause
 
 If the trace shows the runtime/codegen is wrong (not your Kumiki), fix it in
-`packages/`, add a minimal `examples/features/*.kumiki` reproducer (CI smoke-tests
+`packages/`, add a minimal `packages/examples/features/*.kumiki` reproducer (CI smoke-tests
 it), and keep `pnpm exec turbo run test` green. That is how the repo answers bugs:
 with an example and a test.

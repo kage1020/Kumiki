@@ -19,8 +19,8 @@ import { check } from "@kumikijs/compiler";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const _COUNTER = resolve(here, "../../../examples/apps/01-counter/app.kumiki");
-const TODOMVC = resolve(here, "../../../examples/apps/02-todomvc/app.kumiki");
+const _COUNTER = resolve(here, "../../examples/apps/01-counter/app.kumiki");
+const TODOMVC = resolve(here, "../../examples/apps/02-todomvc/app.kumiki");
 
 function copy(src: string): string {
   const dir = mkdtempSync(join(tmpdir(), "kumiki-ai-"));

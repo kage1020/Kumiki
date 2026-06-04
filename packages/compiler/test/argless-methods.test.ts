@@ -1,7 +1,7 @@
 import { check, compile, lex, parse } from "@kumikijs/compiler";
 import { describe, expect, it } from "vitest";
 
-// Issue #7: spec/stdlib.md §2.2 argument-less methods. Both call shapes must
+// Issue #7: docs/spec/stdlib.md §2.2 argument-less methods. Both call shapes must
 // work — `recv.m` (FieldAccess, the spec-recommended shortcut) and `recv.m()`
 // (MethodCall). The receiver type is irrelevant to these assertions (the checker
 // doesn't type-check method receivers), so a single Int slot is a fine stand-in.

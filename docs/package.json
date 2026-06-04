@@ -1,0 +1,22 @@
+{
+  "name": "@kumikijs/docs",
+  "version": "0.1.4",
+  "private": true,
+  "type": "module",
+  "description": "Kumiki documentation site (VitePress) — serves the spec, guide, and design notes plus a browser playground with WebMCP tools.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "dependencies": {
+    "@kumikijs/compiler": "workspace:*",
+    "@kumikijs/runtime": "workspace:*",
+    "@kumikijs/syntax": "workspace:*"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4",
+    "vue": "^3.5.35"
+  }
+}

@@ -1,4 +1,4 @@
-// Capability model: the standard set (spec/stdlib.md §2.5) plus parsing for the
+// Capability model: the standard set (docs/spec/stdlib.md §2.5) plus parsing for the
 // `kumiki.caps.json` manifest that registers project-specific capabilities.
 // Pure (no I/O) so it stays browser-safe; the file-resolving wrapper lives in
 // the node-only submodule (`@kumikijs/compiler/node`).

@@ -6,6 +6,10 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **Issue #7 — 引数なし stdlib メソッド**（`spec/stdlib.md` §2.2）：`head` / `tail` / `last` / `to-list` / `get-err` / `to-option` / `parse-int` / `parse-float` / `abs` / `neg` / `to-float` / `to-int` が未実装で、**spec が推奨するカッコ無し形**（`list.head`）はコンパイルも通るのに実行時 `undefined`（サイレントな誤結果）、カッコ付き形（`list.head()`）は **E0801** で硬く弾かれていた。両形とも runtime ヘルパー（`_stdlib.listHead`/`listTail`/`listLast`/`toList`/`getErr`/`toOption`/`parseIntOpt`/`parseFloatOpt`、数値系は `Math.abs`/`Math.trunc`）へ lower し、`KNOWN_METHODS` に追加。新規 example `examples/features/31-argless-methods.kumiki`。_既知の制限（繰り延べ、レシーバ型推論が必要）_：メソッド省略名は型情報なしの名前一致で dispatch されるため、カッコ無し形が**同名のレコード/マップフィールドを shadow する**（例：レコード `{head, tail}` の `node.head` がフィールドでなく `head` メソッドに lower される）。また未知の `recv.bogus` も依然エラーでなく `undefined` になる — checker がレコードのフィールドかメソッド省略形かをまだ判別できないため。#5 のフォローアップ。
+
 ## [0.2.0] - 2026-06-03
 
 spec が繰り延べていた 5 機能（M1–M5）を独立マイルストーンとして出荷。ロードマップ：[design-notes/roadmap-v0.2.ja.md](./design-notes/roadmap-v0.2.ja.md)。

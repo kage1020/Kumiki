@@ -1,0 +1,22 @@
+# Feature: argument-less stdlib methods (spec/stdlib.md §2.2), written in the
+# parenthesis-free form the spec recommends (§2.2.3). Before issue #7 these
+# compiled clean but evaluated to `undefined` at runtime; now they work.
+
+slot nums  : List(Int) = [3, 1, 2]
+slot text  : Text      = "42"
+slot ratio : Float     = 3.7
+slot n     : Int       = -5
+
+tile App = column(
+    heading("head:   " + nums.head.get-or(0).show),
+    heading("last:   " + nums.last.get-or(0).show),
+    heading("tail #: " + nums.tail.length.show),
+    heading("parsed: " + text.parse-int.get-or(0).show),
+    heading("abs:    " + n.abs.show),
+    heading("trunc:  " + ratio.to-int.show)
+) {pad: "lg", gap: "sm"}
+
+app ArglessDemo
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

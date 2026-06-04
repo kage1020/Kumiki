@@ -6,6 +6,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and adopts [S
 
 ## [Unreleased]
 
+### Fixed
+
+- **Issue #7 — argument-less stdlib methods** (`spec/stdlib.md` §2.2): `head` / `tail` / `last` / `to-list` / `get-err` / `to-option` / `parse-int` / `parse-float` / `abs` / `neg` / `to-float` / `to-int` were unimplemented, so the **parenthesis-free form the spec recommends** (`list.head`) compiled clean but evaluated to `undefined` at runtime (silent wrong result), while the parenthesized form (`list.head()`) was hard-rejected with **E0801**. Both shapes now lower to runtime helpers (`_stdlib.listHead`/`listTail`/`listLast`/`toList`/`getErr`/`toOption`/`parseIntOpt`/`parseFloatOpt`; `Math.abs`/`Math.trunc` for the numerics) and are added to `KNOWN_METHODS`. New example `examples/features/31-argless-methods.kumiki`. _Known limitation (deferred, needs receiver type inference)_: method-shortcut names are dispatched by name with no type info, so the no-paren form **shadows a record/map field of the same name** (e.g. `node.head` on a record `{head, tail}` lowers to `head`-the-method, not the field) and an unknown `recv.bogus` still compiles to `undefined` rather than erroring — the checker can't yet tell a record field from a method shortcut. Follow-up to #5.
+
 ## [0.2.0] - 2026-06-03
 
 The five spec-deferred features (M1–M5) shipped as independent milestones. Roadmap: [design-notes/roadmap-v0.2.md](./design-notes/roadmap-v0.2.md).

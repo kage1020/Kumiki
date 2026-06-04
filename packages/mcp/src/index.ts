@@ -109,7 +109,7 @@ export function createServer(): McpServer {
     {
       title: "Check Kumiki source",
       description:
-        "Parse and typecheck a Kumiki program. Pass `source` (text) or `path` (file). Returns ok or a list of diagnostics with codes (see spec/errors.md).",
+        "Parse and typecheck a Kumiki program. Pass `source` (text) or `path` (file). Returns ok or a list of diagnostics with codes (see docs/spec/errors.md).",
       inputSchema: {
         source: z.string().optional().describe("Full Kumiki source text"),
         path: z.string().optional().describe("Path to a .kumiki file (relative to cwd)"),
@@ -394,7 +394,8 @@ export function createServer(): McpServer {
     "kumiki_spec_search",
     {
       title: "Search the spec",
-      description: "Keyword search across the normative spec/ documents. Returns doc:line matches.",
+      description:
+        "Keyword search across the normative docs/spec documents. Returns doc:line matches.",
       inputSchema: { query: z.string() },
     },
     async ({ query }) => {
@@ -407,10 +408,10 @@ export function createServer(): McpServer {
     "kumiki_spec_list",
     {
       title: "List spec documents",
-      description: "List the available normative spec/ documents.",
+      description: "List the available normative docs/spec documents.",
       inputSchema: {},
     },
-    async () => text(listSpecDocs().join("\n") || "(spec/ not found)"),
+    async () => text(listSpecDocs().join("\n") || "(docs/spec not found)"),
   );
 
   server.registerTool(

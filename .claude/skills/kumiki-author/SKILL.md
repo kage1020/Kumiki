@@ -31,8 +31,8 @@ app MyApp
 
 ## Workflow (always verify)
 
-1. Read the relevant spec under `spec/` (language, stdlib, routing, style, forms, http, lifecycle).
-2. Find the closest example in `examples/features/` (one feature each) or `examples/apps/` (size-ordered full apps). Copy its shape.
+1. Read the relevant spec under `docs/spec/` (language, stdlib, routing, style, forms, http, lifecycle).
+2. Find the closest example in `packages/examples/features/` (one feature each) or `packages/examples/apps/` (size-ordered full apps). Copy its shape.
 3. Write the program.
 4. **Verify before claiming done** — three layers, run all of them:
    ```sh
@@ -59,4 +59,4 @@ app MyApp
 - **Events** expose `$el` (element data), `$event`, and in route reducers `$route`.
 - **`fn` purity**: a `fn` reading a slot is error E0305 — pass the value as an argument instead.
 
-See `spec/errors.md` for the full diagnostic catalog. When you hit an error you can't resolve, switch to the `kumiki-debug` skill.
+See `docs/spec/errors.md` for the full diagnostic catalog. When you hit an error you can't resolve, switch to the `kumiki-debug` skill.

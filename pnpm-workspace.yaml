@@ -1,7 +1,6 @@
 packages:
   - packages/*
-  - tests
-  - site
+  - docs
 
 catalog:
   '@biomejs/biome': ^2.4.16

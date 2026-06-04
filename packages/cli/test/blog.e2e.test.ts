@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildAndLoad } from "./helpers/build-and-load.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const BLOG = resolve(here, "../../../examples/apps/03-blog/app.kumiki");
+const BLOG = resolve(here, "../../examples/apps/03-blog/app.kumiki");
 
 const flush = (ms = 0) => new Promise<void>((r) => setTimeout(r, ms));
 

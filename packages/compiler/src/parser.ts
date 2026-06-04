@@ -866,7 +866,7 @@ class Parser {
           const args: Expr[] = [];
           // `.copy(field=value, ...)` is a record-update syntax: the named
           // args are collected into a single RecordLit and the method call
-          // proceeds with one arg. (See spec/language.md §1.6 lvalue path.)
+          // proceeds with one arg. (See docs/spec/language.md §1.6 lvalue path.)
           const isCopyKwargs =
             fld === "copy" &&
             this.matchT("ident") &&

@@ -22,7 +22,7 @@ export type RefinementCheck = (v: unknown) => boolean;
 export type EventHandler = (el: Record<string, unknown>) => void;
 
 /**
- * A controlled panic — Kumiki's "stop the program" signal (spec/stdlib.md §2.2:
+ * A controlled panic — Kumiki's "stop the program" signal (docs/spec/stdlib.md §2.2:
  * `panic(message)`; `Option/Result.get` on the empty case; `Result.get-err` on
  * `Ok`). On the live path a panic is caught — the dispatch episode is rolled
  * back (no partial slot writes) and an error boundary / top-level fallback is
@@ -343,7 +343,7 @@ export function mount(app: AppShape, target: HTMLElement): { dispose: () => void
   let inPanicHandler = false;
 
   /**
-   * Handle a caught live panic per spec/lifecycle.md §7.2: the dispatch episode
+   * Handle a caught live panic per docs/spec/lifecycle.md §7.2: the dispatch episode
    * is already rolled back (the caller never applied the failed result), so we
    * surface it (console.error → smoke/scenario see it) and fire the `app.error`
    * reducer(s) with `$event = PanicInfo`, exactly as §7.2.3 specifies.
@@ -1267,7 +1267,7 @@ function applyTransition(el: HTMLElement, props?: TileProps): void {
 // Reusable, scoped animations declared with `motion N = {...}` and referenced
 // from a tile's `motion` prop. Codegen puts the parsed definitions on
 // `App.motions`; the runtime turns each into a scoped `@keyframes` + class at
-// mount, honoring `prefers-reduced-motion`. See design-notes/adr-001-motion-layer.md.
+// mount, honoring `prefers-reduced-motion`. See docs/design-notes/adr-001-motion-layer.md.
 
 /** Map a duration token (or a raw ms number) to a CSS duration. */
 function motionDuration(d: unknown): string {
@@ -1997,7 +1997,7 @@ export const _stdlib = {
     return { ...rec, ...patch };
   },
   /**
-   * `.get` — the polymorphic unwrap for Option AND Result. Per spec/stdlib.md
+   * `.get` — the polymorphic unwrap for Option AND Result. Per docs/spec/stdlib.md
    * §2.2 it PANICS on the empty case (`None` / `Err`); `Some(v)` / `Ok(v)`
    * unwrap to `v`. A plain (non-variant) value passes through unchanged. (Before
    * v0.3 this returned the value unchanged on the empty case, so `.get` and
@@ -2046,7 +2046,7 @@ export const _stdlib = {
   },
 
   // ----- Issue #5: collection / value helpers for the stdlib methods that the
-  // codegen now lowers to `_s.*` calls. See spec/stdlib.md §2.2. -----
+  // codegen now lowers to `_s.*` calls. See docs/spec/stdlib.md §2.2. -----
 
   /** List(T).chunk(n) → List(List(T)). The last chunk may be shorter. */
   listChunk(xs: unknown[] | undefined | null, n: number): unknown[] {
@@ -2131,7 +2131,7 @@ export const _stdlib = {
     return _stdlib.setDiff(a as Record<string, true>, b as Record<string, true>);
   },
 
-  // ----- Issue #7: argument-less spec stdlib methods (spec/stdlib.md §2.2).
+  // ----- Issue #7: argument-less spec stdlib methods (docs/spec/stdlib.md §2.2).
   // Callable both parenthesis-free (`xs.head`) and parenthesized (`xs.head()`);
   // codegen lowers both shapes to these. -----
 

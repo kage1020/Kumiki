@@ -4,7 +4,7 @@ import type { AppDef, ReducerDef, SlotDef, TileDef, TypeDef } from "@kumikijs/co
 import { lex, parse } from "@kumikijs/compiler";
 import { describe, expect, it } from "vitest";
 
-const COUNTER_PATH = resolve(__dirname, "../../../examples/apps/01-counter/app.kumiki");
+const COUNTER_PATH = resolve(__dirname, "../../examples/apps/01-counter/app.kumiki");
 
 describe("parser", () => {
   it("parses the counter example end-to-end", () => {

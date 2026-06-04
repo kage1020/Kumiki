@@ -1,0 +1,240 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "kumiki",
+  "displayName": "Kumiki",
+  "scopeName": "source.kumiki",
+  "fileTypes": ["kumiki"],
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#declarations" },
+    { "include": "#numbers" },
+    { "include": "#positional" },
+    { "include": "#clause-keywords" },
+    { "include": "#named-args" },
+    { "include": "#record-keys" },
+    { "include": "#constants" },
+    { "include": "#control-keywords" },
+    { "include": "#builtin-types" },
+    { "include": "#builtin-tiles" },
+    { "include": "#method-access" },
+    { "include": "#type-refs" },
+    { "include": "#identifiers" },
+    { "include": "#operators" },
+    { "include": "#punctuation" }
+  ],
+  "repository": {
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.number-sign.kumiki",
+          "match": "(?<![\\w)\\]}])#.*$"
+        }
+      ]
+    },
+    "strings": {
+      "name": "string.quoted.double.kumiki",
+      "begin": "\"",
+      "end": "\"",
+      "beginCaptures": {
+        "0": { "name": "punctuation.definition.string.begin.kumiki" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.definition.string.end.kumiki" }
+      },
+      "patterns": [
+        {
+          "name": "constant.character.escape.kumiki",
+          "match": "\\\\[ntr\"\\\\]"
+        }
+      ]
+    },
+    "declarations": {
+      "patterns": [
+        {
+          "comment": "type / app / theme / motion declarations introduce a type-like name",
+          "match": "^\\s*(type|app|theme|motion)\\s+([A-Za-z_][A-Za-z0-9_-]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.kumiki storage.type.kumiki" },
+            "2": { "name": "entity.name.type.kumiki" }
+          }
+        },
+        {
+          "comment": "tile declarations introduce a component-like name",
+          "match": "^\\s*(tile)\\s+([A-Za-z_][A-Za-z0-9_-]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.kumiki storage.type.kumiki" },
+            "2": { "name": "entity.name.tag.kumiki" }
+          }
+        },
+        {
+          "comment": "reducer / fn / effect / test declarations introduce a function-like name",
+          "match": "^\\s*(reducer|fn|effect|test)\\s+([A-Za-z_][A-Za-z0-9_-]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.kumiki storage.type.kumiki" },
+            "2": { "name": "entity.name.function.kumiki" }
+          }
+        },
+        {
+          "comment": "slot declarations introduce a global state name",
+          "match": "^\\s*(slot)\\s+([A-Za-z_][A-Za-z0-9_-]*)",
+          "captures": {
+            "1": { "name": "keyword.declaration.kumiki storage.type.kumiki" },
+            "2": { "name": "variable.other.slot.kumiki" }
+          }
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.kumiki",
+          "match": "\\b\\d+(?:\\.\\d+)?(?:ms|s|m|h)?\\b"
+        }
+      ]
+    },
+    "positional": {
+      "patterns": [
+        {
+          "comment": "Positional bindings: $1, $el, $event, $route, $m ...",
+          "name": "variable.parameter.positional.kumiki",
+          "match": "\\$[A-Za-z0-9][A-Za-z0-9_-]*"
+        }
+      ]
+    },
+    "clause-keywords": {
+      "patterns": [
+        {
+          "comment": "Clause / block keywords that take an = (on=, do=, cap=, in=, out=, policy=, caps=, routes=, init=, meta=, theme=, style=, map-request=, retry=)",
+          "name": "keyword.control.clause.kumiki",
+          "match": "\\b(on|do|cap|caps|in|out|policy|retry|map-request|routes|init|meta|theme|style)\\b(?=\\s*=(?!=))"
+        }
+      ]
+    },
+    "named-args": {
+      "patterns": [
+        {
+          "comment": "Named arguments: text=, onClick=, bind=, value=, to=, placeholder= ...",
+          "match": "([A-Za-z_][A-Za-z0-9_-]*)\\s*(?==(?!=))",
+          "captures": {
+            "1": { "name": "entity.other.attribute-name.kumiki" }
+          }
+        }
+      ]
+    },
+    "record-keys": {
+      "patterns": [
+        {
+          "comment": "Record / annotation keys: gap:, color:, id: Todo ...",
+          "match": "([A-Za-z_][A-Za-z0-9_-]*)\\s*(?=:(?!=))",
+          "captures": {
+            "1": { "name": "entity.other.attribute-name.kumiki" }
+          }
+        }
+      ]
+    },
+    "constants": {
+      "patterns": [
+        {
+          "name": "constant.language.kumiki",
+          "match": "\\b(true|false|null|fresh|self|now)\\b"
+        }
+      ]
+    },
+    "control-keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.kumiki",
+          "match": "\\b(when|for|in|let|if|then|else|match|with|emit|nominal|where|on|do|cap|out|policy|retry)\\b"
+        },
+        {
+          "name": "keyword.operator.logical.kumiki",
+          "match": "\\bnot\\b"
+        }
+      ]
+    },
+    "builtin-types": {
+      "patterns": [
+        {
+          "name": "support.type.builtin.kumiki",
+          "match": "\\b(Int|Float|Text|Bool|Time|Unit|Bytes|Decimal|Map|List|Option|Result|Set|Json|Decoder)\\b"
+        }
+      ]
+    },
+    "builtin-tiles": {
+      "patterns": [
+        {
+          "comment": "Built-in tiles from the compiler BUILTIN_TILES set",
+          "name": "support.function.tile.kumiki",
+          "match": "\\b(page|region|row|column|stack|overlay|grid|box|card|panel|divider|scroll|text|heading|link|code|markdown|image|icon|video|button|input|textarea|check|radio|select|slider|switch|form|label|fieldset|error|list|list-item|table|table-head|table-body|table-row|table-cell|modal|drawer|tooltip|popover|toast|spinner|progress|skeleton|route-outlet)\\b"
+        }
+      ]
+    },
+    "method-access": {
+      "patterns": [
+        {
+          "comment": "Field / method access: .filter, .get-or, .show, .ok, .start ...",
+          "match": "(\\.)([A-Za-z_][A-Za-z0-9_-]*)",
+          "captures": {
+            "1": { "name": "punctuation.accessor.kumiki" },
+            "2": { "name": "support.function.method.kumiki" }
+          }
+        }
+      ]
+    },
+    "identifiers": {
+      "patterns": [
+        {
+          "comment": "Bare lowercase identifiers (slots, fns, refs, hyphenated predicates like len-lt) consumed whole so internal hyphens are not mistaken for the minus operator.",
+          "name": "variable.other.kumiki",
+          "match": "\\b[a-z_][A-Za-z0-9_-]*\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.assignment.kumiki",
+          "match": ":=|->>|->"
+        },
+        {
+          "name": "keyword.operator.comparison.kumiki",
+          "match": "==|!=|<=|>=|<|>"
+        },
+        {
+          "name": "keyword.operator.logical.kumiki",
+          "match": "&&|\\|\\||!"
+        },
+        {
+          "name": "keyword.operator.arithmetic.kumiki",
+          "match": "[-+*/%]"
+        },
+        {
+          "name": "keyword.operator.kumiki",
+          "match": "[=|&#]"
+        }
+      ]
+    },
+    "type-refs": {
+      "patterns": [
+        {
+          "comment": "Capitalized identifiers: type references, constructors, tile references",
+          "name": "entity.name.type.kumiki",
+          "match": "\\b[A-Z][A-Za-z0-9_-]*\\b"
+        }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        {
+          "name": "punctuation.section.brackets.kumiki",
+          "match": "[\\[\\](){}]"
+        },
+        {
+          "name": "punctuation.separator.kumiki",
+          "match": "[,;:.]"
+        }
+      ]
+    }
+  }
+}

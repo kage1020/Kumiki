@@ -1,3 +1,4 @@
+import kumikiGrammar from "@kumikijs/syntax";
 import { defineConfig } from "vitepress";
 
 // Docs are synced into this project root by scripts/sync-docs.mjs (run before
@@ -9,8 +10,8 @@ export default defineConfig({
   cleanUrls: true,
   ignoreDeadLinks: true,
   markdown: {
-    // Kumiki has no Shiki grammar; reuse a close-enough one for color.
-    languageAlias: { kumiki: "rust" },
+    // Real Shiki grammar for Kumiki, shipped by @kumikijs/syntax.
+    languages: [kumikiGrammar],
   },
   themeConfig: {
     socialLinks: [{ icon: "github", link: "https://github.com/kage1020/Kumiki" }],

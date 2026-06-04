@@ -14,6 +14,7 @@
 ## アーキテクチャ決定記録（ADR）
 
 - [ADR 001 — `motion` は `theme` と同格、8 番目のレイヤーではない](./adr-001-motion-layer.ja.md) — M5：motion 機能を 7 レイヤー外の補助的表示用定義とする理由と、閉じた motion 文法
+- [ADR 002 — メソッドショートカットディスパッチの受け手型推論](./adr-002-receiver-type-inference.ja.md) — v0.3 M2（#23）：チェッカ初の型推論パス——typecheck で `FieldAccess` を注釈し codegen で消費——でメソッドショートカットによる record フィールド shadow を止める。E0108 診断も
 
 ## 設計理念
 

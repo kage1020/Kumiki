@@ -81,6 +81,24 @@ describe("scenario runner", () => {
     expect(report.steps[0]?.domText).toContain("get called on None");
   });
 
+  // M2 (#23): a record field named like a method renders as the FIELD, not the
+  // shadowing method — proven end-to-end (the value "start" is the field, not a
+  // List.head result), while a real List receiver still uses the shortcut.
+  it("reads record fields named like methods, not the shadowing method (33-field-vs-method)", async () => {
+    const app = await loadApp(join(examples, "features", "33-field-vs-method.kumiki"));
+    const report = await runScenario(app, freshRoot(), {
+      steps: [
+        {
+          expect: {
+            noErrors: true,
+            domIncludes: ["record field):  start", "record field):  3", "List shortcut): 10"],
+          },
+        },
+      ],
+    });
+    expect(report.ok).toBe(true);
+  });
+
   // Regression: this app's scenario guards two framework fixes found via the
   // iterate loop — List.fold codegen, and Int.parse numeric coercion (a total
   // that was silently wrong via string concatenation).

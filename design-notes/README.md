@@ -14,6 +14,7 @@ This is the **record of Kumiki's history and decisions**. Rather than the specif
 ## Architecture Decision Records (ADR)
 
 - [ADR 001 — `motion` is a sibling of `theme`, not an 8th layer](./adr-001-motion-layer.md) — M5: why the motion feature is an auxiliary presentational definition outside the 7-layer model, plus the closed motion grammar
+- [ADR 002 — Receiver type inference for method-shortcut dispatch](./adr-002-receiver-type-inference.md) — v0.3 M2 (#23): the checker's first type-inference pass — annotate `FieldAccess` in typecheck, consume in codegen — to stop method shortcuts shadowing record fields, plus the E0108 diagnostic
 
 ## Design Rationale
 

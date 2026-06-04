@@ -7,6 +7,9 @@ import { defineConfig } from "vitepress";
 // their `*.ja.md` siblings into `site/ja/` and served as the `ja` locale.
 export default defineConfig({
   title: "Kumiki",
+  head: [
+    ["link", { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" }],
+  ],
   cleanUrls: true,
   ignoreDeadLinks: true,
   markdown: {
@@ -14,6 +17,7 @@ export default defineConfig({
     languages: [kumikiGrammar],
   },
   themeConfig: {
+    logo: { light: "/kumiki-mark.svg", dark: "/kumiki-mark-dark.svg" },
     socialLinks: [{ icon: "github", link: "https://github.com/kage1020/Kumiki" }],
     search: { provider: "local" },
   },

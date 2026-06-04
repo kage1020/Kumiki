@@ -1,4 +1,4 @@
-import grammarJson from "../kumiki.tmLanguage.json";
+import grammarJson from "../kumiki.tmLanguage.json" with { type: "json" };
 
 /**
  * A TextMate grammar object. Structurally compatible with Shiki's

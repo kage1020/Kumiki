@@ -744,9 +744,10 @@ describe("live panic handling (#24)", () => {
   });
 
   const dispatch = (app: AppShape, name: string): void =>
-    (
-      app as unknown as { _dispatch: (n: string, el: Record<string, unknown>) => void }
-    )._dispatch(name, {});
+    (app as unknown as { _dispatch: (n: string, el: Record<string, unknown>) => void })._dispatch(
+      name,
+      {},
+    );
   const n = (app: AppShape): unknown => (app.live as Record<string, unknown>).n;
 
   it("a reducer panic does not escape the dispatch and rolls back the episode", () => {

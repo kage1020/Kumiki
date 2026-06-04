@@ -176,6 +176,8 @@ tile ErrorFallback
 
 `error-boundary = X` を tile 定義に書くと、その tile 配下の描画中 panic は X tile を `in=PanicInfo` で呼び出して fallback 表示する。
 
+> **実装ステータス（v0.3）.** live runtime は §7.2 の panic モデルを実装する：reducer ディスパッチ中の panic はその episode の `slot` 変更を rollback し（部分書き込みなし）、検証 tier（`smoke` / scenario）へ surface し、`app.error` reducer（§7.2.3）を `PanicInfo` を `$event` として発火する。描画中の panic は最も近い `error-boundary` tile が捕捉する；囲う境界が**ない**描画 panic（例：ルート配下）は、イベントハンドラを未捕捉で突き抜ける代わりに組み込みのトップレベル panic 表示にフォールバックする。`panic(message)` と多相な `.get`（`None` / `Err` で panic、`.get-err` と整合）はこの同じ制御されたシグナルを送出する。(#24)
+
 ---
 
 ## 7.4 サスペンス（loading 表示）

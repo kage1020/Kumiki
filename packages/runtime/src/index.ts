@@ -21,6 +21,34 @@ export {
 export type RefinementCheck = (v: unknown) => boolean;
 export type EventHandler = (el: Record<string, unknown>) => void;
 
+/**
+ * A controlled panic — Kumiki's "stop the program" signal (spec/stdlib.md §2.2:
+ * `panic(message)`; `Option/Result.get` on the empty case; `Result.get-err` on
+ * `Ok`). On the live path a panic is caught — the dispatch episode is rolled
+ * back (no partial slot writes) and an error boundary / top-level fallback is
+ * shown — instead of escaping the DOM event handler / render uncaught. The
+ * reducer-test harness already catches it to power `expect = {panic: ...}`.
+ */
+export class KumikiPanic extends Error {
+  readonly isKumikiPanic = true as const;
+  readonly location: string | undefined;
+  constructor(message: string, location?: string) {
+    super(message);
+    this.name = "KumikiPanic";
+    this.location = location;
+  }
+}
+
+/** True for a KumikiPanic — also matches across realms where `instanceof` fails. */
+function isPanic(e: unknown): e is KumikiPanic {
+  return (
+    e instanceof KumikiPanic ||
+    (typeof e === "object" &&
+      e !== null &&
+      (e as { isKumikiPanic?: boolean }).isKumikiPanic === true)
+  );
+}
+
 export type TileNode =
   | { kind: "page" | "column" | "row" | "card" | "box"; children: TileNode[]; props?: TileProps }
   | { kind: "heading" | "text"; text: string; props?: TileProps }
@@ -257,8 +285,18 @@ export function mount(app: AppShape, target: HTMLElement): { dispose: () => void
     }
 
     maybeReapplyTheme(app);
-    const tree = pickRootTile(app);
-    const dom = renderTile(tree);
+    let dom: HTMLElement;
+    try {
+      const tree = pickRootTile(app);
+      dom = renderTile(tree);
+    } catch (e) {
+      // A render panic NOT caught by a per-tile `error-boundary` (e.g. one under
+      // the root) lands here: render a top-level panic fallback instead of
+      // letting the exception escape and leaving the DOM stale. Logged via
+      // console.error so the smoke / scenario tiers still flag it (#24).
+      reportPanic("render", e);
+      dom = renderPanicFallback(e);
+    }
     if (currentRoot) target.replaceChild(dom, currentRoot);
     else target.appendChild(dom);
     currentRoot = dom;
@@ -300,9 +338,47 @@ export function mount(app: AppShape, target: HTMLElement): { dispose: () => void
     return app.root ? app.root() : { kind: "text", text: "(no root)" };
   }
 
+  // Re-entrancy guard so a panic inside the `app.error` handler itself does not
+  // recurse — it is just logged.
+  let inPanicHandler = false;
+
+  /**
+   * Handle a caught live panic per spec/lifecycle.md §7.2: the dispatch episode
+   * is already rolled back (the caller never applied the failed result), so we
+   * surface it (console.error → smoke/scenario see it) and fire the `app.error`
+   * reducer(s) with `$event = PanicInfo`, exactly as §7.2.3 specifies.
+   */
+  function handleLivePanic(location: string, e: unknown): void {
+    reportPanic(location, e);
+    if (inPanicHandler) return;
+    const handlers = app.reducers.filter(
+      (h) => h.event.kind === "lifecycle" && h.event.name === "app.error",
+    );
+    if (handlers.length === 0) return;
+    const info = { message: panicInfo(e).message, location };
+    inPanicHandler = true;
+    try {
+      for (const h of handlers) applyReducer(h, { $event: info });
+    } finally {
+      inPanicHandler = false;
+    }
+  }
+
   function applyReducer(r: ReducerSpec, payload: Record<string, unknown>): void {
     if (disposed) return;
-    const result = r.apply(slotValues, payload);
+    let result: ReturnType<ReducerSpec["apply"]>;
+    try {
+      result = r.apply(slotValues, payload);
+    } catch (e) {
+      // A panic (or any throw) inside a reducer is caught here so it does not
+      // escape the DOM event handler. The dispatch episode is rolled back —
+      // `apply` returns the new slots and we only write them on success, so a
+      // throw applies NO partial state. The app stays interactive (a later
+      // dispatch still runs); the `app.error` reducer (if any) is fired with
+      // PanicInfo. The reducer-test harness catches panics separately (#24).
+      handleLivePanic(`reducer "${r.name}"`, e);
+      return;
+    }
     for (const [k, v] of Object.entries(result.slots)) {
       const meta = app.slots[k];
       if (meta?.refine && !meta.refine(v)) continue;
@@ -679,6 +755,33 @@ function _setPathHelper(obj: unknown, path: string[], value: unknown): unknown {
   const [head, ...rest] = path;
   const cur = (obj && typeof obj === "object" ? obj : {}) as Record<string, unknown>;
   return { ...cur, [head!]: _setPathHelper(cur[head!], rest, value) };
+}
+
+/** Message + optional source location for a caught throw (panic or otherwise). */
+function panicInfo(e: unknown): { message: string; location: string | undefined } {
+  if (isPanic(e)) return { message: e.message, location: e.location };
+  if (e instanceof Error) return { message: e.message, location: undefined };
+  return { message: String(e), location: undefined };
+}
+
+/**
+ * Surface a caught live panic so the verification tiers still see it: smoke()
+ * and runScenario() both patch console.error into their issue/error buffers, so
+ * a controlled panic is reported as a failure rather than silently swallowed.
+ */
+function reportPanic(where: string, e: unknown): void {
+  const { message } = panicInfo(e);
+  console.error(`[kumiki] ${isPanic(e) ? "panic" : "error"} in ${where}: ${message}`);
+}
+
+/** A minimal top-level fallback for a render panic with no enclosing boundary. */
+function renderPanicFallback(e: unknown): HTMLElement {
+  const { message, location } = panicInfo(e);
+  const div = document.createElement("div");
+  div.dataset.kumikiPanic = location ?? "";
+  div.setAttribute("role", "alert");
+  div.textContent = `Something went wrong: ${message}`;
+  return div;
 }
 
 function renderTile(node: TileNode): HTMLElement {
@@ -1893,12 +1996,25 @@ export const _stdlib = {
   ): Record<string, unknown> {
     return { ...rec, ...patch };
   },
+  /**
+   * `.get` — the polymorphic unwrap for Option AND Result. Per spec/stdlib.md
+   * §2.2 it PANICS on the empty case (`None` / `Err`); `Some(v)` / `Ok(v)`
+   * unwrap to `v`. A plain (non-variant) value passes through unchanged. (Before
+   * v0.3 this returned the value unchanged on the empty case, so `.get` and
+   * `.get-err` behaved oppositely — #24.)
+   */
   unwrap(opt: unknown): unknown {
     if (opt && typeof opt === "object" && "_tag" in opt) {
       const o = opt as { _tag: string; _0?: unknown };
-      if (o._tag === "Some") return o._0;
+      if (o._tag === "Some" || o._tag === "Ok") return o._0;
+      if (o._tag === "None") throw new KumikiPanic("get called on None");
+      if (o._tag === "Err") throw new KumikiPanic("get called on an Err value");
     }
     return opt;
+  },
+  /** `panic(message)` — raise Kumiki's controlled stop-the-program signal. */
+  panic(message: unknown): never {
+    throw new KumikiPanic(String(message));
   },
   optionGetOr(opt: unknown, def: unknown): unknown {
     if (opt && typeof opt === "object" && "_tag" in opt) {
@@ -2047,13 +2163,13 @@ export const _stdlib = {
     if (v && typeof v === "object") return Object.keys(v as Record<string, unknown>);
     return [];
   },
-  /** Result(T,E).get-err → E; panics if the value is Ok. */
+  /** Result(T,E).get-err → E; panics (KumikiPanic) if the value is Ok. */
   getErr(r: unknown): unknown {
     if (r && typeof r === "object" && "_tag" in (r as Record<string, unknown>)) {
       const t = r as { _tag: string; _0?: unknown };
       if (t._tag === "Err") return t._0;
     }
-    throw new Error("get-err called on a non-Err value");
+    throw new KumikiPanic("get-err called on a non-Err value");
   },
   /** Result(T,E).to-option → Option(T): Ok(v) → Some(v), Err(_) → None. */
   toOption(r: unknown): unknown {

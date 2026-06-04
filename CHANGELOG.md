@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and adopts [S
 
 ## [Unreleased]
 
+### Planned — v0.3 (type soundness & robustness)
+
+See the [v0.3 Roadmap](design-notes/roadmap-v0.3.md). v0.3 closes the two soundness gaps the 0.2.1 code review filed as issues; no new end-user features.
+
+- **M2 — Receiver type inference for method-shortcut dispatch** ([#23](https://github.com/kage1020/Kumiki/issues/23)): `recv.method` (the parenthesis-free form) is dispatched by name only, so a record/map field named like a method is silently shadowed and an unknown `recv.bogus` compiles to `undefined`. M2 adds the checker's first type-inference pass (a name→type environment + `inferType`) so `FieldAccess` dispatches field-vs-shortcut by the receiver's inferred type, turning the silent-wrong-value class into a diagnostic. Removes the #7 known-limitation note below.
+
+### Fixed
+
+- **M1 (#24) — Clean panic handling on the live path** (`spec/lifecycle.md` §7.2–7.3, `spec/stdlib.md` §2.2): a panic on the **live** path — `panic(message)`, `Result.get-err` on `Ok`, or the polymorphic `.get` on the empty case (`None` / `Err`) — previously escaped the DOM event handler / render as an **uncaught exception**, aborting the dispatch and leaving the DOM stale. Now there is one panic model: a tagged `KumikiPanic` (raised by all of the above), caught around live reducer dispatch so the episode is **rolled back** (no partial slot writes), surfaced via `console.error` (so the `smoke` / scenario tiers still flag it), and routed to the `app.error` reducer with `PanicInfo` as `$event`; the app stays interactive. A render panic with no enclosing `error-boundary` now renders a built-in **top-level fallback** instead of throwing. Two latent bugs are fixed along the way: `panic(message)` was never implemented (it lowered to an undefined function call), and `.get` returned the value unchanged on `None` / `Err` (silent) — opposite to `.get-err` — and did not even unwrap `Ok`; `.get` now unwraps `Some`/`Ok` and panics on `None`/`Err`, consistent with the spec. New example `examples/features/32-panic-boundary.kumiki`.
+
+## [0.2.1] - 2026-06-04
+
 ### Fixed
 
 - **Issue #7 — argument-less stdlib methods** (`spec/stdlib.md` §2.2): `head` / `tail` / `last` / `to-list` / `get-err` / `to-option` / `parse-int` / `parse-float` / `abs` / `neg` / `to-float` / `to-int` were unimplemented, so the **parenthesis-free form the spec recommends** (`list.head`) compiled clean but evaluated to `undefined` at runtime (silent wrong result), while the parenthesized form (`list.head()`) was hard-rejected with **E0801**. Both shapes now lower to runtime helpers (`_stdlib.listHead`/`listTail`/`listLast`/`toList`/`getErr`/`toOption`/`parseIntOpt`/`parseFloatOpt`; `Math.abs`/`Math.trunc` for the numerics) and are added to `KNOWN_METHODS`. New example `examples/features/31-argless-methods.kumiki`. _Known limitation (deferred, needs receiver type inference)_: method-shortcut names are dispatched by name with no type info, so the no-paren form **shadows a record/map field of the same name** (e.g. `node.head` on a record `{head, tail}` lowers to `head`-the-method, not the field) and an unknown `recv.bogus` still compiles to `undefined` rather than erroring — the checker can't yet tell a record field from a method shortcut. Follow-up to #5.

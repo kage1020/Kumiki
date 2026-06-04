@@ -170,6 +170,8 @@ or(other)                   : Result(T, E)
 to-option                   : Option(T)
 ```
 
+> **Panic semantics (v0.3).** `Option.get` / `Result.get` (the polymorphic unwrap, also written paren-free as `value.get`) panic on the empty case (`None` / `Err`); `Result.get-err` panics on `Ok`. All raise the one controlled panic signal handled by the live runtime — see [lifecycle.md §7.2](./lifecycle.md). Prefer `get-or(default)` outside a reducer.
+
 ### 2.2.6 Text
 
 ```

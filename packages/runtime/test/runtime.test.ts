@@ -1,5 +1,5 @@
 import type { AppShape } from "@kumikijs/runtime";
-import { _stdlib, mount } from "@kumikijs/runtime";
+import { _stdlib, KumikiPanic, mount } from "@kumikijs/runtime";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Hand-crafted AppShape mirroring the counter example, using the Phase 2 runtime contract.
@@ -635,9 +635,27 @@ describe("stdlib argument-less methods (issue #7)", () => {
     expect(_stdlib.toOption(_stdlib.Err("boom"))).toEqual(_stdlib.None);
   });
 
-  it("getErr returns the Err payload and panics on Ok", () => {
+  it("getErr returns the Err payload and panics (KumikiPanic) on Ok", () => {
     expect(_stdlib.getErr(_stdlib.Err("boom"))).toBe("boom");
-    expect(() => _stdlib.getErr(_stdlib.Ok(1))).toThrow();
+    expect(() => _stdlib.getErr(_stdlib.Ok(1))).toThrow(KumikiPanic);
+  });
+
+  // M1 (#24): `.get` is the polymorphic unwrap for Option AND Result; spec
+  // stdlib.md §2.2 says it panics on the empty case (None / Err). Before M1 it
+  // returned the value unchanged (silent), so `.get` and `.get-err` behaved
+  // oppositely. Now both panic via KumikiPanic.
+  it("unwrap (.get) unwraps Some/Ok and panics on None/Err", () => {
+    expect(_stdlib.unwrap(_stdlib.Some(5))).toBe(5);
+    expect(_stdlib.unwrap(_stdlib.Ok(7))).toBe(7);
+    expect(() => _stdlib.unwrap(_stdlib.None)).toThrow(KumikiPanic);
+    expect(() => _stdlib.unwrap(_stdlib.Err("x"))).toThrow(KumikiPanic);
+    // A plain (non-variant) value passes through unchanged.
+    expect(_stdlib.unwrap(42)).toBe(42);
+  });
+
+  it("panic(msg) raises a KumikiPanic carrying the message", () => {
+    expect(() => _stdlib.panic("boom")).toThrow(KumikiPanic);
+    expect(() => _stdlib.panic("boom")).toThrow("boom");
   });
 
   it("parseIntOpt / parseFloatOpt return Option, None on non-numeric", () => {
@@ -647,5 +665,123 @@ describe("stdlib argument-less methods (issue #7)", () => {
     expect(_stdlib.parseIntOpt("")).toEqual(_stdlib.None);
     expect(_stdlib.parseFloatOpt("3.5")).toEqual(_stdlib.Some(3.5));
     expect(_stdlib.parseFloatOpt("nope")).toEqual(_stdlib.None);
+  });
+});
+
+// M1 (#24): a panic on the LIVE path must be handled cleanly — caught, the
+// dispatch episode rolled back (no partial writes), surfaced via console.error
+// (so smoke/scenario flag it), and the app left interactive (a later dispatch
+// still works). Before M1 the panic escaped the DOM event handler uncaught.
+//
+//  - `boom`     panics inside its reducer body (via _stdlib.panic).
+//  - `ok`       is a normal reducer that still works after a panic.
+//  - `onError`  is the spec §7.2.3 `app.error` reducer; it records the message
+//               of the PanicInfo delivered as `$event`.
+function makePanicApp(): AppShape {
+  const app: AppShape = {
+    slots: { n: { value: 0 }, lastError: { value: "" } },
+    caps: [],
+    effects: {},
+    init: [],
+    reducers: [
+      {
+        name: "boom",
+        selector: { tile: "BoomBtn" },
+        event: { kind: "ui", ev: "click" },
+        apply: () => {
+          _stdlib.panic("boom in reducer");
+          return { slots: { n: 99 }, emits: [] };
+        },
+      },
+      {
+        name: "ok",
+        selector: { tile: "OkBtn" },
+        event: { kind: "ui", ev: "click" },
+        apply: (live) => ({ slots: { n: (live.n as number) + 1 }, emits: [] }),
+      },
+      {
+        name: "onError",
+        event: { kind: "lifecycle", name: "app.error" },
+        apply: (_live, payload) => ({
+          slots: { lastError: (payload.$event as { message: string }).message },
+          emits: [],
+        }),
+      },
+    ],
+    root: () => ({ kind: "column", children: [{ kind: "heading", text: "panic-app" }] }),
+  };
+  return app;
+}
+
+// A root tile that panics during render with NO enclosing error-boundary — the
+// top-level render boundary must catch it (render a panic node, not throw).
+function makeRenderPanicApp(): AppShape {
+  const app: AppShape = {
+    slots: {},
+    caps: [],
+    effects: {},
+    init: [],
+    reducers: [],
+    root: () => {
+      _stdlib.panic("render boom");
+      return { kind: "column", children: [] };
+    },
+  };
+  return app;
+}
+
+describe("live panic handling (#24)", () => {
+  let root: HTMLElement;
+  let errSpy: ReturnType<typeof vi.spyOn>;
+  beforeEach(() => {
+    root = document.createElement("div");
+    document.body.appendChild(root);
+    errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    errSpy.mockRestore();
+    root.remove();
+  });
+
+  const dispatch = (app: AppShape, name: string): void =>
+    (app as unknown as { _dispatch: (n: string, el: Record<string, unknown>) => void })._dispatch(
+      name,
+      {},
+    );
+  const n = (app: AppShape): unknown => (app.live as Record<string, unknown>).n;
+
+  it("a reducer panic does not escape the dispatch and rolls back the episode", () => {
+    const app = makePanicApp();
+    mount(app, root);
+    // The panicking dispatch must NOT throw out of the handler...
+    expect(() => dispatch(app, "boom")).not.toThrow();
+    // ...and must leave the slot at its pre-dispatch value (no partial write).
+    expect(n(app)).toBe(0);
+    // ...and the panic is surfaced (so smoke/scenario flag it).
+    expect(errSpy).toHaveBeenCalled();
+  });
+
+  it("the app stays interactive after a reducer panic (recoverable, not bricked)", () => {
+    const app = makePanicApp();
+    mount(app, root);
+    dispatch(app, "boom");
+    dispatch(app, "ok");
+    expect(n(app)).toBe(1); // a normal reducer still runs after a panic
+  });
+
+  it("a reducer panic fires the app.error reducer with PanicInfo ($event)", () => {
+    const app = makePanicApp();
+    mount(app, root);
+    dispatch(app, "boom");
+    // spec §7.2.3: app.error receives the PanicInfo, whose .message is the panic.
+    expect((app.live as Record<string, unknown>).lastError).toBe("boom in reducer");
+  });
+
+  it("a render panic with no error-boundary is caught by the top-level boundary", () => {
+    const app = makeRenderPanicApp();
+    // mount → render must not throw; it renders a panic fallback instead.
+    expect(() => mount(app, root)).not.toThrow();
+    expect(root.textContent ?? "").toContain("render boom");
+    expect(errSpy).toHaveBeenCalled();
   });
 });

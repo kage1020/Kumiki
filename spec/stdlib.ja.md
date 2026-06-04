@@ -170,6 +170,8 @@ or(other)                   : Result(T, E)
 to-option                   : Option(T)
 ```
 
+> **panic 意味論（v0.3）.** `Option.get` / `Result.get`（多相 unwrap、カッコ無しで `value.get` とも書ける）は空ケース（`None` / `Err`）で panic し、`Result.get-err` は `Ok` で panic する。いずれも live runtime が扱う唯一の制御された panic シグナルを送出する — [lifecycle.md §7.2](./lifecycle.ja.md) を参照。reducer 外では `get-or(default)` を推奨。
+
 ### 2.2.6 Text
 
 ```

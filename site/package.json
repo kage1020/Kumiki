@@ -13,7 +13,8 @@
   },
   "dependencies": {
     "@kumikijs/compiler": "workspace:*",
-    "@kumikijs/runtime": "workspace:*"
+    "@kumikijs/runtime": "workspace:*",
+    "@kumikijs/syntax": "workspace:*"
   },
   "devDependencies": {
     "vitepress": "^1.6.4",

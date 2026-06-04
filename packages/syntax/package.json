@@ -1,0 +1,58 @@
+{
+  "name": "@kumikijs/syntax",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Kumiki TextMate grammar — syntax highlighting for .kumiki files (Shiki, VitePress, VS Code).",
+  "license": "Apache-2.0",
+  "author": "kage1020",
+  "homepage": "https://github.com/kage1020/Kumiki/tree/main/packages/syntax#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kage1020/Kumiki.git",
+    "directory": "packages/syntax"
+  },
+  "bugs": "https://github.com/kage1020/Kumiki/issues",
+  "keywords": [
+    "kumiki",
+    "syntax-highlighting",
+    "textmate",
+    "tmlanguage",
+    "shiki",
+    "grammar"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./grammar.json": "./kumiki.tmLanguage.json"
+  },
+  "files": [
+    "dist",
+    "kumiki.tmLanguage.json"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./grammar.json": "./kumiki.tmLanguage.json"
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "lint": "biome check src test"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" role="img" aria-label="Kumiki">
+  <title>Kumiki</title>
+  <style>
+    .ink { fill: #1a1830; }
+    @media (prefers-color-scheme: dark) { .ink { fill: #cfd0e0; } }
+    .piece { transform-box: fill-box; transform-origin: center; animation: drop 5.4s cubic-bezier(.45,0,.25,1) infinite; }
+    @keyframes drop {
+      0%   { transform: translateY(-80px); opacity: 0; }
+      6%   { opacity: 1; }
+      26%  { transform: translateY(2px); }
+      30%, 84% { transform: translateY(0); opacity: 1; }
+      93%  { opacity: 0; }
+      100% { transform: translateY(-80px); opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) { .piece { animation: none; transform: none; opacity: 1; } }
+  </style>
+  <rect class="piece ink" style="animation-delay:0s"   x="20.7" y="52.7" width="32.6" height="26.6" rx="2"/>
+  <rect class="piece" style="animation-delay:.12s" x="54.7" y="52.7" width="24.6" height="26.6" rx="2" fill="#7b61ff"/>
+  <rect class="piece" style="animation-delay:.26s" x="20.7" y="34.7" width="22.6" height="16.6" rx="2" fill="#7b61ff" opacity=".85"/>
+  <rect class="piece" style="animation-delay:.38s" x="44.7" y="34.7" width="20.6" height="16.6" rx="2" fill="#13d6c4"/>
+  <rect class="piece" style="animation-delay:.50s" x="66.7" y="34.7" width="12.6" height="16.6" rx="2" fill="#7b61ff"/>
+  <rect class="piece" style="animation-delay:.64s" x="20.7" y="20.7" width="28.6" height="12.6" rx="2" fill="#13d6c4"/>
+  <rect class="piece" style="animation-delay:.76s" x="50.7" y="20.7" width="28.6" height="12.6" rx="2" fill="#13d6c4" opacity=".8"/>
+</svg>

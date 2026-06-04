@@ -6,6 +6,15 @@
 
 ## [Unreleased]
 
+### Planned — v0.3（型健全性＆堅牢性）
+
+[v0.3 ロードマップ](design-notes/roadmap-v0.3.ja.md) を参照。v0.3 は 0.2.1 のコードレビューが issue 化した 2 つの健全性ギャップを埋める；新しいエンドユーザ機能はない。
+
+- **M1 — live パスのクリーンな panic ハンドリング**（[#24](https://github.com/kage1020/Kumiki/issues/24)）：live パスの panic（`panic(...)`、`Ok` への `Result.get-err`、空ケースへの `Option/Result.get`）が現状 DOM イベントハンドラ／render を未捕捉で突き抜ける。M1 は 1 つの panic モデル——タグ付き `KumikiPanic`、live reducer ディスパッチの try/catch（アトミック、以降のディスパッチ停止）、トップレベル render 境界——を定義し、`.get`（現状 panic しない）を `.get-err` と `spec/stdlib.md` §2.2 どおり整合させる。
+- **M2 — メソッドショートカットディスパッチの受け手型推論**（[#23](https://github.com/kage1020/Kumiki/issues/23)）：`recv.method`（カッコ無し形）は名前のみで dispatch されるため、メソッドと同名の record/map フィールドが暗黙に shadow され、未知の `recv.bogus` が `undefined` にコンパイルされる。M2 はチェッカに初の型推論パス（名前→型の環境 + `inferType`）を入れ、`FieldAccess` を受け手の推論型で field-vs-shortcut に dispatch し、silent-wrong-value のクラスを診断へ変える。下の #7 既知の制限ノートを除去する。
+
+## [0.2.1] - 2026-06-04
+
 ### Fixed
 
 - **Issue #7 — 引数なし stdlib メソッド**（`spec/stdlib.md` §2.2）：`head` / `tail` / `last` / `to-list` / `get-err` / `to-option` / `parse-int` / `parse-float` / `abs` / `neg` / `to-float` / `to-int` が未実装で、**spec が推奨するカッコ無し形**（`list.head`）はコンパイルも通るのに実行時 `undefined`（サイレントな誤結果）、カッコ付き形（`list.head()`）は **E0801** で硬く弾かれていた。両形とも runtime ヘルパー（`_stdlib.listHead`/`listTail`/`listLast`/`toList`/`getErr`/`toOption`/`parseIntOpt`/`parseFloatOpt`、数値系は `Math.abs`/`Math.trunc`）へ lower し、`KNOWN_METHODS` に追加。新規 example `examples/features/31-argless-methods.kumiki`。_既知の制限（繰り延べ、レシーバ型推論が必要）_：メソッド省略名は型情報なしの名前一致で dispatch されるため、カッコ無し形が**同名のレコード/マップフィールドを shadow する**（例：レコード `{head, tail}` の `node.head` がフィールドでなく `head` メソッドに lower される）。また未知の `recv.bogus` も依然エラーでなく `undefined` になる — checker がレコードのフィールドかメソッド省略形かをまだ判別できないため。#5 のフォローアップ。

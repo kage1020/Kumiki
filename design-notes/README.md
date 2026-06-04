@@ -6,6 +6,7 @@ This is the **record of Kumiki's history and decisions**. Rather than the specif
 
 ## Roadmap
 
+- [v0.3 Roadmap](./roadmap-v0.3.md) — scope, design, and acceptance criteria for the v0.3 milestone (clean panic handling / receiver type inference) — the type-soundness & robustness milestone
 - [v0.2 Roadmap](./roadmap-v0.2.md) — scope, design, and acceptance criteria for the v0.2 milestone (stop-timer / overlay / plugin capabilities / `fix --auto-patch` / `motion` layer)
 - [`test` layer & `kumiki test` runner](./test-runner.md) — M4 scope decision: the in-language test DSL + runner (prerequisite for `fix --auto-patch`)
 - [`kumiki fix --auto-patch <test-name>`](./fix-from-test.md) — M4b scope decision: which test failures are deterministically repairable, and why the rest are reported

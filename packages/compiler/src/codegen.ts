@@ -542,6 +542,11 @@ function jsOfExpr(e: Expr, ctx: EvalCtx): string {
       return `(${e.op === "!" ? "!" : "-"}${jsOfExpr(e.rhs, ctx)})`;
     case "FieldAccess": {
       const baseJs = jsOfExpr(e.base, ctx);
+      // ADR-002 (#23): when the checker has inferred that the receiver is a
+      // record with this field, read the field — do NOT let a same-named method
+      // shortcut shadow it. `accessKind` is only set when `check()` ran; absent,
+      // we keep the historical name-based dispatch below (back-compat).
+      if (e.accessKind === "field") return `(${baseJs})[${JSON.stringify(e.field)}]`;
       // For Option/Result values stored as {_tag,_0}, accessing common fields like
       // ".get" needs unwrapping. We special-case ".get" / ".is-some" / ".is-none" /
       // ".is-ok" / ".is-err".
@@ -745,6 +750,70 @@ export const KNOWN_METHODS: ReadonlySet<string> = new Set([
   "neg", // Int/Float.neg
   "to-float", // Int.to-float → Float
   "to-int", // Float.to-int → Int (truncated)
+  // ADR-002 symmetry: these are emitted as no-paren FieldAccess shortcuts (see
+  // FIELD_ACCESS_SHORTCUTS / jsOfExpr) but were missing here, so their `.m()`
+  // form wrongly tripped E0801 while `.m` worked. Listing them makes both shapes
+  // agree (and keeps FIELD_ACCESS_SHORTCUTS ⊆ KNOWN_METHODS).
+  "is-ok", // Result(T,E).is-ok → Bool
+  "is-err", // Result(T,E).is-err → Bool
+  "values", // Map(K,V).values → List(V)
+  "entries", // Map(K,V).entries → List([K,V])
+  "lower", // Text.lower → Text
+  "upper", // Text.upper → Text
+  "sort", // List(T).sort → List(T)
+  "ms", // Time/Duration.ms → Int
+]);
+
+/**
+ * The method names codegen lowers in the parenthesis-free `recv.m` (FieldAccess)
+ * form — kept in sync with the `if (e.field === …)` chain in jsOfExpr's
+ * FieldAccess case. A subset of KNOWN_METHODS (enforced by a test): every
+ * no-paren shortcut must also accept the `recv.m()` shape.
+ */
+export const FIELD_ACCESS_SHORTCUTS: ReadonlySet<string> = new Set([
+  "get",
+  "is-some",
+  "is-none",
+  "is-ok",
+  "is-err",
+  "keys",
+  "values",
+  "entries",
+  "size",
+  "to-ms",
+  "ms",
+  "show",
+  "length",
+  "is-empty",
+  "lower",
+  "upper",
+  "trim",
+  "unique",
+  "reverse",
+  "sort",
+  "head",
+  "tail",
+  "last",
+  "to-list",
+  "get-err",
+  "to-option",
+  "parse-int",
+  "parse-float",
+  "abs",
+  "neg",
+  "to-float",
+  "to-int",
+]);
+
+/**
+ * Every member name the runtime understands on a stdlib receiver — the union of
+ * the method-call methods and the no-paren shortcuts. Used by the type checker
+ * (ADR-002) to decide whether `recv.m` on a *known* receiver type is a real
+ * member (→ shortcut) or an unknown one (→ E0108). Flat, not per-type.
+ */
+export const KNOWN_MEMBERS: ReadonlySet<string> = new Set([
+  ...KNOWN_METHODS,
+  ...FIELD_ACCESS_SHORTCUTS,
 ]);
 
 function methodCallJs(recv: Expr, method: string, args: Expr[], ctx: EvalCtx): string {

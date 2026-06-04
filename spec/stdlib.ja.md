@@ -137,6 +137,8 @@ fn empty?() -> Bool = todos.is-empty          ; 同上
 fn norm() -> List(Todo) = todos.reverse       ; 同上
 ```
 
+> **dispatch 規則（v0.3、ADR-002）.** `recv.m` は名前ではなく `recv` の**推論型**で dispatch される：`recv` が `m` という名のフィールドを持つ record ならフィールドを読み、`m` メソッドを持つ stdlib 型ならショートカットを使う。よってメソッドと同名の record フィールド（`{head, …}` への `node.head`）はフィールドとして読まれ、shadow されない。受け手型が**既知**で `m` がフィールドでもメンバーでもないときはコンパイルエラー（[errors.md](./errors.ja.md) E0108）。受け手型が推論できないとき（例：型のない reducer payload）は従来の名前ベース dispatch を使う。
+
 **`map` / `filter` / `sort-by` の lambda 引数**:
 - List 要素には `$1` を、`.entries` 後の `[k, v]` ペアには `$1=key, $2=value` を束縛します（ランタイムが自動 destructure）
 - 例: `m.entries.sort-by($2.createdAt).map($1)` で `$1=key`, `$2=value`

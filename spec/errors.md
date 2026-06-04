@@ -100,6 +100,14 @@ A tile's `motion: "<name>"` prop refers to a motion that no `motion <name> = {�
 
 **Fix**: Check the spelling, or declare the motion. See [Style](./style.md) §4.9.1.
 
+### E0108 `undef-member`
+
+A `recv.member` access where the **inferred type** of `recv` is known, but `member` is neither a field of that type nor a stdlib method/shortcut for it (ADR-002). This catches a typo (`list.frist`) or a member used on the wrong shape (`record.head` where the record has no `head` field). When the receiver type can't be inferred, no error is raised — the name-based shortcut dispatch is used instead.
+
+> `Record type has no field or method ".<member>"` / `Type "<T>" has no member ".<member>"`
+
+**Fix**: Correct the member name, or — if `recv` is a record — use a field that exists. See [Standard Library](./stdlib.md) §2.2.3.
+
 ## E02xx — Types
 
 ### E0201 `type-mismatch`

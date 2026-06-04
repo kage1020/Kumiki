@@ -1,0 +1,23 @@
+# Feature: receiver type inference (#23, ADR-002). The parenthesis-free method
+# shortcut `recv.m` now dispatches by the receiver's INFERRED type:
+#  - `seg.head` / `seg.size` on a RECORD read the fields (no shadow), even
+#    though `head` / `size` are also stdlib method names;
+#  - `items.head` on a LIST uses the List.head shortcut (→ Option(T)).
+# Before v0.3 the record fields were silently shadowed by the methods.
+
+type Segment = { head: Text, size: Int }
+
+slot seg   : Segment   = { head: "start", size: 3 }
+slot items : List(Int) = [10, 20, 30]
+
+tile App = column(
+    heading("seg.head  (record field):  " + seg.head),
+    heading("seg.size  (record field):  " + seg.size.show),
+    heading("items.head (List shortcut): " + items.head.get-or(0).show),
+    heading("items.length:               " + items.length.show)
+) {pad: "lg", gap: "sm"}
+
+app FieldVsMethod
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

@@ -191,7 +191,20 @@ export type Expr =
   | { kind: "Ref"; name: string; pos: Pos }
   | { kind: "BinOp"; op: BinOp; lhs: Expr; rhs: Expr; pos: Pos }
   | { kind: "UnaryOp"; op: "-" | "!"; rhs: Expr; pos: Pos }
-  | { kind: "FieldAccess"; base: Expr; field: string; pos: Pos }
+  | {
+      kind: "FieldAccess";
+      base: Expr;
+      field: string;
+      pos: Pos;
+      /**
+       * Dispatch decision filled in by the type checker (ADR-002): `"field"`
+       * means the receiver is a record with this field, so codegen lowers a
+       * field read instead of a method shortcut (kills the #23 shadow). Absent /
+       * `"shortcut"` keeps the name-based shortcut dispatch (back-compat — also
+       * the case when codegen runs without `check()`).
+       */
+      accessKind?: "field" | "shortcut";
+    }
   | { kind: "Index"; base: Expr; index: Expr; pos: Pos }
   | { kind: "Call"; callee: string; args: Expr[]; pos: Pos } // module-level fns and ctors (TodoId.fresh, math.abs, ...)
   | { kind: "MethodCall"; receiver: Expr; method: string; args: Expr[]; pos: Pos }

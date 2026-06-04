@@ -137,6 +137,8 @@ fn empty?() -> Bool = todos.is-empty          ; same as above
 fn norm() -> List(Todo) = todos.reverse       ; same as above
 ```
 
+> **Dispatch rule (v0.3, ADR-002).** `recv.m` is dispatched by the **inferred type** of `recv`, not by name: if `recv` is a record with a field `m`, it reads the field; if `recv` is a stdlib type with method `m`, it uses the shortcut. So a record field literally named like a method (`node.head` on `{head, …}`) is read as the field — not shadowed. When the receiver type is **known** and `m` is neither a field nor a member, it is a compile error ([errors.md](./errors.md) E0108). When the receiver type can't be inferred (e.g. an untyped reducer payload), the name-based dispatch is used unchanged.
+
 **The lambda arguments of `map` / `filter` / `sort-by`**:
 - For a List element, `$1` is bound; for the `[k, v]` pair after `.entries`, `$1=key, $2=value` are bound (the runtime destructures automatically)
 - Example: `m.entries.sort-by($2.createdAt).map($1)` with `$1=key`, `$2=value`

@@ -16,7 +16,7 @@ import type {
   TypeExpr,
 } from "./ast.ts";
 import { STANDARD_CAPABILITIES } from "./capabilities.ts";
-import { KNOWN_METHODS } from "./codegen.ts";
+import { KNOWN_MEMBERS, KNOWN_METHODS } from "./codegen.ts";
 
 export type KumikiError = {
   code: string;
@@ -304,8 +304,11 @@ function checkSlot(slot: SlotDef, sym: SymbolTable, errors: KumikiError[]): void
 }
 
 function checkTile(tile: TileDef, sym: SymbolTable, errors: KumikiError[]): void {
-  const ctx: Ctx = { kind: "tile", localBinds: new Set() };
-  if (tile.in) ctx.localBinds.add("$1");
+  const ctx: Ctx = { kind: "tile", localBinds: new Set(), localTypes: new Map() };
+  if (tile.in) {
+    ctx.localBinds.add("$1");
+    ctx.localTypes?.set("$1", tile.in);
+  }
   checkTileExpr(tile.body, sym, errors, ctx);
 }
 
@@ -313,6 +316,14 @@ type Ctx = {
   kind: "slot-init" | "tile" | "reducer" | "fn";
   localBinds: Set<string>;
   capsAvailable?: Set<string>; // for reducer context
+  /**
+   * Inferred types of in-scope local binds (ADR-002): fn params, tile `in`
+   * (`$1`), and `let` bindings. Used by FieldAccess inference to dispatch
+   * field-vs-shortcut and to flag E0108. Cloned alongside `localBinds` when a
+   * narrower scope is entered. Absent for binds we don't type (reducer payloads,
+   * `match` binds) — those infer as dynamic.
+   */
+  localTypes?: Map<string, TypeExpr>;
 };
 
 function checkA11y(t: TileExpr & { kind: "TileCall" }, errors: KumikiError[]): void {
@@ -357,7 +368,11 @@ function checkTileExpr(t: TileExpr, sym: SymbolTable, errors: KumikiError[], ctx
   switch (t.kind) {
     case "TileFor": {
       checkExpr(t.iter, sym, errors, ctx);
-      const inner: Ctx = { ...ctx, localBinds: new Set(ctx.localBinds) };
+      const inner: Ctx = {
+        ...ctx,
+        localBinds: new Set(ctx.localBinds),
+        localTypes: new Map(ctx.localTypes ?? []),
+      };
       inner.localBinds.add(t.bind);
       checkTileExpr(t.body, sym, errors, inner);
       return;
@@ -374,7 +389,11 @@ function checkTileExpr(t: TileExpr, sym: SymbolTable, errors: KumikiError[], ctx
     case "TileMatch":
       checkExpr(t.scrutinee, sym, errors, ctx);
       for (const arm of t.arms) {
-        const inner: Ctx = { ...ctx, localBinds: new Set(ctx.localBinds) };
+        const inner: Ctx = {
+          ...ctx,
+          localBinds: new Set(ctx.localBinds),
+          localTypes: new Map(ctx.localTypes ?? []),
+        };
         if (arm.pattern.kind === "PVariant")
           for (const b of arm.pattern.binds) inner.localBinds.add(b);
         if (arm.pattern.kind === "PBind") inner.localBinds.add(arm.pattern.name);
@@ -508,7 +527,11 @@ function checkStmt(
 ): void {
   if (s.kind === "ForStmt") {
     checkExpr(s.iter, sym, errors, ctx);
-    const inner: Ctx = { ...ctx, localBinds: new Set(ctx.localBinds) };
+    const inner: Ctx = {
+      ...ctx,
+      localBinds: new Set(ctx.localBinds),
+      localTypes: new Map(ctx.localTypes ?? []),
+    };
     inner.localBinds.add(s.bind);
     // A loop body executes multiple times; track writes inside its own scope
     // so the same slot can be assigned once per iteration. After the loop,
@@ -536,7 +559,11 @@ function checkStmt(
     // Arms are mutually exclusive — each starts fresh from the parent set.
     const armSets: Set<string>[] = [];
     for (const arm of s.arms) {
-      const inner: Ctx = { ...ctx, localBinds: new Set(ctx.localBinds) };
+      const inner: Ctx = {
+        ...ctx,
+        localBinds: new Set(ctx.localBinds),
+        localTypes: new Map(ctx.localTypes ?? []),
+      };
       if (arm.pattern.kind === "PVariant")
         for (const b of arm.pattern.binds) if (b !== "_") inner.localBinds.add(b);
       if (arm.pattern.kind === "PBind") inner.localBinds.add(arm.pattern.name);
@@ -551,6 +578,11 @@ function checkStmt(
   if (s.kind === "LetStmt") {
     checkExpr(s.rhs, sym, errors, ctx);
     ctx.localBinds.add(s.name);
+    const rt = inferType(s.rhs, sym, ctx);
+    if (rt) {
+      if (!ctx.localTypes) ctx.localTypes = new Map();
+      ctx.localTypes.set(s.name, rt);
+    }
     return;
   }
   if (s.kind === "Emit") {
@@ -685,6 +717,7 @@ function checkExpr(e: Expr, sym: SymbolTable, errors: KumikiError[], ctx: Ctx): 
       return;
     case "FieldAccess":
       checkExpr(e.base, sym, errors, ctx);
+      classifyFieldAccess(e, sym, errors, ctx);
       return;
     case "Index":
       checkExpr(e.base, sym, errors, ctx);
@@ -705,7 +738,11 @@ function checkExpr(e: Expr, sym: SymbolTable, errors: KumikiError[], ctx: Ctx): 
       checkExpr(e.receiver, sym, errors, ctx);
       for (const a of e.args) {
         // Inside method call args, $1/$2 are implicit lambdas
-        const inner: Ctx = { ...ctx, localBinds: new Set(ctx.localBinds) };
+        const inner: Ctx = {
+          ...ctx,
+          localBinds: new Set(ctx.localBinds),
+          localTypes: new Map(ctx.localTypes ?? []),
+        };
         inner.localBinds.add("$1");
         inner.localBinds.add("$2");
         checkExpr(a, sym, errors, inner);
@@ -726,7 +763,11 @@ function checkExpr(e: Expr, sym: SymbolTable, errors: KumikiError[], ctx: Ctx): 
     case "MatchExpr": {
       checkExpr(e.scrutinee, sym, errors, ctx);
       for (const arm of e.arms) {
-        const inner: Ctx = { ...ctx, localBinds: new Set(ctx.localBinds) };
+        const inner: Ctx = {
+          ...ctx,
+          localBinds: new Set(ctx.localBinds),
+          localTypes: new Map(ctx.localTypes ?? []),
+        };
         if (arm.pattern.kind === "PVariant")
           for (const b of arm.pattern.binds) if (b !== "_") inner.localBinds.add(b);
         if (arm.pattern.kind === "PBind") inner.localBinds.add(arm.pattern.name);
@@ -741,12 +782,179 @@ function checkExpr(e: Expr, sym: SymbolTable, errors: KumikiError[], ctx: Ctx): 
       return;
     case "LetIn": {
       checkExpr(e.value, sym, errors, ctx);
-      const inner: Ctx = { ...ctx, localBinds: new Set(ctx.localBinds) };
+      const inner: Ctx = {
+        ...ctx,
+        localBinds: new Set(ctx.localBinds),
+        localTypes: new Map(ctx.localTypes ?? []),
+      };
       inner.localBinds.add(e.name);
+      const vt = inferType(e.value, sym, inner);
+      if (vt) inner.localTypes?.set(e.name, vt);
       checkExpr(e.body, sym, errors, inner);
       return;
     }
   }
+}
+
+// ===== Receiver type inference (ADR-002, #23) =====
+// A minimal, dispatch-directed inferencer: just enough to tell a record field
+// from a stdlib method shortcut, and to flag an unknown member on a known
+// receiver type (E0108). It returns `null` whenever the type can't be decided —
+// inference never guesses, so an untyped receiver keeps the historical
+// name-based shortcut dispatch with no diagnostic.
+
+const SCALAR_PRIMS = new Set(["Int", "Float", "Text", "Bool", "Time", "Bytes"]);
+const STDLIB_CONTAINERS = new Set(["List", "Map", "Set", "Option", "Result"]);
+
+/** Unwrap type aliases (`TypeRef` → its `TypeDef` body) and nominal/refinement wrappers. */
+function unaliasType(
+  t: TypeExpr | null,
+  sym: SymbolTable,
+  seen: Set<string> = new Set(),
+): TypeExpr | null {
+  if (!t) return null;
+  if (t.kind === "TypeRef") {
+    if (seen.has(t.name)) return null;
+    const def = sym.types.get(t.name);
+    if (!def) return t; // unknown name / type param — opaque, treated as "other"
+    seen.add(t.name);
+    return unaliasType(def.body, sym, seen);
+  }
+  if (t.kind === "TypeNominal" || t.kind === "TypeRefinement")
+    return unaliasType(t.inner, sym, seen);
+  return t;
+}
+
+function recordFieldType(rec: TypeExpr & { kind: "TypeRecord" }, name: string): TypeExpr | null {
+  return rec.fields.find((f) => f.name === name)?.type ?? null;
+}
+
+const unitType = (pos: Pos): TypeExpr => ({ kind: "TypePrim", name: "Unit", pos });
+
+/** Best-effort static type of an expression; `null` = undecidable / dynamic. */
+function inferType(e: Expr, sym: SymbolTable, ctx: Ctx): TypeExpr | null {
+  switch (e.kind) {
+    case "Num":
+      return { kind: "TypePrim", name: "Int", pos: e.pos }; // Int/Float not split here
+    case "Str":
+      return { kind: "TypePrim", name: "Text", pos: e.pos };
+    case "Bool":
+      return { kind: "TypePrim", name: "Bool", pos: e.pos };
+    case "Ref": {
+      const bound = ctx.localTypes?.get(e.name);
+      if (bound) return bound;
+      return sym.slots.get(e.name)?.type ?? null;
+    }
+    case "FieldAccess": {
+      const base = unaliasType(inferType(e.base, sym, ctx), sym);
+      if (!base) return null;
+      if (base.kind === "TypeRecord") return recordFieldType(base, e.field);
+      // `.get` unwraps Option(T) / Result(T,E) → T
+      if (
+        e.field === "get" &&
+        base.kind === "TypeApp" &&
+        (base.name === "Option" || base.name === "Result")
+      )
+        return base.args[0] ?? null;
+      return null;
+    }
+    case "Index": {
+      const base = unaliasType(inferType(e.base, sym, ctx), sym);
+      if (base?.kind === "TypeApp") {
+        if (base.name === "List" || base.name === "Set") return base.args[0] ?? null;
+        if (base.name === "Map") return base.args[1] ?? null;
+      }
+      return null;
+    }
+    case "MethodCall": {
+      // `.get(k)` on a Map → Option(V) (spec: a missing key is None — the common
+      // `m.get(k).get` / `.get-or(d)` shape relies on this). `.get()` on
+      // Option/Result → inner. Anything else stays dynamic (conservative).
+      if (e.method === "get") {
+        const recv = unaliasType(inferType(e.receiver, sym, ctx), sym);
+        if (recv?.kind === "TypeApp") {
+          if (recv.name === "Map")
+            return recv.args[1]
+              ? { kind: "TypeApp", name: "Option", args: [recv.args[1]], pos: e.pos }
+              : null;
+          if (recv.name === "Option" || recv.name === "Result") return recv.args[0] ?? null;
+        }
+      }
+      return null;
+    }
+    case "RecordLit":
+      return {
+        kind: "TypeRecord",
+        fields: e.fields.map((f) => ({
+          name: f.name,
+          type: inferType(f.value, sym, ctx) ?? unitType(f.value.pos),
+        })),
+        pos: e.pos,
+      };
+    case "Variant": {
+      const inner = e.payload[0]
+        ? (inferType(e.payload[0], sym, ctx) ?? unitType(e.pos))
+        : unitType(e.pos);
+      if (e.name === "Some" || e.name === "None")
+        return { kind: "TypeApp", name: "Option", args: [inner], pos: e.pos };
+      if (e.name === "Ok") return { kind: "TypeApp", name: "Result", args: [inner], pos: e.pos };
+      // Err carries E, not T — can't infer the success type, so stay dynamic.
+      return null;
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * Decide whether `recv.field` is a record field read or a method shortcut, and
+ * annotate the node so codegen lowers the right thing (ADR-002). Emits E0108
+ * when the receiver type is KNOWN and `field` is neither a member nor a record
+ * field; stays silent (shortcut) when the type is undecidable.
+ */
+function classifyFieldAccess(
+  e: Expr & { kind: "FieldAccess" },
+  sym: SymbolTable,
+  errors: KumikiError[],
+  ctx: Ctx,
+): void {
+  const t = unaliasType(inferType(e.base, sym, ctx), sym);
+  if (!t) return; // dynamic — keep name-based shortcut dispatch, no diagnostic
+  if (t.kind === "TypeRecord") {
+    if (recordFieldType(t, e.field)) {
+      e.accessKind = "field";
+      return;
+    }
+    if (e.field === "show") {
+      e.accessKind = "shortcut";
+      return;
+    }
+    errors.push({
+      code: "E0108",
+      kind: "undef-member",
+      message: `Record type has no field or method ".${e.field}"`,
+      pos: e.pos,
+    });
+    return;
+  }
+  const isKnownReceiver =
+    (t.kind === "TypePrim" && SCALAR_PRIMS.has(t.name)) ||
+    (t.kind === "TypeApp" && STDLIB_CONTAINERS.has(t.name));
+  if (isKnownReceiver) {
+    if (KNOWN_MEMBERS.has(e.field)) {
+      e.accessKind = "shortcut";
+      return;
+    }
+    const tn = t.kind === "TypeApp" ? t.name : (t as { name: string }).name;
+    errors.push({
+      code: "E0108",
+      kind: "undef-member",
+      message: `Type "${tn}" has no member ".${e.field}"`,
+      pos: e.pos,
+    });
+  }
+  // Any other resolved type (union, opaque type param) → leave as shortcut, no
+  // diagnostic (we only flag members of types we fully understand).
 }
 
 function currentFnName(ctx: Ctx): string {
@@ -754,7 +962,11 @@ function currentFnName(ctx: Ctx): string {
 }
 
 function checkFn(fn: FnDef, sym: SymbolTable, errors: KumikiError[]): void {
-  const ctx: Ctx = { kind: "fn", localBinds: new Set() };
+  const ctx: Ctx = {
+    kind: "fn",
+    localBinds: new Set(),
+    localTypes: new Map(fn.params.map((p) => [p.name, p.type])),
+  };
   (ctx as Ctx & { fnName?: string }).fnName = fn.name;
   for (const p of fn.params) ctx.localBinds.add(p.name);
   // also bind $1, $2 used in expression-fragment style

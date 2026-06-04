@@ -6,7 +6,14 @@ export {
   parseCapabilityManifest,
   STANDARD_CAPABILITIES,
 } from "./capabilities.ts";
-export { type CodegenOptions, codegen, RUNTIME_HELPERS } from "./codegen.ts";
+export {
+  type CodegenOptions,
+  codegen,
+  FIELD_ACCESS_SHORTCUTS,
+  KNOWN_MEMBERS,
+  KNOWN_METHODS,
+  RUNTIME_HELPERS,
+} from "./codegen.ts";
 export {
   type CompileFail,
   type CompileOk,

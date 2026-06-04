@@ -1,5 +1,16 @@
 # @kumikijs/site
 
+## 0.1.3
+
+### Patch Changes
+
+- 0784054: Add `@kumikijs/syntax`: a TextMate grammar for the Kumiki language, providing
+  real syntax highlighting for `.kumiki` files in Shiki / VitePress / VS Code.
+  The docs site now highlights Kumiki code blocks with this grammar instead of
+  aliasing Rust.
+- Updated dependencies [0784054]
+  - @kumikijs/syntax@0.2.0
+
 ## 0.1.2
 
 ### Patch Changes

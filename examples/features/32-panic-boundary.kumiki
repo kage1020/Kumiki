@@ -1,0 +1,35 @@
+# Feature: error boundaries + clean panic recovery (spec/lifecycle.md §7.3,
+# spec/stdlib.md §2.2). `.get` on a `None` is a panic. Here a child tile reads
+# it only after a button flips `reveal`, so the read panics during render — and
+# the enclosing `error-boundary` catches it and shows the fallback instead of
+# the exception escaping uncaught. This is the v0.3 (#24) clean panic model:
+# a render panic under a boundary is recoverable; the app stays alive.
+
+slot secret : Option(Text) = None
+slot reveal : Bool         = false
+
+tile Risky
+    error-boundary = Fallback
+    = column(
+        text("status: ready"),
+        when(reveal, text("secret: " + secret.get)))
+      {gap: "sm"}
+
+tile Fallback
+    in=PanicInfo
+    = text("recovered: " + $1.message) {color: "danger"}
+
+tile RevealBtn = button(text="reveal", onClick=doReveal)
+
+tile App = column(
+    heading("Panic boundary demo"),
+    Risky,
+    RevealBtn)
+  {pad: "lg", gap: "md"}
+
+reducer doReveal on=ui.click(RevealBtn) do= reveal := true
+
+app PanicBoundaryDemo
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

@@ -66,6 +66,21 @@ describe("scenario runner", () => {
     expect(report.ok).toBe(true);
   });
 
+  // M1 (#24): a render panic under an `error-boundary` is caught and the
+  // fallback shown — cleanly, with no surfaced error (the boundary recovery is
+  // silent). Clicking "reveal" makes a child tile read `.get` on a None, which
+  // panics during render; the boundary turns it into "recovered: …".
+  it("recovers from a render panic via an error-boundary (32-panic-boundary)", async () => {
+    const app = await loadApp(join(examples, "features", "32-panic-boundary.kumiki"));
+    const report = await runScenario(app, freshRoot(), {
+      steps: [
+        { do: { clickText: "reveal" }, expect: { noErrors: true, domIncludes: ["recovered:"] } },
+      ],
+    });
+    expect(report.ok).toBe(true);
+    expect(report.steps[0]?.domText).toContain("get called on None");
+  });
+
   // Regression: this app's scenario guards two framework fixes found via the
   // iterate loop — List.fold codegen, and Int.parse numeric coercion (a total
   // that was silently wrong via string concatenation).

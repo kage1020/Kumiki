@@ -631,6 +631,13 @@ function jsOfExpr(e: Expr, ctx: EvalCtx): string {
         const args = e.args.map((a) => jsOfExpr(a, ctx));
         return `_s.fmt ? _s.fmt(${args.join(", ")}) : ${args[0] ?? '""'}`;
       }
+      // `panic(message)` — Kumiki's controlled stop-the-program signal
+      // (spec/stdlib.md §2.2). Lowers to the runtime helper that throws a
+      // KumikiPanic, which the live dispatch / render boundary catches.
+      if (cn === "panic") {
+        const a = e.args[0] ? jsOfExpr(e.args[0], ctx) : '""';
+        return `_s.panic(${a})`;
+      }
       const args = e.args.map((a) => jsOfExpr(a, ctx)).join(", ");
       // Otherwise treat as user-defined fn
       return `${jsName(cn)}(${args})`;

@@ -87,4 +87,25 @@ describe("codegen", () => {
     const overlayPart = result.js.split('kind: "overlay"')[1] ?? "";
     expect(overlayPart).toContain("BASE-LAYER");
   });
+
+  it("lowers panic(msg) to the runtime helper, not an undefined fn call (#24)", () => {
+    const src = `
+      slot draft : Text = ""
+      reducer save on=ui.click(B) do= draft := if draft.is-empty then panic("draft cannot be empty") else draft
+      tile B = button(text="save", onClick=save)
+      tile App = column(B)
+      app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+    `;
+    const result = compile(src, { runtimeSpecifier: "./runtime.js" });
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    // Before M1, panic() fell through to a user-fn call (`panic(...)`) — an
+    // undefined reference at runtime. It must lower to the runtime helper, and
+    // EVERY `panic(` in the output must be the `_s.panic(` form (no bare call).
+    expect(result.js).toContain('_s.panic("draft cannot be empty")');
+    const total = (result.js.match(/panic\(/g) ?? []).length;
+    const helper = (result.js.match(/_s\.panic\(/g) ?? []).length;
+    expect(helper).toBeGreaterThan(0);
+    expect(total).toBe(helper);
+  });
 });

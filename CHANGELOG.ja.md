@@ -10,8 +10,11 @@
 
 [v0.3 ロードマップ](design-notes/roadmap-v0.3.ja.md) を参照。v0.3 は 0.2.1 のコードレビューが issue 化した 2 つの健全性ギャップを埋める；新しいエンドユーザ機能はない。
 
-- **M1 — live パスのクリーンな panic ハンドリング**（[#24](https://github.com/kage1020/Kumiki/issues/24)）：live パスの panic（`panic(...)`、`Ok` への `Result.get-err`、空ケースへの `Option/Result.get`）が現状 DOM イベントハンドラ／render を未捕捉で突き抜ける。M1 は 1 つの panic モデル——タグ付き `KumikiPanic`、live reducer ディスパッチの try/catch（アトミック、以降のディスパッチ停止）、トップレベル render 境界——を定義し、`.get`（現状 panic しない）を `.get-err` と `spec/stdlib.md` §2.2 どおり整合させる。
 - **M2 — メソッドショートカットディスパッチの受け手型推論**（[#23](https://github.com/kage1020/Kumiki/issues/23)）：`recv.method`（カッコ無し形）は名前のみで dispatch されるため、メソッドと同名の record/map フィールドが暗黙に shadow され、未知の `recv.bogus` が `undefined` にコンパイルされる。M2 はチェッカに初の型推論パス（名前→型の環境 + `inferType`）を入れ、`FieldAccess` を受け手の推論型で field-vs-shortcut に dispatch し、silent-wrong-value のクラスを診断へ変える。下の #7 既知の制限ノートを除去する。
+
+### Fixed
+
+- **M1 (#24) — live パスのクリーンな panic ハンドリング**（`spec/lifecycle.md` §7.2–7.3、`spec/stdlib.md` §2.2）：**live** パスの panic——`panic(message)`、`Ok` への `Result.get-err`、空ケース（`None` / `Err`）への多相 `.get`——が従来 DOM イベントハンドラ／render を**未捕捉例外**として突き抜け、ディスパッチを中断し DOM を stale にしていた。今後は 1 つの panic モデル：タグ付き `KumikiPanic`（上記すべてが送出）を live reducer ディスパッチの周囲で捕捉して episode を **rollback**（部分 slot 書き込みなし）、`console.error` で surface（`smoke` / scenario tier が検知）、`app.error` reducer へ `PanicInfo` を `$event` として配送する；アプリは生存し続ける。囲う `error-boundary` の無い render panic は throw せず組み込みの**トップレベルフォールバック**を描画する。途中で 2 つの潜在バグも修正：`panic(message)` は未実装だった（未定義関数呼び出しに lower）し、`.get` は `None` / `Err` で値をそのまま返し（サイレント、`.get-err` と正反対）`Ok` の剥がしすらしなかった——`.get` は `Some`/`Ok` を剥がし `None`/`Err` で panic するよう spec に整合。新規 example `examples/features/32-panic-boundary.kumiki`。
 
 ## [0.2.1] - 2026-06-04
 

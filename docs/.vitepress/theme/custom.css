@@ -2,12 +2,16 @@
    image at 192px (mobile) / 256px / 320px (desktop); bump it up a lot so the
    assembling-pieces animation is the focal point of the landing page.
 
-   The SVG's intrinsic size is 100x100, so `max-width` alone won't upscale it —
-   the <img> needs an explicit `width` to grow past its natural size. We set
-   `width: 100%` and cap it per breakpoint. */
+   Two gotchas this stylesheet works around:
+   - The SVG's intrinsic size is 100x100, so `max-width` alone won't upscale
+     it — the <img> needs an explicit `width` to grow past its natural size.
+   - `.image-src` is absolutely positioned (centered), so `.image-container`
+     must carry an explicit height or it collapses to 0 and the mark shifts up.
+   Both the container height and the image cap track the same per-breakpoint
+   size. */
 .VPHero .image-container {
   width: 100%;
-  height: auto;
+  height: 380px;
   transform: none;
 }
 .VPHero .VPImage.image-src {
@@ -22,6 +26,9 @@
 }
 
 @media (min-width: 640px) {
+  .VPHero .image-container {
+    height: 520px;
+  }
   .VPHero .VPImage.image-src {
     max-width: 520px;
   }
@@ -35,6 +42,9 @@
   /* Give the image column room to grow next to the hero text. */
   .VPHero .image {
     flex-grow: 1.4;
+  }
+  .VPHero .image-container {
+    height: 680px;
   }
   .VPHero .VPImage.image-src {
     max-width: 680px;

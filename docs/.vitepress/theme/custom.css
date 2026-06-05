@@ -1,14 +1,20 @@
 /* Enlarge the animated hero mark on the home page. VitePress caps the hero
    image at 192px (mobile) / 256px / 320px (desktop); bump it up a lot so the
-   assembling-pieces animation is the focal point of the landing page. */
+   assembling-pieces animation is the focal point of the landing page.
+
+   The SVG's intrinsic size is 100x100, so `max-width` alone won't upscale it —
+   the <img> needs an explicit `width` to grow past its natural size. We set
+   `width: 100%` and cap it per breakpoint. */
 .VPHero .image-container {
   width: 100%;
   height: auto;
   transform: none;
 }
 .VPHero .VPImage.image-src {
-  max-width: 100%;
-  max-height: 380px;
+  width: 100%;
+  max-width: 380px;
+  height: auto;
+  max-height: none;
 }
 .VPHero .image-bg {
   width: 340px;
@@ -17,7 +23,7 @@
 
 @media (min-width: 640px) {
   .VPHero .VPImage.image-src {
-    max-height: 520px;
+    max-width: 520px;
   }
   .VPHero .image-bg {
     width: 460px;
@@ -32,7 +38,6 @@
   }
   .VPHero .VPImage.image-src {
     max-width: 680px;
-    max-height: 680px;
   }
   .VPHero .image-bg {
     width: 600px;

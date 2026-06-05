@@ -108,4 +108,25 @@ describe("codegen", () => {
     expect(helper).toBeGreaterThan(0);
     expect(total).toBe(helper);
   });
+
+  it("lowers a user fn whose name shadows a builtin tile in value position to a fn call (#03 regression)", () => {
+    // `label` is both a VALUE_ARG_BUILTIN tile and, here, a user `fn`. Inside
+    // `heading(...)` (a value-arg position) the call must parse as an EXPRESSION,
+    // not a nested tile. Before the fix the arg was parsed as a builtin tile and
+    // codegen emitted `_s.show(undefined)` — an always-empty heading.
+    const src = `
+      type Light = Red | Green
+      slot light : Light = Red
+      fn label(l: Light) -> Text = match l with | Red -> "STOP" | Green -> "GO"
+      reducer advance on=ui.click(B) do= light := light
+      tile B = button(text="next", onClick=advance)
+      tile App = column(heading(label(light)), B)
+      app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+    `;
+    const result = compile(src, { runtimeSpecifier: "./runtime.js" });
+    expect(result.kind).toBe("ok");
+    if (result.kind !== "ok") return;
+    expect(result.js).toContain('_s.show(label(_live["light"]))');
+    expect(result.js).not.toContain("_s.show(undefined)");
+  });
 });

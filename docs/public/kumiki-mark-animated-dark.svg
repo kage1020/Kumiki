@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" role="img" aria-label="Kumiki">
+  <title>Kumiki</title>
+  <style>
+    .piece {
+      transform-box: fill-box;
+      transform-origin: center;
+      animation-duration: 5.4s;
+      animation-timing-function: cubic-bezier(.45, 0, .25, 1);
+      animation-iteration-count: infinite;
+    }
+    /* bottom row slides in from the sides, mid row interlocks, top row drops */
+    .from-left   { animation-name: fromLeft; }
+    .from-right  { animation-name: fromRight; }
+    .from-bottom { animation-name: fromBottom; }
+    .from-top    { animation-name: fromTop; }
+
+    @keyframes fromLeft {
+      0%        { transform: translateX(-72px); opacity: 0; }
+      7%        { opacity: 1; }
+      22%       { transform: translateX(3px); }
+      28%, 84%  { transform: translateX(0); opacity: 1; }
+      94%, 100% { transform: translateX(-72px); opacity: 0; }
+    }
+    @keyframes fromRight {
+      0%        { transform: translateX(72px); opacity: 0; }
+      7%        { opacity: 1; }
+      22%       { transform: translateX(-3px); }
+      28%, 84%  { transform: translateX(0); opacity: 1; }
+      94%, 100% { transform: translateX(72px); opacity: 0; }
+    }
+    @keyframes fromBottom {
+      0%        { transform: translateY(72px); opacity: 0; }
+      7%        { opacity: 1; }
+      22%       { transform: translateY(-3px); }
+      28%, 84%  { transform: translateY(0); opacity: 1; }
+      94%, 100% { transform: translateY(72px); opacity: 0; }
+    }
+    @keyframes fromTop {
+      0%        { transform: translateY(-72px); opacity: 0; }
+      7%        { opacity: 1; }
+      22%       { transform: translateY(3px); }
+      28%, 84%  { transform: translateY(0); opacity: 1; }
+      94%, 100% { transform: translateY(-72px); opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .piece { animation: none; transform: none; opacity: 1; }
+    }
+  </style>
+  <!-- bottom row -->
+  <rect class="piece from-left"   style="animation-delay:0s"   x="20.7" y="52.7" width="32.6" height="26.6" rx="2" fill="#cfd0e0"/>
+  <rect class="piece from-right"  style="animation-delay:.10s" x="54.7" y="52.7" width="24.6" height="26.6" rx="2" fill="#7b61ff"/>
+  <!-- mid row -->
+  <rect class="piece from-left"   style="animation-delay:.24s" x="20.7" y="34.7" width="22.6" height="16.6" rx="2" fill="#7b61ff" opacity=".85"/>
+  <rect class="piece from-bottom" style="animation-delay:.34s" x="44.7" y="34.7" width="20.6" height="16.6" rx="2" fill="#13d6c4"/>
+  <rect class="piece from-right"  style="animation-delay:.44s" x="66.7" y="34.7" width="12.6" height="16.6" rx="2" fill="#7b61ff"/>
+  <!-- top row -->
+  <rect class="piece from-top"    style="animation-delay:.60s" x="20.7" y="20.7" width="28.6" height="12.6" rx="2" fill="#13d6c4"/>
+  <rect class="piece from-top"    style="animation-delay:.72s" x="50.7" y="20.7" width="28.6" height="12.6" rx="2" fill="#13d6c4" opacity=".8"/>
+</svg>

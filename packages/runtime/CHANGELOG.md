@@ -1,5 +1,95 @@
 # @kumikijs/runtime
 
+## 0.4.0
+
+### Minor Changes
+
+- c51b7b8: feat: host capability providers — the inbound ecosystem seam
+
+  Custom capabilities (registered via `kumiki.caps.json`) can now be backed by a
+  host-supplied implementation, so a Kumiki app can use any npm library / SDK
+  without language-level FFI.
+
+  - `mount(app, target, { providers })` accepts a `Record<string, CapabilityProvider>`
+    keyed by capability name. New runtime exports: `CapabilityProvider`,
+    `MountOptions`; `CapabilityRegistry` gains `provider(cap)`.
+  - Codegen now lowers a custom-capability effect to a provider lookup at the
+    capability boundary (`caps.provider(cap)`) instead of an always-failing
+    "not implemented" stub. With no provider registered it resolves to
+    `err {message: "Capability <name> has no provider"}`.
+  - The auto-mounted bundle threads `globalThis.__kumikiProviders` so an embedding
+    host can register providers before the module loads.
+
+  Standard capabilities keep their built-in implementations (not provider-overridable),
+  and scenario mocks still override providers at the same boundary. See
+  docs/spec/stdlib.md §2.5.
+
+- c51b7b8: feat: multiple independent instances via a `createApp()` factory
+
+  A compiled app previously bound its render closures to one module-level live
+  state, so mounting the same app twice (or two Web Component instances) shared
+  state. Codegen now wraps the per-instance pieces (slots, live, reducers, routes,
+  effects, tiles) in a `createApp()` factory whose closures bind to that call's own
+  `live`. Each `createApp()` returns a fully independent `AppShape`; no runtime
+  change is needed.
+
+  - Compiled modules expose `createApp` (and `export { createApp }` under
+    `exportApp` / the Vite plugin); the default export remains a single shared
+    instance for back-compat.
+  - `defineKumikiElement(tag, appOrFactory, …)` accepts a factory — pass the
+    module's `createApp` so each `<tag>` element gets its own state; passing an
+    `AppShape` keeps the shared single-instance behavior.
+  - `@kumikijs/vite/client` ambient types now declare the `createApp` export.
+
+- c51b7b8: feat: standard capabilities are now host-provider-overridable
+
+  Every effect invoke (standard and custom) consults `caps.provider(cap)` before
+  its built-in implementation. A host can therefore register a provider for a
+  _standard_ capability — `http.*`, `storage.*`, `nav.*`, `notification.show`,
+  `log.write` — to swap the HTTP transport (axios / ofetch), inject auth headers,
+  integrate a framework router, or replace the toast UI, without touching the
+  Kumiki source. The provider receives the effect's (already `map-request`-mapped)
+  request; with no provider registered the built-in behavior runs unchanged.
+
+  - `codegen` now lowers every effect to the uniform shape _map → provider check →
+    built-in fallback_ (custom caps fall back to the existing "no provider" error).
+  - The runtime built-ins (navigate / toast / log) defer to a registered provider
+    for their capability before running the default behavior.
+
+- c51b7b8: feat: `defineKumikiElement` — embed a compiled app as a Web Component (outbound seam)
+
+  Wrap a compiled Kumiki app as a standard custom element so it drops into any host
+  page or framework (React/Vue/Svelte/plain HTML) without a Kumiki-specific
+  integration. The element owns the mount lifecycle (mount on connect, dispose on
+  disconnect) and bridges the host both ways:
+
+  - **Inbound** — `options.providers` forward to `mount` (the custom-capability
+    seam); `options.attributeSlots` map observed attributes to slots; imperative
+    `setSlot`/`setSlots`/`getSlot`/`slots` read & write live state (refinements
+    enforced).
+  - **Outbound** — `options.events` surface custom-capability effects as DOM
+    `CustomEvent`s on the element; a `providers[cap]` entry overrides the
+    passthrough for that capability.
+
+  New exports: `defineKumikiElement`, `KumikiElementOptions`, `AttributeSlotBinding`.
+  Renders into light DOM; single-instance per imported app module. See
+  docs/spec/runtime.md §10.9.1.
+
+- c51b7b8: feat: `defineKumikiElement({ shadow: true })` — shadow-DOM style isolation
+
+  The Web Component wrapper can now render into an open shadow root for full style
+  encapsulation. The app's motion / theme / state `<style>` nodes are injected into
+  the shadow root (not the document head) and theme background/foreground/font are
+  applied to an in-shadow container, so host-page CSS does not bleed in and
+  Kumiki's CSS does not leak out. Light DOM (the document-level styling that
+  matches a standalone page) remains the default.
+
+  `mount` gains `styleRoot?: Document | ShadowRoot` and `styleHost?: HTMLElement`
+  options that route every Kumiki `<style>` injection (animations, motion, theme,
+  state styles) to the chosen root — the seam the shadow element uses. Style
+  injection no longer references the global `Document` constructor, keeping non-DOM
+  imports of the runtime safe.
+
 ## 0.3.0
 
 ### Minor Changes

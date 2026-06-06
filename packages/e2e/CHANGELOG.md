@@ -1,5 +1,12 @@
 # @kumikijs/e2e
 
+## 0.1.6
+
+### Patch Changes
+
+- Updated dependencies [20c8601]
+  - @kumikijs/compiler@0.5.0
+
 ## 0.1.5
 
 ### Patch Changes

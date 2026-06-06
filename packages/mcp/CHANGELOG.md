@@ -1,5 +1,13 @@
 # @kumikijs/mcp
 
+## 0.3.3
+
+### Patch Changes
+
+- Updated dependencies [20c8601]
+  - @kumikijs/compiler@0.5.0
+  - @kumikijs/cli@0.3.3
+
 ## 0.3.2
 
 ### Patch Changes

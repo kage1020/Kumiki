@@ -1,5 +1,14 @@
 # @kumikijs/site
 
+## 0.1.7
+
+### Patch Changes
+
+- Updated dependencies [20c8601]
+- Updated dependencies [20c8601]
+  - @kumikijs/runtime@0.5.0
+  - @kumikijs/compiler@0.5.0
+
 ## 0.1.6
 
 ### Patch Changes

@@ -74,7 +74,6 @@ describe("kumiki test (in-language test runner)", () => {
     expect(out).toContain("PASS  inc-increments");
     expect(out).toContain("PASS  app-renders-count");
     expect(out).toContain("PASS  greeting-renders-input");
-    // reducer-test exercising `<any-id>` / `<slots.X>` expect wildcards (v0.6 M1).
     expect(out).toContain("PASS  add-creates-item");
     expect(out).toContain("5/5 passed");
   });

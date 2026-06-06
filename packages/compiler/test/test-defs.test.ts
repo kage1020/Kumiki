@@ -97,4 +97,27 @@ app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
 test t = reducer-test inc given={slots:{count:<any-id>}, event:{type: ui.click, target: B}} expect={slots:{count:1}, effects:[]}`;
     expect(checkSrc(src).some((e) => e.code === "E0109")).toBe(true);
   });
+
+  it("rejects a wildcard nested under another expression in `given` (E0109)", () => {
+    // A wildcard buried under a FieldAccess must not escape the given-scan.
+    const src = `
+slot count : Int = 0
+reducer inc on=ui.click(B) do= count := count + 1
+tile B = button(text="+1", onClick=inc)
+tile App = column(B)
+app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+test t = reducer-test inc given={slots:{count:<slots.count>.foo}, event:{type: ui.click, target: B}} expect={slots:{count:1}, effects:[]}`;
+    expect(checkSrc(src).some((e) => e.code === "E0109")).toBe(true);
+  });
+
+  it("rejects `<slots.X>` naming an undefined slot in expect (E0103)", () => {
+    const src = `
+slot count : Int = 0
+reducer inc on=ui.click(B) do= count := count + 1
+tile B = button(text="+1", onClick=inc)
+tile App = column(B)
+app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+test t = reducer-test inc given={slots:{count:0}, event:{type: ui.click, target: B}} expect={slots:{count:1}, effects:[persist(<slots.itms>)]}`;
+    expect(checkSrc(src).some((e) => e.code === "E0103" && e.message.includes("itms"))).toBe(true);
+  });
 });

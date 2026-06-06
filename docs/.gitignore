@@ -2,7 +2,6 @@
 /spec
 /guide
 /examples
-/design-notes
 
 # Generated Japanese locale tree (built from *.ja.md by scripts/sync-docs.mjs)
 /ja

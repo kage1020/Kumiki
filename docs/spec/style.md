@@ -377,7 +377,7 @@ tile Loader = box(icon(name="spinner")) {motion: "Spin"}
 - A `motion: "X"` prop naming an undefined motion is **E0107**.
 - Because the body is a literal record, a motion **cannot read/write slots or emit effects** — it is purely presentational. It composes with `when(...)` and `overlay`, and the generated keyframes are scoped (no global-CSS leak, §4.10). `prefers-reduced-motion: reduce` disables motion (and the v0.1 transitions above).
 
-Scope and the layer-vs-extension decision are recorded in [design-notes/adr-001-motion-layer.md](../design-notes/adr-001-motion-layer.md). Deferred: multi-stop percentage keyframes, color/blur/skew properties.
+Deferred: multi-stop percentage keyframes, color/blur/skew properties.
 
 ---
 

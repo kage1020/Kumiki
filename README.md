@@ -24,13 +24,13 @@ Kumiki has none of the "optimized for human cognition" machinery like JSX, Hooks
 
 ## Why Kumiki
 
-Cross-vendor measurements confirm that LLMs can write Kumiki apps up to a scale of 1300 lines from the specification alone ([docs/design-notes/learning-cost-v4.md](./docs/design-notes/learning-cost-v4.md)). Token efficiency is also high compared to React ([docs/design-notes/benchmark.md](./docs/design-notes/benchmark.md)).
+Cross-vendor measurements confirm that LLMs can write Kumiki apps up to a scale of 1300 lines from the specification alone. Token efficiency is also high compared to React.
 
 ## Repository layout
 
 | Directory | Role |
 |---|---|
-| [`docs/`](./docs/) | Documentation site (VitePress). `spec/` (**normative spec**) · `guide/` (tutorials) · `design-notes/` (rationale & benchmarks). Japanese pages under `ja/`. |
+| [`docs/`](./docs/) | Documentation site (VitePress). `spec/` (**normative spec**) · `guide/` (tutorials). Japanese pages under `ja/`. |
 | [`packages/`](./packages/) | Implementation and supporting code. `compiler` / `runtime` / `cli` / `mcp` / `syntax`, plus `examples` / `tests` / `benchmarks` |
 
 ## Quick Start

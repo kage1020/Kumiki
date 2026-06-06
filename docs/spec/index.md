@@ -1,6 +1,6 @@
 # Kumiki Specification
 
-This is the **normative specification** of the Kumiki language and runtime. When the implementation (`packages/`) and this specification disagree, this specification is, as a rule, taken as authoritative, and which side to fix is recorded as a design decision (→ [Design Notes](../design-notes/)).
+This is the **normative specification** of the Kumiki language and runtime. When the implementation (`packages/`) and this specification disagree, this specification is, as a rule, taken as authoritative, and which side to fix is recorded as a design decision in the PR.
 
 Tutorials and how-tos are not specification and live in [Kumiki Guide](../guide/). Working examples are in [Kumiki Examples](https://github.com/kage1020/Kumiki/tree/main/packages/examples).
 

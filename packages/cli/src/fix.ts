@@ -155,7 +155,6 @@ export function fixCmd(
 //      reuse `planFixes` to clear the blocking errors first.
 //   2. behavioral — the file compiles but the test fails; apply a deterministic
 //      literal repair when one is provable (see `planTestPatch`), else report.
-// See docs/design-notes/fix-from-test.md.
 
 export type FixFromTestOutcome = {
   /** true when the named test ends up passing, or a fix is available in dry-run. */

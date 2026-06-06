@@ -17,7 +17,7 @@ test-expr ::= reducer-test | tile-test | episode-test | property-test
 
 `test` 定義は **6 つ目のレイヤ**。CRDT graph に格納され、`kumiki test` で実行される。本番ビルドには含まれない。
 
-> **実装状況（v0.2）.** `reducer-test`・`tile-test`・`kumiki test` ランナー（名前 / `prefix*` フィルタ）・`kumiki fix --auto-patch <test-name>`（§8.7.2）は実装済み。ランナーは `PASS` / `FAIL` 行と、失敗時に `expected` / `actual` / `diff at <path>`、およびスカラーのリーフを特定できる場合は §8.7.1 の値矢印（`"a" -> "b"`）を表示する — テストごとの時間・property-test のケース数は**未出力**。その他**未実装**：`property-test` と `episode-test`、`expect` のワイルドカード（`<any-id>` / `<slots.X>`）、`reducer-test` 内の effect 結果モック（§8.5 の多段フロー — 現状は scenario ランナーがその形を担う）、`--watch` / `--coverage`。詳細は [design-notes/test-runner.md](../design-notes/test-runner.md) と [design-notes/fix-from-test.md](../design-notes/fix-from-test.md)。
+> **実装状況（v0.2）.** `reducer-test`・`tile-test`・`kumiki test` ランナー（名前 / `prefix*` フィルタ）・`kumiki fix --auto-patch <test-name>`（§8.7.2）は実装済み。ランナーは `PASS` / `FAIL` 行と、失敗時に `expected` / `actual` / `diff at <path>`、およびスカラーのリーフを特定できる場合は §8.7.1 の値矢印（`"a" -> "b"`）を表示する — テストごとの時間・property-test のケース数は**未出力**。その他**未実装**：`property-test` と `episode-test`、`expect` のワイルドカード（`<any-id>` / `<slots.X>`）、`reducer-test` 内の effect 結果モック（§8.5 の多段フロー — 現状は scenario ランナーがその形を担う）、`--watch` / `--coverage`。
 
 ## 8.2 Reducer テスト
 
@@ -199,7 +199,7 @@ FAIL  counter-display
 - ファイルがコンパイルできなければテストは走れない — [`fix`](./ai-edit.md) の型エラー修復（did-you-mean の名前修正、`/404` 欠落）を再利用してテストを走らせる。
 - tile-test / reducer-test が、実際値が*一意の*ソースリテラルである**文字列リーフ**で失敗した場合、そのリテラルを期待値に置換する（§8.7.1 のスナップショット事例）。
 
-リテラルでない乖離（数値 slot、誤った演算子、effect リスト不一致）は推測せず diff として報告する。詳細は [design-notes/fix-from-test.md](../design-notes/fix-from-test.md)。
+リテラルでない乖離（数値 slot、誤った演算子、effect リスト不一致）は推測せず diff として報告する。
 
 ## 8.8 統合テスト（ブラウザ駆動）
 

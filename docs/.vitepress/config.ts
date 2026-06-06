@@ -10,9 +10,9 @@ const nodeRequire = createRequire(import.meta.url);
 const kumikiGrammar = nodeRequire("@kumikijs/syntax/grammar.json");
 
 // Docs live directly under this VitePress root and are served as-is (no sync
-// step). English pages are `spec/`, `guide/`, `design-notes/`; their Japanese
-// counterparts sit under `ja/` and are served as the `ja` locale. Example
-// sources live in `packages/examples` and are loaded by the Playground.
+// step). English pages are `spec/`, `guide/`; their Japanese counterparts sit
+// under `ja/` and are served as the `ja` locale. Example sources live in
+// `packages/examples` and are loaded by the Playground.
 export default defineConfig({
   title: "Kumiki",
   head: [
@@ -40,7 +40,6 @@ export default defineConfig({
           { text: "Guide", link: "/guide/getting-started" },
           { text: "Spec", link: "/spec/" },
           { text: "Playground", link: "/guide/playground" },
-          { text: "Design Notes", link: "/design-notes/" },
         ],
         sidebar: {
           "/guide/": [
@@ -74,7 +73,6 @@ export default defineConfig({
               ],
             },
           ],
-          "/design-notes/": [{ text: "Design Notes", link: "/design-notes/" }],
         },
       },
     },
@@ -88,7 +86,6 @@ export default defineConfig({
           { text: "ガイド", link: "/ja/guide/getting-started" },
           { text: "仕様", link: "/ja/spec/" },
           { text: "Playground", link: "/ja/guide/playground" },
-          { text: "設計ノート", link: "/ja/design-notes/" },
         ],
         sidebar: {
           "/ja/guide/": [
@@ -122,7 +119,6 @@ export default defineConfig({
               ],
             },
           ],
-          "/ja/design-notes/": [{ text: "設計ノート", link: "/ja/design-notes/" }],
         },
       },
     },

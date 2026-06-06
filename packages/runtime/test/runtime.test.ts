@@ -785,3 +785,233 @@ describe("live panic handling (#24)", () => {
     expect(errSpy).toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Capability providers (inbound ecosystem seam): a custom capability has no
+// built-in implementation, so the host supplies one via mount(..., {providers}).
+// The generated effect invoke resolves it at the capability boundary
+// (caps.provider(cap)) and errors clearly when none is registered.
+// ---------------------------------------------------------------------------
+
+import type { CapabilityProvider, EffectResult } from "@kumikijs/runtime";
+
+const CAP = "telemetry.track";
+
+// Mirrors exactly what codegen emits for a custom-capability effect, so this
+// test pins the runtime contract the generated code relies on.
+function makeTrackApp(): AppShape {
+  const app: AppShape = {
+    slots: { sent: { value: 0 }, failed: { value: false } },
+    caps: [CAP],
+    effects: {
+      track: {
+        name: "track",
+        cap: CAP,
+        invoke: async (input, caps) => {
+          const p = caps.provider(CAP);
+          if (!p) {
+            return { kind: "err", value: { message: `Capability "${CAP}" has no provider` } };
+          }
+          return p(input, caps);
+        },
+      },
+    },
+    init: [],
+    reducers: [
+      {
+        name: "fire",
+        selector: { tile: "B" },
+        event: { kind: "ui", ev: "click" },
+        apply: () => ({ slots: {}, emits: [{ effect: "track", args: [{ name: "click" }] }] }),
+      },
+      {
+        name: "onSent",
+        event: { kind: "effect", effect: "track", outcome: "ok" },
+        apply: (live) => ({ slots: { sent: (live.sent as number) + 1 }, emits: [] }),
+      },
+      {
+        name: "onFail",
+        event: { kind: "effect", effect: "track", outcome: "err" },
+        apply: () => ({ slots: { failed: true }, emits: [] }),
+      },
+    ],
+    root: () => ({ kind: "column", children: [] }),
+  };
+  return app;
+}
+
+const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
+
+describe("capability providers", () => {
+  let root: HTMLElement;
+  const fire = (app: AppShape): void =>
+    (app as unknown as { _dispatch: (n: string, el: Record<string, unknown>) => void })._dispatch(
+      "fire",
+      {},
+    );
+  beforeEach(() => {
+    root = document.createElement("div");
+    document.body.appendChild(root);
+  });
+  afterEach(() => {
+    document.body.removeChild(root);
+  });
+
+  it("calls a registered provider and flows its ok result into the reducer (AC2)", async () => {
+    const app = makeTrackApp();
+    const seen: unknown[] = [];
+    const provider: CapabilityProvider = async (input) => {
+      seen.push(input);
+      return { kind: "ok", value: null };
+    };
+    mount(app, root, { providers: { [CAP]: provider } });
+    fire(app);
+    await tick();
+    expect(seen).toEqual([{ name: "click" }]);
+    expect((app.live as Record<string, unknown>).sent).toBe(1);
+    expect((app.live as Record<string, unknown>).failed).toBe(false);
+  });
+
+  it("errs clearly when the custom capability has no provider (AC3)", async () => {
+    const app = makeTrackApp();
+    mount(app, root); // no providers
+    fire(app);
+    await tick();
+    expect((app.live as Record<string, unknown>).sent).toBe(0);
+    expect((app.live as Record<string, unknown>).failed).toBe(true);
+  });
+
+  it("normalizes a synchronously-returned provider value (AC5)", async () => {
+    const app = makeTrackApp();
+    // A provider may return a plain (non-promise) EffectResult.
+    const provider: CapabilityProvider = (): EffectResult => ({ kind: "ok", value: null });
+    mount(app, root, { providers: { [CAP]: provider } });
+    fire(app);
+    await tick();
+    expect((app.live as Record<string, unknown>).sent).toBe(1);
+  });
+
+  it("normalizes a throwing provider into an err outcome (AC5)", async () => {
+    const app = makeTrackApp();
+    const provider: CapabilityProvider = () => {
+      throw new Error("boom");
+    };
+    mount(app, root, { providers: { [CAP]: provider } });
+    fire(app);
+    await tick();
+    expect((app.live as Record<string, unknown>).failed).toBe(true);
+    expect((app.live as Record<string, unknown>).sent).toBe(0);
+  });
+
+  it("does not invoke the provider when the capability is not declared (AC6)", async () => {
+    const app = makeTrackApp();
+    app.caps = []; // telemetry.track no longer declared
+    let called = false;
+    const provider: CapabilityProvider = async () => {
+      called = true;
+      return { kind: "ok", value: null };
+    };
+    mount(app, root, { providers: { [CAP]: provider } });
+    fire(app);
+    await tick();
+    expect(called).toBe(false);
+    expect((app.live as Record<string, unknown>).sent).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Standard capabilities (toast/nav/log + http/storage) are also provider-
+// overridable: a host can swap the implementation (custom toast UI, router,
+// HTTP transport, auth injection) by registering a provider for the cap. Absent
+// one, the built-in behavior runs.
+// ---------------------------------------------------------------------------
+
+function makeBuiltinApp(): AppShape {
+  return {
+    slots: { ok: { value: false } },
+    caps: ["notification.show", "nav.push"],
+    effects: {},
+    init: [],
+    reducers: [
+      {
+        name: "doToast",
+        selector: { tile: "B" },
+        event: { kind: "ui", ev: "click" },
+        apply: () => ({
+          slots: {},
+          emits: [{ effect: "toast", args: [{ kind: "info", text: "hi-toast" }] }],
+        }),
+      },
+      {
+        name: "doNav",
+        selector: { tile: "B" },
+        event: { kind: "ui", ev: "click" },
+        apply: () => ({
+          slots: {},
+          emits: [{ effect: "navigate", args: [{ path: "/elsewhere" }] }],
+        }),
+      },
+    ],
+    root: () => ({ kind: "column", children: [] }),
+  };
+}
+
+describe("standard capability override", () => {
+  let root: HTMLElement;
+  const fireB = (app: AppShape, name: string): void => (app as AppLive)._dispatch?.(name, {});
+  beforeEach(() => {
+    root = document.createElement("div");
+    document.body.appendChild(root);
+  });
+  afterEach(() => {
+    document.body.removeChild(root);
+  });
+
+  it("routes a built-in toast to a host provider when registered (no default banner)", async () => {
+    const app = makeBuiltinApp();
+    const seen: unknown[] = [];
+    mount(app, root, {
+      providers: {
+        "notification.show": async (input) => {
+          seen.push(input);
+          return { kind: "ok", value: null };
+        },
+      },
+    });
+    fireB(app, "doToast");
+    await tick();
+    expect(seen).toEqual([{ kind: "info", text: "hi-toast" }]);
+    // the built-in fixed banner must NOT have been created
+    expect(document.body.textContent ?? "").not.toContain("hi-toast");
+  });
+
+  it("falls back to the built-in toast when no provider is registered", async () => {
+    const app = makeBuiltinApp();
+    mount(app, root); // no providers
+    fireB(app, "doToast");
+    await tick();
+    const banner = Array.from(document.body.querySelectorAll("div")).find((d) =>
+      (d.textContent ?? "").includes("hi-toast"),
+    );
+    expect(banner).toBeTruthy();
+    banner?.remove();
+  });
+
+  it("routes built-in navigation to a host provider (router integration)", async () => {
+    const app = makeBuiltinApp();
+    const seen: unknown[] = [];
+    const before = location.pathname;
+    mount(app, root, {
+      providers: {
+        "nav.push": async (input) => {
+          seen.push(input);
+          return { kind: "ok", value: null };
+        },
+      },
+    });
+    fireB(app, "doNav");
+    await tick();
+    expect(seen).toEqual([{ path: "/elsewhere" }]);
+    expect(location.pathname).toBe(before); // built-in history navigation was not run
+  });
+});

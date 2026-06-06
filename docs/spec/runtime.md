@@ -355,6 +355,34 @@ dist/
 └── manifest.json
 ```
 
+### 10.8.1 Vite plugin (`@kumikijs/vite`)
+
+The **build-integration ecosystem seam**: drop Kumiki into an existing Vite project (and therefore Next/Astro/SvelteKit/etc.) and `import` `.kumiki` files like any module. Each source compiles to an ESM module that **default-exports the compiled `AppShape`** (via codegen's `exportApp` — no auto-mount; the importer owns mounting through `mount` or `defineKumikiElement`).
+
+```ts
+// vite.config.ts
+import { kumiki } from "@kumikijs/vite";
+export default { plugins: [kumiki()] };
+```
+
+```ts
+import App from "./app.kumiki";
+import { mount } from "@kumikijs/runtime";
+mount(App, document.getElementById("root"));
+```
+
+The module also exports a `createApp()` factory — `import App, { createApp } from "./app.kumiki"` — for spinning up multiple independent instances (each `createApp()` returns an `AppShape` with its own state).
+
+- **Options** — `bundle` (default `true`: inline the runtime so each module is self-contained; `false` leaves an `import "@kumikijs/runtime"` for the bundler to dedupe). `types` (default `false`: emit a sibling `<name>.kumiki.gen.ts` of typed `Slots` / `Providers` helpers for type-safe provider authoring; written only when its contents change).
+- **Capabilities** — a sibling `kumiki.caps.json` is resolved automatically (same as the CLI), so custom-capability apps compile unchanged.
+- **Typing the import** — reference the shipped ambient types once so `import App from "./x.kumiki"` is typed as `AppShape`:
+
+  ```ts
+  /// <reference types="@kumikijs/vite/client" />
+  ```
+
+Verified by `packages/vite/test/plugin.test.ts`; the typed-helper generator (`generateDts`) by `packages/compiler/test/dts.test.ts`.
+
 ---
 
 ## 10.9 Runtime API (for Embedding)
@@ -378,6 +406,39 @@ app.slots.todos                       // read-only
 app.episodes                          // recent episodes
 app.unmount()
 ```
+
+### 10.9.1 Web Component embedding (`defineKumikiElement`)
+
+The **outbound ecosystem seam**: wrap a compiled app as a standard custom element so it drops into any host page or framework (React/Vue/Svelte/plain HTML) without a Kumiki-specific integration. It bridges the host both ways and owns the mount lifecycle (mount on connect, dispose on disconnect).
+
+```ts
+import { defineKumikiElement } from "@kumikijs/runtime";
+import { App } from "./my-compiled-app.js"; // the bundle's exported AppShape
+
+defineKumikiElement("my-widget", App, {
+  // inbound (host → app): host implementations for custom capabilities
+  providers: { "payments.charge": async (input) => /* … */ },
+  // outbound (app → host): custom-cap effects surface as DOM CustomEvents
+  events: ["telemetry.track"],
+  // declarative props: an observed attribute mapped to a slot
+  attributeSlots: { "data-count": { slot: "count", parse: Number } },
+});
+```
+
+```html
+<my-widget data-count="3"></my-widget>
+<script>
+  document.querySelector("my-widget")
+    .addEventListener("telemetry.track", (e) => console.log(e.detail));
+</script>
+```
+
+- **Inbound** — `providers` are forwarded to `mount` (same custom-capability seam as §2.5); `attributeSlots` map observed attributes to slots (applied on connect and on change); imperative `el.setSlot(name, v)` / `el.setSlots({…})` write live slots (refinements enforced) and `el.getSlot(name)` / `el.slots` read them.
+- **Outbound** — each capability in `events` gets a passthrough that dispatches `CustomEvent(cap, { detail: input, bubbles, composed })` and resolves ok; a `providers[cap]` entry **overrides** the passthrough for that capability.
+- **Style isolation** — by default it renders into the element's **light DOM** (the runtime's document-level theme/motion styles apply, matching a standalone page). Pass `shadow: true` to render into an **open shadow root**: the app's motion / theme / state `<style>` nodes are injected into the shadow root (via `mount`'s `styleRoot`), and theme background/foreground/font are applied to an in-shadow container — so host-page CSS does not bleed in and Kumiki's CSS does not leak out.
+- Registration is idempotent. For **multiple independent instances** of the same component, pass the compiled module's `createApp` factory instead of its default export — each element then builds its own state: `defineKumikiElement("my-widget", createApp)`. Passing the default `AppShape` shares one instance across all elements of that tag.
+
+Verified by `packages/runtime/test/element.test.ts`.
 
 ---
 

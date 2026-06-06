@@ -24,6 +24,12 @@ export type CodegenOptions = {
   runtimeSpecifier: string;
   /** Emit the in-language `test` definitions (`__kumikiTests`). Off for production builds. */
   includeTests?: boolean;
+  /**
+   * Emit `export default App;` instead of auto-mounting to `#root`. Use when the
+   * module is imported (e.g. the Vite plugin / Web Component embedding) rather
+   * than run as a standalone page bundle.
+   */
+  exportApp?: boolean;
 };
 
 export function codegen(program: Program, opts: CodegenOptions): string {
@@ -53,6 +59,12 @@ export function codegen(program: Program, opts: CodegenOptions): string {
   lines.push("");
   lines.push("const _s = _stdlib;");
   lines.push("");
+
+  // Everything that closes over slot state lives inside `createApp()` so each
+  // call produces an independent instance (its own `live` + closures). Multiple
+  // mounts / Web Component instances therefore never share state. Pure module
+  // data (`_s`) stays outside.
+  lines.push("function createApp() {");
 
   // fn definitions
   for (const fn of fns) {
@@ -125,7 +137,7 @@ export function codegen(program: Program, opts: CodegenOptions): string {
   lines.push("};");
   lines.push("");
 
-  // App object passed to mount
+  // App object for this instance (its closures above bind to this call's `_live`).
   lines.push("const App = {");
   lines.push("  slots: _slots,");
   lines.push(`  caps: ${JSON.stringify(app.caps)},`);
@@ -138,19 +150,28 @@ export function codegen(program: Program, opts: CodegenOptions): string {
   lines.push(`  themeName: ${themeRef},`);
   lines.push("  motions: _motions,");
   lines.push("};");
-  lines.push("");
 
-  lines.push("globalThis.__kumikiApp = App;");
-
-  // In-language tests (`kumiki test`). Excluded from production builds.
+  // In-language test tile factories close over this instance's live state, so
+  // they are built inside the factory and attached to the app.
   if (opts.includeTests && tests.length > 0) {
-    lines.push("");
     lines.push("const _tilesById = {");
     for (const tile of tiles) {
       lines.push(`  ${JSON.stringify(tile.name)}: (${jsName("$1")}) => ${genTile(tile, ctx)},`);
     }
     lines.push("};");
-    lines.push("void _tilesById;");
+    lines.push("App._tilesById = _tilesById;");
+  }
+
+  lines.push("  return App;");
+  lines.push("}"); // end createApp
+  lines.push("");
+  // The default instance — used by auto-mount, the embedding host, and tooling.
+  lines.push("const App = createApp();");
+  lines.push("globalThis.__kumikiApp = App;");
+
+  // In-language tests (`kumiki test`) run against the default instance.
+  if (opts.includeTests && tests.length > 0) {
+    lines.push("");
     lines.push("const __kumikiTests = [");
     for (const t of tests) lines.push(genTest(t, ctx));
     lines.push("];");
@@ -158,7 +179,19 @@ export function codegen(program: Program, opts: CodegenOptions): string {
   }
   lines.push("");
 
-  lines.push(`mount(App, document.getElementById("root"));`);
+  if (opts.exportApp) {
+    // Module mode: the importer (Vite plugin / embedding host) owns mounting.
+    // `createApp` lets a host spin up multiple independent instances.
+    lines.push("export default App;");
+    lines.push("export { createApp };");
+  } else {
+    // Auto-mount. A host embedding the bundle can register custom-capability
+    // providers by assigning `globalThis.__kumikiProviders` before this module
+    // loads (the inbound ecosystem seam; see runtime CapabilityProvider).
+    lines.push(
+      `mount(App, document.getElementById("root"), { providers: globalThis.__kumikiProviders });`,
+    );
+  }
 
   return lines.join("\n");
 }
@@ -193,14 +226,14 @@ function genTest(t: TestDef, gen: GenCtx): string {
     name: ${nameJs},
     kind: "reducer-test",
     run: () => {
-      _s.resetLive(_live, _slots, ${slotsJs});
+      _s.resetLive(App.live, App.slots, ${slotsJs});
       const _el = ${elJs};
-      const _r = _reducers.find((r) => r.name === ${JSON.stringify(t.target)});
+      const _r = App.reducers.find((r) => r.name === ${JSON.stringify(t.target)});
       if (!_r) throw new Error("reducer ${t.target} not found");
       let _res = null, _panic = null;
-      try { _res = _r.apply(_live, { $el: _el, $event: _el }); }
+      try { _res = _r.apply(App.live, { $el: _el, $event: _el }); }
       catch (e) { _panic = (e && e.message) ? e.message : String(e); }
-      return _s.runReducerTest({ name: ${nameJs}, givenSlots: { ..._live }, result: _res, panic: _panic, expect: ${expectJs} });
+      return _s.runReducerTest({ name: ${nameJs}, givenSlots: { ...App.live }, result: _res, panic: _panic, expect: ${expectJs} });
     },
   },`;
   }
@@ -214,8 +247,8 @@ function genTest(t: TestDef, gen: GenCtx): string {
     name: ${nameJs},
     kind: "tile-test",
     run: () => {
-      _s.resetLive(_live, _slots, ${slotsJs});
-      const _actual = _tilesById[${JSON.stringify(t.target)}](${inJs});
+      _s.resetLive(App.live, App.slots, ${slotsJs});
+      const _actual = App._tilesById[${JSON.stringify(t.target)}](${inJs});
       const _expected = ${expectedJs};
       return _s.runTileTest({ name: ${nameJs}, actual: _actual, expected: _expected });
     },
@@ -293,32 +326,48 @@ function genFn(fn: FnDef, gen: GenCtx): string {
 
 // ----- effect -----
 
-function genEffect(eff: EffectDef, gen: GenCtx): string {
-  let invokeBody: string;
+/**
+ * The built-in implementation call for a standard capability, given the request
+ * variable name. Returns null for custom capabilities (no built-in — a host
+ * provider is required).
+ */
+function builtinEffectCall(eff: EffectDef, reqVar: string): string | null {
   if (eff.cap === "storage.read") {
-    if (eff.mapRequest) {
-      const mapJs = jsOfExpr(eff.mapRequest, makeEvalCtx(gen, new Set(["$1"])));
-      invokeBody = `async (${jsName("$1")}, _caps) => { const req = ${mapJs}; return builtinEffects.storageRead({ key: req.key }); }`;
-    } else {
-      invokeBody = `async (input) => builtinEffects.storageRead(input)`;
-    }
-  } else if (eff.cap === "storage.write") {
-    if (eff.mapRequest) {
-      const mapJs = jsOfExpr(eff.mapRequest, makeEvalCtx(gen, new Set(["$1"])));
-      invokeBody = `async (${jsName("$1")}, _caps) => { const req = ${mapJs}; return builtinEffects.storageWrite({ key: req.key, value: req.value }); }`;
-    } else {
-      invokeBody = `async (input) => builtinEffects.storageWrite(input)`;
-    }
-  } else if (eff.cap.startsWith("http.")) {
+    return `builtinEffects.storageRead(${eff.mapRequest ? `{ key: ${reqVar}.key }` : reqVar})`;
+  }
+  if (eff.cap === "storage.write") {
+    return `builtinEffects.storageWrite(${
+      eff.mapRequest ? `{ key: ${reqVar}.key, value: ${reqVar}.value }` : reqVar
+    })`;
+  }
+  if (eff.cap.startsWith("http.")) {
     const method = eff.cap.slice("http.".length).toUpperCase();
-    if (eff.mapRequest) {
-      const mapJs = jsOfExpr(eff.mapRequest, makeEvalCtx(gen, new Set(["$1"])));
-      invokeBody = `async (${jsName("$1")}, _caps) => { const req = ${mapJs}; return builtinEffects.httpFetch(${JSON.stringify(method)}, req, ""); }`;
-    } else {
-      invokeBody = `async (input) => builtinEffects.httpFetch(${JSON.stringify(method)}, input, "")`;
-    }
+    return `builtinEffects.httpFetch(${JSON.stringify(method)}, ${reqVar}, "")`;
+  }
+  return null;
+}
+
+function genEffect(eff: EffectDef, gen: GenCtx): string {
+  // Every effect invoke follows one shape: (1) map the request if `map-request`
+  // is present, (2) consult the host provider for this capability and delegate
+  // to it if registered (the ecosystem seam — lets a host swap the HTTP
+  // transport, inject auth, mock, etc.), (3) otherwise fall back to the built-in
+  // implementation. Custom capabilities have no built-in, so their fallback is a
+  // clear "no provider" error.
+  const capJs = JSON.stringify(eff.cap);
+  const reqVar = eff.mapRequest ? "req" : "input";
+  const builtin = builtinEffectCall(eff, reqVar);
+  const fallback =
+    builtin ??
+    `{ kind: "err", value: { message: ${JSON.stringify(`Capability ${eff.cap} has no provider`)} } }`;
+  const tail = `const p = caps.provider(${capJs}); if (p) return p(${reqVar}, caps); return ${fallback};`;
+
+  let invokeBody: string;
+  if (eff.mapRequest) {
+    const mapJs = jsOfExpr(eff.mapRequest, makeEvalCtx(gen, new Set(["$1"])));
+    invokeBody = `async (${jsName("$1")}, caps) => { const req = ${mapJs}; ${tail} }`;
   } else {
-    invokeBody = `async () => ({ kind: "err", value: { message: "Capability ${eff.cap} not implemented" } })`;
+    invokeBody = `async (input, caps) => { ${tail} }`;
   }
 
   return `{

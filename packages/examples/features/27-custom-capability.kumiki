@@ -2,6 +2,8 @@
 # `track` (cap=telemetry.track) is emitted on click; its ok result bumps a
 # counter — proving a manifest-registered capability compiles, is emittable, and
 # is dispatched (and mockable in scenarios, exactly like a standard effect).
+# At runtime its implementation is supplied host-side via mount(..., {providers})
+# — see docs/spec/stdlib.md §2.5 and packages/tests/provider.test.ts.
 
 slot sent : Int = 0
 

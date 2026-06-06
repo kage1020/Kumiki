@@ -1,0 +1,69 @@
+{
+  "name": "@kumikijs/vite",
+  "version": "0.3.0",
+  "type": "module",
+  "description": "Vite plugin for Kumiki — import .kumiki files as modules in any Vite/Next project.",
+  "license": "Apache-2.0",
+  "author": "kage1020",
+  "homepage": "https://github.com/kage1020/Kumiki/tree/main/packages/vite#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kage1020/Kumiki.git",
+    "directory": "packages/vite"
+  },
+  "bugs": "https://github.com/kage1020/Kumiki/issues",
+  "keywords": [
+    "kumiki",
+    "vite",
+    "vite-plugin",
+    "ai-first",
+    "build"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./src/index.ts"
+    },
+    "./client": {
+      "types": "./client.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "client.d.ts"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.js"
+      },
+      "./client": {
+        "types": "./client.d.ts"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "lint": "biome check src test"
+  },
+  "dependencies": {
+    "@kumikijs/compiler": "workspace:*",
+    "@kumikijs/runtime": "workspace:*"
+  },
+  "peerDependencies": {
+    "vite": ">=5"
+  },
+  "devDependencies": {
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}

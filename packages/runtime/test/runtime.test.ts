@@ -1024,6 +1024,91 @@ describe("unhandled effect-error contract (#37)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Memory router mode (#37 sibling #36, v0.4 M3): routing must work without the
+// ambient location/history — for the playground srcdoc sandbox and any embedded
+// host that owns the URL. mount(..., { router: "memory" }) holds the path in
+// memory and never calls history.*.
+// ---------------------------------------------------------------------------
+
+function makeRoutedApp(): AppShape {
+  const app: AppShape = {
+    slots: {},
+    caps: ["nav.push"],
+    effects: {},
+    init: [],
+    reducers: [],
+    routes: [
+      { pattern: "/", tile: () => ({ kind: "text", text: "home", props: {} }) },
+      {
+        pattern: "/items/:id",
+        tile: () => ({
+          kind: "text",
+          text: `item ${(app.live?.route as { params?: Record<string, string> })?.params?.id ?? "?"}`,
+          props: {},
+        }),
+      },
+      { pattern: "/404", tile: () => ({ kind: "text", text: "not found", props: {} }) },
+    ],
+    root: () => ({ kind: "text", text: "", props: {} }),
+  };
+  return app;
+}
+
+describe("memory router mode (#36)", () => {
+  let root: HTMLElement;
+  const navigate = (app: AppShape, path: string): void =>
+    (app as unknown as { _navigate: (p: string, r?: boolean) => void })._navigate(path);
+  beforeEach(() => {
+    root = document.createElement("div");
+    document.body.appendChild(root);
+  });
+  afterEach(() => {
+    document.body.removeChild(root);
+  });
+
+  it("initialises at the virtual path, not location.pathname (AC1)", () => {
+    const app = makeRoutedApp();
+    // A non-root initial path proves the route comes from the virtual location,
+    // independent of jsdom's ambient location (which is "/").
+    const { dispose } = mount(app, root, { router: "memory", initialPath: "/items/99" });
+    expect(root.textContent).toBe("item 99");
+    expect((app.live?.route as { pattern: string }).pattern).toBe("/items/:id");
+    dispose();
+  });
+
+  it("defaults memory to / and resolves a real route, not /404 (AC1)", () => {
+    const app = makeRoutedApp();
+    const { dispose } = mount(app, root, { router: "memory" });
+    expect(root.textContent).toBe("home");
+    dispose();
+  });
+
+  it("navigates via internal state, keeping path params, without touching history (AC2)", () => {
+    const pushSpy = vi.spyOn(history, "pushState");
+    const app = makeRoutedApp();
+    const { dispose } = mount(app, root, { router: "memory" });
+    navigate(app, "/items/42");
+    expect(root.textContent).toBe("item 42");
+    expect((app.live?.route as { params: Record<string, string> }).params.id).toBe("42");
+    expect(pushSpy).not.toHaveBeenCalled();
+    dispose();
+    pushSpy.mockRestore();
+  });
+
+  it("history mode stays the default and drives the real history API (AC3)", () => {
+    const pushSpy = vi.spyOn(history, "pushState");
+    const app = makeRoutedApp();
+    const { dispose } = mount(app, root); // default → history
+    navigate(app, "/items/7");
+    expect(root.textContent).toBe("item 7");
+    expect(pushSpy).toHaveBeenCalled();
+    dispose();
+    pushSpy.mockRestore();
+    history.replaceState(null, "", "/");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Standard capabilities (toast/nav/log + http/storage) are also provider-
 // overridable: a host can swap the implementation (custom toast UI, router,
 // HTTP transport, auth injection) by registering a provider for the cap. Absent

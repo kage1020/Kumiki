@@ -89,9 +89,14 @@ function buildPreview(src: string): void {
     srcdoc.value = "";
     return;
   }
+  // The preview iframe is a sandboxed srcdoc (opaque origin, no real path), so
+  // the app can't use the ambient location/history — opt into the memory router
+  // (#36) before the auto-mounting module runs, so routing examples (18/23)
+  // initialise at "/" and navigate instead of falling to /404.
   srcdoc.value = `<!doctype html><html><head><meta charset="utf-8">
 <style>body{font-family:system-ui,sans-serif;margin:0;padding:16px}</style></head>
 <body><div id="root"></div>
+<script>globalThis.__kumikiMount = { router: "memory" };<\/script>
 <script type="module">${result.js}<\/script></body></html>`;
 }
 

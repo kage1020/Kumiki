@@ -109,6 +109,18 @@ emit navigate({path: "/todos/{id}", params: {"id": todo.id.show}})
 
 `{name}` is substituted from params. An unspecified `{name}` produces a compile-time warning.
 
+### 3.3.4 Router source: `history` vs `memory` (#36)
+
+By default the runtime reads and writes the **ambient document** location/history: `mount(app, el)` resolves the initial route from `location.pathname` and `navigate` / link clicks call `history.pushState` / `replaceState`. This is correct for an app served at a real origin.
+
+In an **embedded or sandboxed host** — the docs playground `<iframe srcdoc sandbox="allow-scripts">`, a Web Component, any embed where the Kumiki app does not own the top-level URL — there is no real path (initial matching would fall to `/404`) and the origin is opaque (`history.pushState` throws `SecurityError`). For those, mount with the **memory router**:
+
+```js
+mount(app, el, { router: "memory", initialPath: "/" }); // initialPath optional, defaults to "/"
+```
+
+The memory router holds the current path in memory: the initial route resolves from `initialPath` (not `location`), and `navigate` / `navigate-replace` / `navigate-back` / link clicks update that in-memory path and re-render without touching `history.*`. Path params, query, redirects (`->>`), and the `/404` fallback all behave identically — only the *source* of the location changes. `router: "history"` remains the default, so apps served at a real origin are unaffected. The embedding seams expose it: the auto-mounting bundle reads `globalThis.__kumikiMount` (e.g. `{ router: "memory" }`) before mounting, and `defineKumikiElement(tag, app, { router: "memory" })` forwards it to the Web Component.
+
 ---
 
 ## 3.4 Route Lifecycle

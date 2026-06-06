@@ -186,10 +186,12 @@ export function codegen(program: Program, opts: CodegenOptions): string {
     lines.push("export { createApp };");
   } else {
     // Auto-mount. A host embedding the bundle can register custom-capability
-    // providers by assigning `globalThis.__kumikiProviders` before this module
-    // loads (the inbound ecosystem seam; see runtime CapabilityProvider).
+    // providers by assigning `globalThis.__kumikiProviders`, and pass any other
+    // MountOptions (e.g. `{ router: "memory" }` for a sandboxed preview that
+    // doesn't own the URL, #36) via `globalThis.__kumikiMount`, before this
+    // module loads (the inbound ecosystem seam; see runtime CapabilityProvider).
     lines.push(
-      `mount(App, document.getElementById("root"), { providers: globalThis.__kumikiProviders });`,
+      `mount(App, document.getElementById("root"), { providers: globalThis.__kumikiProviders, ...globalThis.__kumikiMount });`,
     );
   }
 

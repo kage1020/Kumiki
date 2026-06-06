@@ -68,7 +68,7 @@ export async function runScenario(
   app: AppShape,
   root: HTMLElement,
   scenario: Scenario,
-  opts: { settleMs?: number } = {},
+  opts: { settleMs?: number; router?: "history" | "memory"; initialPath?: string } = {},
 ): Promise<ScenarioReport> {
   const settleMs = opts.settleMs ?? 25;
   const steps: StepResult[] = [];
@@ -113,9 +113,13 @@ export async function runScenario(
 
   const dispatchable = app as Dispatchable;
 
+  const mountOpts: { router?: "history" | "memory"; initialPath?: string } = {};
+  if (opts.router) mountOpts.router = opts.router;
+  if (opts.initialPath !== undefined) mountOpts.initialPath = opts.initialPath;
+
   try {
     try {
-      mount(app, root);
+      mount(app, root, mountOpts);
     } catch (e) {
       steps.push(mkStep(undefined, "mount", [`mount threw: ${errStr(e)}`], [], app, root, []));
       return finish();

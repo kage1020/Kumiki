@@ -118,6 +118,26 @@ describe("scenario runner", () => {
     expect(report.ok).toBe(true);
   });
 
+  // M3 (#36): path-based routing works in memory-router mode (the playground
+  // srcdoc sandbox / any embedded host that owns the URL), with no reliance on
+  // the ambient location/history: initial "/" resolves to Home (not /404), a
+  // link click navigates, and the path param survives into the routed tile.
+  it("routes in memory mode: initial /, link nav, path params (18-routing)", async () => {
+    const app = await loadApp(join(examples, "features", "18-routing.kumiki"));
+    const report = await runScenario(
+      app,
+      freshRoot(),
+      {
+        steps: [
+          { expect: { noErrors: true, domIncludes: ["Home"], domExcludes: ["not found"] } },
+          { do: { clickText: "Go to item 42" }, expect: { domIncludes: ["Item 42"] } },
+        ],
+      },
+      { router: "memory" },
+    );
+    expect(report.ok).toBe(true);
+  });
+
   // Regression: this app's scenario guards two framework fixes found via the
   // iterate loop — List.fold codegen, and Int.parse numeric coercion (a total
   // that was silently wrong via string concatenation).

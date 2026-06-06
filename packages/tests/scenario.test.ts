@@ -118,6 +118,31 @@ describe("scenario runner", () => {
     expect(report.ok).toBe(true);
   });
 
+  // M4 (#38): the HTTP showcase demonstrates the success path deterministically.
+  // The effect is mocked at the capability boundary (exactly what the playground
+  // does with a deterministic http.get provider), so the ok reducer populates
+  // the quote into Loaded(...).
+  it("loads a quote on the success path (19-effect-http)", async () => {
+    const app = await loadApp(join(examples, "features", "19-effect-http.kumiki"));
+    const report = await runScenario(app, freshRoot(), {
+      steps: [
+        {
+          do: { clickText: "Load quote" },
+          expect: {
+            noErrors: true,
+            domIncludes: ["Make it work", "Kent Beck"],
+          },
+        },
+      ],
+      effects: {
+        fetchQuote: [
+          { outcome: "ok", value: { text: "Make it work, make it right.", author: "Kent Beck" } },
+        ],
+      },
+    });
+    expect(report.ok).toBe(true);
+  });
+
   // M3 (#36): path-based routing works in memory-router mode (the playground
   // srcdoc sandbox / any embedded host that owns the URL), with no reliance on
   // the ambient location/history: initial "/" resolves to Home (not /404), a

@@ -3,7 +3,7 @@
 "@kumikijs/compiler": minor
 ---
 
-feat: virtual / memory router mode for embedded contexts (v0.4 M3, #36)
+feat: virtual / memory router mode for embedded contexts (v0.5 M3, #36)
 
 `mount(app, el, { router: "memory", initialPath?: "/" })` resolves the initial
 route from `initialPath` (not the ambient `location`) and routes `navigate` /

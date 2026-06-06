@@ -2,7 +2,7 @@
 "@kumikijs/runtime": minor
 ---
 
-feat: no-silent-failure contract for unhandled effect errors (v0.4 M2, #37)
+feat: no-silent-failure contract for unhandled effect errors (v0.5 M2, #37)
 
 An effect `err` result that no `.err` reducer consumes is now surfaced via
 `console.error` (`[kumiki] effect "<name>" returned an error with no .err

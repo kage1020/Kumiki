@@ -6,8 +6,9 @@ hero:
   text: A web framework of AI, by AI, for AI
   tagline: Definitions interlock like Japanese joinery (kumiki) — no JSX, no Hooks, no hidden state — so AI can write, edit, and reassemble an app in parallel. Experimental.
   image:
-    light: /kumiki-mark.svg
-    dark: /kumiki-mark-dark.svg
+    light: /kumiki-mark-animated.svg
+    dark: /kumiki-mark-animated-dark.svg
+    alt: Kumiki
   actions:
     - theme: brand
       text: Get started

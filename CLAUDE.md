@@ -76,7 +76,7 @@ The repo's policy is "**looking at it resolves every question**" — questions a
 
 - **New feature** → update `docs/spec/` (authoritative) **and** add a working example to `packages/examples/`.
 - **Bug** → add a minimal repro to `packages/examples/`, a regression test to `packages/tests/`, then fix.
-- **Spec ⇆ implementation discrepancy** → the spec wins; record which side to fix in `docs/design-notes/` (ADRs live there too).
+- **Spec ⇆ implementation discrepancy** → the spec wins; record which side to fix in the PR description.
 - **Every new example must pass check + build + smoke** — `@kumikijs/tests` enforces this in CI, so a broken example fails the build.
 
 Follow **TDD (t_wada style)**: Design → Acceptance Criteria (as AC, no code) → test code → implementation → iterate. Don't jump straight to implementation.

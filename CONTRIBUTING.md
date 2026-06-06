@@ -12,7 +12,7 @@ The goal of this repository is that "**looking at it resolves your question**". 
 - **When a bug report comes in** → add a minimal reproduction to `packages/examples/`, add a regression test to `packages/tests/`, and then fix it.
 - **When you add a new feature** → update `docs/spec/` and add a working example to `packages/examples/`.
 
-The spec (`docs/spec/`) is authoritative, and the implementation (`packages/`) follows it. When you find a discrepancy, record the design decision of which to fix in [`docs/design-notes/`](./docs/design-notes/).
+The spec (`docs/spec/`) is authoritative, and the implementation (`packages/`) follows it. When you find a discrepancy, record the design decision of which to fix in the PR description.
 
 ## Development flow (TDD)
 
@@ -60,4 +60,3 @@ Everything must be green. In particular:
 | Working examples | `packages/examples/features/` or `packages/examples/apps/` |
 | Implementation | `packages/*/src/` |
 | Tests | per-package `test/`, cross-cutting in `packages/tests/` |
-| Design rationale / measurements | `docs/design-notes/` |

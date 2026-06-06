@@ -1449,7 +1449,7 @@ function applyTransition(el: HTMLElement, props?: TileProps): void {
 // Reusable, scoped animations declared with `motion N = {...}` and referenced
 // from a tile's `motion` prop. Codegen puts the parsed definitions on
 // `App.motions`; the runtime turns each into a scoped `@keyframes` + class at
-// mount, honoring `prefers-reduced-motion`. See docs/design-notes/adr-001-motion-layer.md.
+// mount, honoring `prefers-reduced-motion`.
 
 /** Map a duration token (or a raw ms number) to a CSS duration. */
 function motionDuration(d: unknown): string {

@@ -1,6 +1,6 @@
 # @kumikijs/site
 
-The Kumiki documentation site (VitePress). It serves `spec/`, `guide/`, `examples/`, and `design-notes/` as a single source, and includes an in-browser **Playground** (running the compiler + runtime in the browser) and **WebMCP** tools.
+The Kumiki documentation site (VitePress). It serves `spec/`, `guide/`, and `examples/` as a single source, and includes an in-browser **Playground** (running the compiler + runtime in the browser) and **WebMCP** tools.
 
 ## How it works
 

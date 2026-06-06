@@ -1,6 +1,6 @@
 # @kumikijs/site
 
-Kumiki ドキュメントサイト（VitePress）。`spec/` `guide/` `examples/` `design-notes/` を単一ソースとして配信し、ブラウザ内 **Playground**（コンパイラ + ランタイムをブラウザで実行）と **WebMCP** ツールを備える。
+Kumiki ドキュメントサイト（VitePress）。`spec/` `guide/` `examples/` を単一ソースとして配信し、ブラウザ内 **Playground**（コンパイラ + ランタイムをブラウザで実行）と **WebMCP** ツールを備える。
 
 ## 仕組み
 

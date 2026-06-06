@@ -1,5 +1,39 @@
 # @kumikijs/runtime
 
+## 0.5.0
+
+### Minor Changes
+
+- 20c8601: feat: no-silent-failure contract for unhandled effect errors (v0.5 M2, #37)
+
+  An effect `err` result that no `.err` reducer consumes is now surfaced via
+  `console.error` (`[kumiki] effect "<name>" returned an error with no .err
+reducer: …`) instead of being dropped silently — so the verification tiers
+  (`smoke` / `runScenario`, which capture `console.error`) flag it, consistent
+  with the v0.3 live-panic model. This fixes the storage-unavailable case (sandbox
+  preview / private mode) that previously looked like the app did nothing.
+
+  The default contract is `err` + a surfaced report; a program opts into handling
+  (or deliberately ignoring) the error by wiring an `.err` reducer (even an empty
+  one). An in-memory storage fallback is explicitly not the silent default.
+  Backward-compatible (additive surfacing; defaults unchanged).
+
+- 20c8601: feat: virtual / memory router mode for embedded contexts (v0.5 M3, #36)
+
+  `mount(app, el, { router: "memory", initialPath?: "/" })` resolves the initial
+  route from `initialPath` (not the ambient `location`) and routes `navigate` /
+  link clicks / `navigate-back` through an in-memory path with no `history.*` —
+  so path-based routing works inside the playground `<iframe srcdoc sandbox>` and
+  any embedded host (Web Component, embed) that owns the top-level URL, where the
+  ambient origin is opaque and `history.pushState` throws.
+
+  `router: "history"` stays the default (apps at a real origin are unaffected).
+  The auto-mounting bundle spreads `globalThis.__kumikiMount` into mount options
+  (compiler), and `defineKumikiElement(tag, app, { router, initialPath })`
+  forwards the option to the Web Component. `runScenario` gained a
+  `{ router, initialPath }` option. Backward-compatible (additive; defaults
+  unchanged).
+
 ## 0.4.0
 
 ### Minor Changes

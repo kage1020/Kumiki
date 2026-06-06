@@ -1,5 +1,14 @@
 # @kumikijs/cli
 
+## 0.3.3
+
+### Patch Changes
+
+- Updated dependencies [20c8601]
+- Updated dependencies [20c8601]
+  - @kumikijs/runtime@0.5.0
+  - @kumikijs/compiler@0.5.0
+
 ## 0.3.2
 
 ### Patch Changes

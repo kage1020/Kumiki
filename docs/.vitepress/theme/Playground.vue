@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
-import { compile, lex, parse, check } from "@kumikijs/compiler";
+import { compile, lex, parse, check, parseCapabilityManifest } from "@kumikijs/compiler";
 // The prebuilt runtime bundle, inlined as a string so generated apps are
 // fully self-contained and runnable inside the preview iframe.
 import runtimeBundle from "@kumikijs/runtime/bundle?raw";
@@ -19,6 +19,19 @@ const examples = Object.entries(exampleModules)
   .map(([path, source]) => ({ name: path.split("/").pop() ?? path, source }))
   .sort((a, b) => a.name.localeCompare(b.name));
 
+// The examples directory ships a `kumiki.caps.json` registering project-specific
+// capabilities (e.g. telemetry.track for 27-custom-capability). The CLI resolves
+// it from disk; here we load it at build time and pass the registered names to
+// check()/compile() so those examples typecheck instead of failing E0302.
+const capsModules = import.meta.glob(
+  "../../../packages/examples/features/kumiki.caps.json",
+  { query: "?raw", import: "default", eager: true },
+) as Record<string, string>;
+
+const capsRaw = Object.values(capsModules)[0];
+const capsParsed = capsRaw ? parseCapabilityManifest(JSON.parse(capsRaw)) : null;
+const capabilities: string[] = capsParsed?.ok ? capsParsed.manifest.capabilities : [];
+
 const DEFAULT_SOURCE =
   examples.find((e) => e.name.startsWith("01"))?.source ??
   'slot count : Int = 0\n\nreducer inc on=ui.click(IncBtn) do= count := count + 1\n\ntile IncBtn = button(text="+1", onClick=inc)\ntile App = column(heading("Count: " + count.show), IncBtn)\n\napp Playground\n    caps   = []\n    routes = {"/" -> App, "/404" -> App}\n    init   = []\n';
@@ -31,7 +44,7 @@ const selected = ref("");
 function diagnose(src: string): Diag[] {
   try {
     const program = parse(lex(src));
-    return check(program).map((e) => ({
+    return check(program, { capabilities }).map((e) => ({
       code: e.code,
       kind: e.kind,
       message: e.message,
@@ -63,6 +76,7 @@ function buildPreview(src: string): void {
     runtimeSpecifier: "",
     bundle: true,
     readRuntimeBundle: () => runtimeBundle,
+    capabilities,
   });
   if (result.kind === "fail") {
     diagnostics.value = result.errors.map((e) => ({
@@ -132,6 +146,7 @@ function registerWebMcpTools(): void {
           runtimeSpecifier: "",
           bundle: true,
           readRuntimeBundle: () => runtimeBundle,
+          capabilities,
         });
         return r.kind === "ok"
           ? { ok: true, jsBytes: r.js.length }

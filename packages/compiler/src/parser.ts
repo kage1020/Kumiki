@@ -1340,6 +1340,12 @@ class Parser {
     }
     const tok0 = this.peek();
     if (tok0.kind === "ident") {
+      // Value-arg builtins (heading/text/markdown/label/link/image/icon) take a
+      // value expression, never a nested tile. An identifier here is always a
+      // value — even one that shadows a builtin tile name (e.g. a user
+      // `fn label`) or is capital-cased — so parse it as an expression. Without
+      // this guard `heading(label(x))` mis-parses `label(x)` as a builtin tile.
+      if (parentTakesValueArg) return this.parseExpr();
       const name = tok0.value;
       const p1 = this.peek(1);
       const looksLikeTileCall = p1.kind === "op" && (p1.value === "(" || p1.value === "{");

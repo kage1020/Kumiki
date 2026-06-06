@@ -1,6 +1,6 @@
 # Kumiki 仕様
 
-ここは Kumiki 言語とランタイムの**正規（normative）仕様**である。実装（`packages/`）と本仕様が食い違った場合、原則として本仕様を正とし、どちらを直すかを設計判断として記録する（→ [Design Notes](../design-notes/)）。
+ここは Kumiki 言語とランタイムの**正規（normative）仕様**である。実装（`packages/`）と本仕様が食い違った場合、原則として本仕様を正とし、どちらを直すかを設計判断として PR に記録する。
 
 チュートリアルや how-to は仕様ではなく [Kumiki Guide](../guide/) に置く。動作する実例は [Kumiki Examples](https://github.com/kage1020/Kumiki/tree/main/packages/examples) にある。
 

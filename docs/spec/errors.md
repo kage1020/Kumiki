@@ -177,7 +177,7 @@ Within the same reducer, the same slot path shape (lvalue shape) is written more
 
 > `Slot path "<shape>" is written more than once in this reducer`
 
-**Note**: The granularity is **path shape**. `issues[id].status` and `issues[id].updatedAt` are considered different shapes and can coexist, but double assignment to `count` is forbidden. For the rationale, see [Rationale](../design-notes/rationale.md).
+**Note**: The granularity is **path shape**. `issues[id].status` and `issues[id].updatedAt` are considered different shapes and can coexist, but double assignment to `count` is forbidden.
 
 ## E07xx — Accessibility (a11y)
 

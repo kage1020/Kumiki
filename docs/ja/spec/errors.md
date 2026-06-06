@@ -177,7 +177,7 @@ keyframe ストップが閉じたアニメ可能集合（`opacity`, `translate-x
 
 > `Slot path "<shape>" is written more than once in this reducer`
 
-**補足**：粒度は**パス形状**である。`issues[id].status` と `issues[id].updatedAt` は別形状とみなされ共存できるが、`count` への二重代入は禁止される。理由は [Rationale](../design-notes/rationale.md)。
+**補足**：粒度は**パス形状**である。`issues[id].status` と `issues[id].updatedAt` は別形状とみなされ共存できるが、`count` への二重代入は禁止される。
 
 ## E07xx — アクセシビリティ（a11y）
 

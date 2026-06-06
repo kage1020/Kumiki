@@ -17,7 +17,7 @@ test-expr ::= reducer-test | tile-test | episode-test | property-test
 
 A `test` definition is **the sixth layer**. It is stored in the CRDT graph and run with `kumiki test`. It is not included in the production build.
 
-> **Implementation status (v0.2).** `reducer-test`, `tile-test`, the `kumiki test` runner (name / `prefix*` filtering), and `kumiki fix --auto-patch <test-name>` (§8.7.2) are implemented. The runner prints `PASS` / `FAIL` lines plus `expected` / `actual` / `diff at <path>` and, when it can isolate a scalar leaf, the §8.7.1 value arrow (`"a" -> "b"`) on failure — per-test timings and property-test case counts are **not yet** produced. Also still specified but **not yet implemented**: `property-test` and `episode-test`, `expect` wildcards (`<any-id>` / `<slots.X>`), effect-result mocks inside `reducer-test` (§8.5's multi-step flow — the [scenario runner](#88-integration-tests-browser-driven) covers that shape today), and `--watch` / `--coverage`. See [design-notes/test-runner.md](../design-notes/test-runner.md) and [design-notes/fix-from-test.md](../design-notes/fix-from-test.md).
+> **Implementation status (v0.2).** `reducer-test`, `tile-test`, the `kumiki test` runner (name / `prefix*` filtering), and `kumiki fix --auto-patch <test-name>` (§8.7.2) are implemented. The runner prints `PASS` / `FAIL` lines plus `expected` / `actual` / `diff at <path>` and, when it can isolate a scalar leaf, the §8.7.1 value arrow (`"a" -> "b"`) on failure — per-test timings and property-test case counts are **not yet** produced. Also still specified but **not yet implemented**: `property-test` and `episode-test`, `expect` wildcards (`<any-id>` / `<slots.X>`), effect-result mocks inside `reducer-test` (§8.5's multi-step flow — the [scenario runner](#88-integration-tests-browser-driven) covers that shape today), and `--watch` / `--coverage`.
 
 ## 8.2 Reducer Tests
 
@@ -199,7 +199,7 @@ FAIL  counter-display
 - If the file does not compile, the test can't run — it reuses the [`fix`](./ai-edit.md) typecheck repairs (did-you-mean name fixes, missing `/404`) so the test can run.
 - If a tile-test or reducer-test fails on a **string leaf** whose actual value is a *unique* source literal, it replaces that literal with the expected value (the §8.7.1 snapshot case).
 
-Non-literal divergences (numeric slots, wrong operators, effect-list mismatches) are reported as a diff rather than guessed. See [design-notes/fix-from-test.md](../design-notes/fix-from-test.md).
+Non-literal divergences (numeric slots, wrong operators, effect-list mismatches) are reported as a diff rather than guessed.
 
 ## 8.8 Integration Tests (browser-driven)
 

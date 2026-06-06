@@ -377,7 +377,7 @@ tile Loader = box(icon(name="spinner")) {motion: "Spin"}
 - 未定義の motion を指す `motion: "X"` プロップは **E0107**。
 - body はリテラルレコードなので、motion は **slot の読み書きや effect emit ができない** — 純粋に表示用。`when(...)` や `overlay` と合成でき、生成 keyframes はスコープされる（グローバル CSS を漏らさない、§4.10）。`prefers-reduced-motion: reduce` で motion（と上記 v0.1 transition）を無効化する。
 
-スコープとレイヤー vs 拡張の判断は [design-notes/adr-001-motion-layer.ja.md](../design-notes/adr-001-motion-layer.md) に記録。繰り延べ：多段パーセンテージ keyframes、色/blur/skew プロパティ。
+繰り延べ：多段パーセンテージ keyframes、色/blur/skew プロパティ。
 
 ---
 

@@ -32,7 +32,7 @@ export async function buildAndLoad(kumikiPath: string, rootId: string): Promise<
   // Patch the bottom of the bundle so it stops at `globalThis.__kumikiApp = App`
   // instead of mounting to a hard-coded "#root" we don't own in tests.
   const patched = result.js
-    .replace(`mount(App, document.getElementById("root"));`, "")
+    .replace(/mount\(App, document\.getElementById\("root"\)[^;]*\);?/, "")
     .replace(
       /globalThis\.__kumikiApp = App;/,
       `globalThis.__kumikiApp = App; globalThis.__kumikiRootId = ${JSON.stringify(rootId)};`,

@@ -27,7 +27,8 @@ export async function loadApp(kumikiPath: string): Promise<AppShape> {
     );
   }
   // Stop the bundle at `globalThis.__kumikiApp = App` instead of auto-mounting.
-  const patched = result.js.replace(/mount\(App, document\.getElementById\("root"\)\);?/, "");
+  // (The auto-mount line may carry a trailing options arg, e.g. `{ providers }`.)
+  const patched = result.js.replace(/mount\(App, document\.getElementById\("root"\)[^;]*\);?/, "");
 
   const dir = mkdtempSync(join(TMP_ROOT, "app-"));
   const file = join(dir, "app.mjs");

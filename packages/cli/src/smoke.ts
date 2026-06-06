@@ -78,7 +78,7 @@ async function loadApp(
       `compile failed:\n${result.errors.map((e) => `${e.code} ${e.message}`).join("\n")}`,
     );
   }
-  const patched = result.js.replace(/mount\(App, document\.getElementById\("root"\)\);?/, "");
+  const patched = result.js.replace(/mount\(App, document\.getElementById\("root"\)[^;]*\);?/, "");
   const dir = mkdtempSync(join(tmpdir(), "kumiki-smoke-"));
   const file = join(dir, "app.mjs");
   writeFileSync(file, patched);

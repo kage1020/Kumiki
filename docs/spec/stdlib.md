@@ -429,6 +429,35 @@ Each entry is a capability name in `group.action` form (lowercase, dot-separated
 
 This is a **capability-boundary registration: a declarative manifest, not new syntax or arbitrary code** — consistent with Kumiki's non-goal of macro/DSL extension ([rationale](../design-notes/rationale.md)). Working example: [packages/examples/features/27-custom-capability.kumiki](https://github.com/kage1020/Kumiki/blob/main/packages/examples/features/27-custom-capability.kumiki) (+ its `kumiki.caps.json`).
 
+#### Supplying the implementation (host capability providers)
+
+A custom capability has **no built-in implementation** — the manifest only makes the name *declarable*. The host that mounts the app supplies the implementation at the capability boundary, via `mount`'s options:
+
+```ts
+import { mount } from "@kumikijs/runtime";
+import { stripe } from "./stripe.ts"; // any npm library lives here, host-side
+
+mount(App, root, {
+  providers: {
+    // keyed by capability name; receives the effect's (map-request-mapped) input
+    "payments.charge": async (input) => {
+      try {
+        const r = await stripe.charges.create(input as ChargeReq);
+        return { kind: "ok", value: { id: r.id } };
+      } catch (e) {
+        return { kind: "err", value: { message: String(e) } };
+      }
+    },
+  },
+});
+```
+
+A provider returns an `EffectResult` (`{kind:"ok"|"err", value}`), sync or async; a thrown error is normalized to `err`. This is **Kumiki's inbound ecosystem seam**: arbitrary JS / npm libraries are confined to the provider, behind a typed, mockable, episode-tracked boundary, so the language core needs no FFI. If an effect on a custom capability fires with no provider registered, it resolves to `err {message: "Capability <name> has no provider"}`. In a `kumiki run` scenario, the scripted effect outcome overrides the provider (the runner mocks at the same boundary), so tests stay hermetic.
+
+The compiled bundle auto-mounts to `#root`; a host embedding the bundle can register providers by assigning `globalThis.__kumikiProviders` before the module loads.
+
+**Overriding a standard capability.** A provider may also be registered for a *standard* capability (`http.*`, `storage.*`, `nav.*`, `notification.show`, `log.write`, …) — every effect invoke consults `caps.provider(cap)` before its built-in implementation. This lets a host swap the HTTP transport (axios / ofetch), inject auth headers, plug in a framework router, or replace the toast UI, without changing the Kumiki source. The provider receives the effect's (already `map-request`-mapped) request; when none is registered the built-in behavior runs unchanged.
+
 ---
 
 ## 2.6 Standard Effects

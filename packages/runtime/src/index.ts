@@ -1,6 +1,11 @@
 // Kumiki v0.1 runtime — Phase 3 browser runtime.
 
 export {
+  type AttributeSlotBinding,
+  defineKumikiElement,
+  type KumikiElementOptions,
+} from "./element.ts";
+export {
   type Action,
   type EffectScript,
   type Expect,
@@ -142,8 +147,40 @@ export type EffectSpec = {
 
 export type EffectResult = { kind: "ok"; value: unknown } | { kind: "err"; value: unknown };
 
+/**
+ * A host-supplied implementation for a custom capability (one registered via
+ * `kumiki.caps.json`). This is Kumiki's inbound ecosystem seam: arbitrary JS /
+ * npm libraries live here, behind a typed, mockable capability boundary, so the
+ * Kumiki core stays pure (no language-level FFI). `input` is the effect's
+ * (already `map-request`-mapped) request; the return may be sync or async.
+ */
+export type CapabilityProvider = (
+  input: unknown,
+  caps: CapabilityRegistry,
+) => Promise<EffectResult> | EffectResult;
+
 export type CapabilityRegistry = {
   has(cap: string): boolean;
+  /** The host provider registered for `cap` at mount, or undefined. */
+  provider(cap: string): CapabilityProvider | undefined;
+};
+
+/** Options accepted by `mount`. */
+export type MountOptions = {
+  /** Host implementations for custom capabilities, keyed by capability name. */
+  providers?: Record<string, CapabilityProvider>;
+  /**
+   * Where Kumiki injects its `<style>` nodes (motion / theme / state styles).
+   * Defaults to `document` (styles go in `<head>`). Pass a `ShadowRoot` to keep
+   * them encapsulated — used by `defineKumikiElement({ shadow: true })`.
+   */
+  styleRoot?: Document | ShadowRoot;
+  /**
+   * The element whose inline style carries theme background/foreground/font
+   * (the `<body>` equivalent). Defaults to `document.body`; the shadow element
+   * passes its in-shadow container so theming stays encapsulated.
+   */
+  styleHost?: HTMLElement;
 };
 
 export type RouteEntry = {
@@ -231,7 +268,11 @@ function emptyRoute(): ParsedRoute {
   return { path: "/", pattern: "/", params: {}, query: {}, hash: null };
 }
 
-export function mount(app: AppShape, target: HTMLElement): { dispose: () => void } {
+export function mount(
+  app: AppShape,
+  target: HTMLElement,
+  options: MountOptions = {},
+): { dispose: () => void } {
   if (!app.live) {
     app.live = {};
     for (const [k, v] of Object.entries(app.slots)) app.live[k] = v.value;
@@ -240,11 +281,17 @@ export function mount(app: AppShape, target: HTMLElement): { dispose: () => void
   if (!("route" in app.live)) {
     app.live.route = emptyRoute();
   }
+  // Route every <style> injection to the requested root (document head by
+  // default, or a shadow root for an isolated Web Component). Reset the cached
+  // state-style node so it is re-resolved into this mount's root.
+  currentStyleRoot = options.styleRoot ?? document;
+  currentStyleHost = options.styleHost ?? null;
+  stateStylesEl = null;
   // Inject the app's `motion` keyframes (+ prefers-reduced-motion guard) once.
   ensureMotionStyles(app);
   const slotValues = app.live;
 
-  const caps = makeCapabilityRegistry(app.caps);
+  const caps = makeCapabilityRegistry(app.caps, options.providers);
   const dispatcher = makeEffectDispatcher(app, caps, (effect, outcome, value, key) => {
     handleEffectResult(effect, outcome, value, key);
   });
@@ -538,9 +585,15 @@ export function mount(app: AppShape, target: HTMLElement): { dispose: () => void
   };
 }
 
-function makeCapabilityRegistry(allowed: string[]): CapabilityRegistry {
+function makeCapabilityRegistry(
+  allowed: string[],
+  providers?: Record<string, CapabilityProvider>,
+): CapabilityRegistry {
   const ok = new Set(allowed);
-  return { has: (c) => ok.has(c) };
+  return {
+    has: (c) => ok.has(c),
+    provider: (c) => providers?.[c],
+  };
 }
 
 type Dispatcher = {
@@ -643,10 +696,23 @@ function registerBuiltinEffects(
   getLive: () => Record<string, unknown>,
   rerender: () => void,
 ): void {
+  // Each built-in first defers to a host provider registered for its capability
+  // (the ecosystem seam — lets a host override navigation/toast/log), then runs
+  // the default behavior.
+  const overridable = (
+    cap: string,
+    fn: (input: unknown) => Promise<EffectResult>,
+  ): EffectSpec["invoke"] => {
+    return async (input, caps) => {
+      const p = caps.provider(cap);
+      if (p) return p(input, caps);
+      return fn(input);
+    };
+  };
   app.effects.navigate = {
     name: "navigate",
     cap: "nav.push",
-    invoke: async (input) => {
+    invoke: overridable("nav.push", async (input) => {
       const x = input as {
         path: string;
         params?: Record<string, string>;
@@ -654,12 +720,12 @@ function registerBuiltinEffects(
       };
       navigate(buildPath(x), false);
       return { kind: "ok", value: null };
-    },
+    }),
   };
   app.effects["navigate-replace"] = {
     name: "navigate-replace",
     cap: "nav.replace",
-    invoke: async (input) => {
+    invoke: overridable("nav.replace", async (input) => {
       const x = input as {
         path: string;
         params?: Record<string, string>;
@@ -667,20 +733,20 @@ function registerBuiltinEffects(
       };
       navigate(buildPath(x), true);
       return { kind: "ok", value: null };
-    },
+    }),
   };
   app.effects["navigate-back"] = {
     name: "navigate-back",
     cap: "nav.back",
-    invoke: async () => {
+    invoke: overridable("nav.back", async () => {
       history.back();
       return { kind: "ok", value: null };
-    },
+    }),
   };
   app.effects.toast = {
     name: "toast",
     cap: "notification.show",
-    invoke: async (input) => {
+    invoke: overridable("notification.show", async (input) => {
       const t = input as { kind?: string; text?: string };
       const banner = document.createElement("div");
       banner.style.cssText =
@@ -689,15 +755,15 @@ function registerBuiltinEffects(
       document.body.appendChild(banner);
       setTimeout(() => banner.remove(), 3000);
       return { kind: "ok", value: null };
-    },
+    }),
   };
   app.effects.log = {
     name: "log",
     cap: "log.write",
-    invoke: async (input) => {
+    invoke: overridable("log.write", async (input) => {
       console.log("[kumiki]", input);
       return { kind: "ok", value: null };
-    },
+    }),
   };
   // http capability is handled per-effect by the codegen (each declared `effect`
   // gets its own invoke function); this builtin only handles the navigation/toast
@@ -1231,10 +1297,10 @@ function applyResponsive(_el: HTMLElement, raw: unknown, set: (v: unknown) => vo
   }
 }
 
-let animationStylesInjected = false;
 function ensureAnimationStyles(): void {
-  if (animationStylesInjected) return;
-  animationStylesInjected = true;
+  // Keyed by presence in the active style root, so each root (document head or a
+  // shadow root) gets its own copy of the v0.1 animation keyframes.
+  if (findStyleNode("kumiki-animations")) return;
   const css = `
 @keyframes kumiki-fade { from { opacity: 0 } to { opacity: 1 } }
 @keyframes kumiki-slide-up { from { transform: translateY(8px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
@@ -1250,7 +1316,7 @@ function ensureAnimationStyles(): void {
   const style = document.createElement("style");
   style.id = "kumiki-animations";
   style.appendChild(document.createTextNode(css));
-  document.head.appendChild(style);
+  appendStyleNode(style);
 }
 
 function applyTransition(el: HTMLElement, props?: TileProps): void {
@@ -1313,6 +1379,36 @@ function motionCss(name: string, spec: unknown): string {
 }
 
 /** Inject the app's motion keyframes + a `prefers-reduced-motion` guard at mount. */
+// Where Kumiki's <style> nodes go and which element carries body-level theme
+// styles. Set per mount (see MountOptions.styleRoot / styleHost). Module-level
+// because a compiled app is single-instance (its render closures bind to one
+// module's live state), like the other style singletons below. Left null until
+// mount so merely importing this module never touches `document` (keeps non-DOM
+// imports — e.g. a Vite-compiled bundle loaded in Node — safe).
+let currentStyleRoot: Document | ShadowRoot | null = null;
+let currentStyleHost: HTMLElement | null = null;
+
+/** Find a Kumiki style node by id within the active style root. */
+function findStyleNode(id: string): HTMLStyleElement | null {
+  const root = currentStyleRoot ?? document;
+  return root.getElementById(id) as HTMLStyleElement | null;
+}
+
+/** Append a style node to the active style root (document head, or a shadow root). */
+function appendStyleNode(style: HTMLStyleElement): void {
+  const root = currentStyleRoot ?? document;
+  // A Document has `.head`; a ShadowRoot does not. Duck-typing avoids referencing
+  // the global `Document` constructor, which isn't defined in every DOM shim.
+  const head = (root as Document).head;
+  if (head) head.appendChild(style);
+  else (root as ShadowRoot).appendChild(style);
+}
+
+/** The element that carries body-level theme styles (background/fg/font). */
+function styleHostEl(): HTMLElement {
+  return currentStyleHost ?? document.body;
+}
+
 function ensureMotionStyles(app: AppShape): void {
   const motions = app.motions ?? {};
   const rules = Object.entries(motions).map(([name, spec]) => motionCss(name, spec));
@@ -1320,11 +1416,11 @@ function ensureMotionStyles(app: AppShape): void {
   rules.push(
     `@media (prefers-reduced-motion: reduce) { .kumiki-motion, .kumiki-anim { animation: none !important } }`,
   );
-  let style = document.getElementById("kumiki-motions") as HTMLStyleElement | null;
+  let style = findStyleNode("kumiki-motions");
   if (!style) {
     style = document.createElement("style");
     style.id = "kumiki-motions";
-    document.head.appendChild(style);
+    appendStyleNode(style);
   }
   style.textContent = rules.join("\n");
 }
@@ -1348,9 +1444,12 @@ function applyStateStyles(el: HTMLElement, props: TileProps): void {
     el.dataset.kumikiState = el.dataset.kumikiState ? `${el.dataset.kumikiState} ${id}` : id;
     const decls = stateStyleDecls(sub as Record<string, unknown>);
     if (!stateStylesEl) {
-      stateStylesEl = document.createElement("style");
-      stateStylesEl.id = "kumiki-state-styles";
-      document.head.appendChild(stateStylesEl);
+      stateStylesEl = findStyleNode("kumiki-state-styles");
+      if (!stateStylesEl) {
+        stateStylesEl = document.createElement("style");
+        stateStylesEl.id = "kumiki-state-styles";
+        appendStyleNode(stateStylesEl);
+      }
     }
     const selector =
       state === "hover"
@@ -1411,17 +1510,17 @@ function applyThemeDefaults(app: AppShape): void {
   const colors = (theme.colors ?? {}) as Record<string, ThemeValue>;
   const typography = (theme.typography ?? {}) as Record<string, ThemeValue>;
   const sizes = (typography.size ?? {}) as Record<string, ThemeValue>;
-  if (typeof colors.bg === "string") document.body.style.background = colors.bg;
-  if (typeof colors.fg === "string") document.body.style.color = colors.fg;
-  if (typeof typography.family === "string")
-    document.body.style.fontFamily = typography.family as string;
-  if (typeof sizes.md === "string") document.body.style.fontSize = sizes.md as string;
+  const host = styleHostEl();
+  if (typeof colors.bg === "string") host.style.background = colors.bg;
+  if (typeof colors.fg === "string") host.style.color = colors.fg;
+  if (typeof typography.family === "string") host.style.fontFamily = typography.family as string;
+  if (typeof sizes.md === "string") host.style.fontSize = sizes.md as string;
   if (typeof typography["line-height"] === "string")
-    document.body.style.lineHeight = String(typography["line-height"]);
+    host.style.lineHeight = String(typography["line-height"]);
   // Inject CSS for primitives that need theme tokens.
   // Remove any prior injection first so re-renders (e.g. theme switching) don't
-  // accumulate <style> nodes in document.head.
-  const prior = document.getElementById("kumiki-theme-base");
+  // accumulate <style> nodes in the active style root.
+  const prior = findStyleNode("kumiki-theme-base");
   if (prior) prior.remove();
   const css = document.createElement("style");
   css.id = "kumiki-theme-base";
@@ -1466,7 +1565,7 @@ function applyThemeDefaults(app: AppShape): void {
 [data-kumiki-tile="markdown"] p { margin: 0 0 12px; }
 `),
   );
-  document.head.appendChild(css);
+  appendStyleNode(css);
 }
 
 function themeShadow(theme: Theme, key: string): string | undefined {

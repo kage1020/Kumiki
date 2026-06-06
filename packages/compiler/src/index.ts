@@ -22,6 +22,7 @@ export {
   type ExtendedCodegenOptions,
   inlineRuntime,
 } from "./compile.ts";
+export { generateDts } from "./dts.ts";
 export { lex } from "./lexer.ts";
 export { ParseError, parse } from "./parser.ts";
 export { check, type KumikiError } from "./typecheck.ts";

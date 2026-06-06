@@ -3,17 +3,22 @@
 # counter — proving a manifest-registered capability compiles, is emittable, and
 # is dispatched (and mockable in scenarios, exactly like a standard effect).
 # At runtime its implementation is supplied host-side via mount(..., {providers})
-# — see docs/spec/stdlib.md §2.5 and packages/tests/provider.test.ts.
+# — see docs/spec/stdlib.md §2.5 and packages/tests/provider.test.ts. The `.err`
+# branch models a missing/failing provider so the error is visible, not silently
+# dropped (#37).
 
-slot sent : Int = 0
+slot sent   : Int  = 0
+slot status : Text = "idle"
 
-effect track cap=telemetry.track in={name: Text} out=Unit
+effect track cap=telemetry.track in={name: Text} out=Result(Unit, Text)
 
 reducer fire   on=ui.click(TrackBtn) do= emit track({name: "click"})
-reducer onSent on=track.ok(_, _)     do= sent := sent + 1
+reducer onSent on=track.ok(_, _)     do= sent   := sent + 1
+                                        status := "tracked"
+reducer onFail on=track.err(_, _)    do= status := "no telemetry provider"
 
 tile TrackBtn = button(text="Track", onClick=fire)
-tile App = column(heading("sent: " + sent.show), TrackBtn) {pad: "lg", gap: "md"}
+tile App = column(heading("sent: " + sent.show), text(status), TrackBtn) {pad: "lg", gap: "md"}
 
 app CustomCapFeature
     caps   = [telemetry.track]

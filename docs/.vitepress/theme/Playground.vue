@@ -89,9 +89,27 @@ function buildPreview(src: string): void {
     srcdoc.value = "";
     return;
   }
+  // The preview iframe is a sandboxed srcdoc (opaque origin, no real path, no
+  // network). Configure the embedding seams before the auto-mounting module runs:
+  //  - memory router (#36) so routing examples (18/23) initialise at "/" and
+  //    navigate instead of falling to /404;
+  //  - a deterministic http.get provider (#38) so the HTTP showcase (19) serves
+  //    its /api/quote offline and demonstrates the SUCCESS path. Both use the
+  //    runtime's own seams — no fetch patching, no sandbox weakening.
+  const preamble = `globalThis.__kumikiMount = { router: "memory" };
+globalThis.__kumikiProviders = {
+  "http.get": (input) => {
+    const url = (input && input.url) || "";
+    if (url.indexOf("/api/quote") !== -1) {
+      return { kind: "ok", value: { text: "Make it work, make it right, make it fast.", author: "Kent Beck" } };
+    }
+    return { kind: "err", value: { message: "no demo backend for " + url } };
+  },
+};`;
   srcdoc.value = `<!doctype html><html><head><meta charset="utf-8">
 <style>body{font-family:system-ui,sans-serif;margin:0;padding:16px}</style></head>
 <body><div id="root"></div>
+<script>${preamble}<\/script>
 <script type="module">${result.js}<\/script></body></html>`;
 }
 

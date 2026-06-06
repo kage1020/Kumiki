@@ -249,6 +249,15 @@ expect(Object.keys(todos)).toHaveLength(1)
 
 `@kumiki/mcp` は同等の `kumiki_smoke` を提供し、AI エージェントが編集後に自己検証できる。
 
+### example コーパスガード：コンパイルでなくランタイム真正性
+
+example コーパス（`packages/tests`）は「壊れた example は決してマージされない」という常設の保証である。全 example が*コンパイルする*ことだけのアサートでは不十分だ：lowering で落ちた値引数はクリーンにコンパイルされマウントもするが、空だが存在するノードを描画する——「コンパイルは通るが実際は壊れている」状態で、層 1 にも層 2 の「空でない／throw しない」基準にも見えない（`03-union-and-match` の見出しバグが `_s.show(undefined)` に lower されて緑で出荷されたのはまさにこれ）。よってコーパスガードは dropped-expression クラスについて**ランタイム真正性**もアサートする：
+
+- **静的 codegen スキャン。** すべての値保持 display tile（`heading` / `text` / `button` / `label` / `link` / `markdown` / `image` / `icon` / `input`・`textarea` の value）は値を `show(...)` で lower する。これらいずれかの位置で落ちた式は厳密なトークン `show(undefined)` として現れる。Kumiki ソースに `undefined` リテラルは無いため、このトークンは dropped expression からしか生じ得ない——偏在する良性 `undefined`（reducer の読み戻しや selector 無し reducer）とは別物のゼロ誤検出センチネルである。いずれかの example の生成 JS にこれが含まれればコーパスは失敗する。
+- **描画 DOM スキャン。** 各 example を jsdom にマウントし、リテラル `"undefined"` であるテキストノードを描画しないことをアサートする。センチネルが拾わない経路で DOM に届く生の `undefined` を捕捉する。
+
+これらはブラウザバイナリ無しで既定 CI で走り、再混入した dropped-expression バグは緑で出荷されずビルドを失敗させる。
+
 ### シナリオ実行（層 2→3 の橋渡し）と自律ループ
 
 `kumiki run <file> <scenario.json>`（MCP: `kumiki_run_scenario`）は、アプリを**シナリオ**で駆動し、毎ステップの構造化 trace を返す。これが「人を介さない生成→実行→観測→修正ループ」の土台になる。

@@ -109,6 +109,18 @@ emit navigate({path: "/todos/{id}", params: {"id": todo.id.show}})
 
 `{name}` は params で置換される。未指定の `{name}` はコンパイル時警告。
 
+### 3.3.4 ルータソース：`history` と `memory`（#36）
+
+デフォルトでは、ランタイムは**周辺 document** の location/history を読み書きする：`mount(app, el)` は初期ルートを `location.pathname` から解決し、`navigate` / link クリックは `history.pushState` / `replaceState` を呼ぶ。実 origin で配信されるアプリにはこれが正しい。
+
+**埋め込み／サンドボックスホスト**——docs プレイグラウンドの `<iframe srcdoc sandbox="allow-scripts">`、Web Component、Kumiki アプリがトップレベル URL を所有しない任意の埋め込み——では本物のパスが無く（初期マッチが `/404` に落ちる）、origin が opaque（`history.pushState` が `SecurityError` を投げる）。それらでは **memory ルータ**でマウントする：
+
+```js
+mount(app, el, { router: "memory", initialPath: "/" }); // initialPath は任意、デフォルト "/"
+```
+
+memory ルータは現在のパスをメモリに保持する：初期ルートは（`location` ではなく）`initialPath` から解決され、`navigate` / `navigate-replace` / `navigate-back` / link クリックはそのメモリ内パスを更新して再描画し、`history.*` には触れない。パスパラメータ・query・リダイレクト（`->>`）・`/404` フォールバックはすべて同一に振る舞う——変わるのは location の*ソース*だけ。`router: "history"` がデフォルトのままなので、実 origin で配信されるアプリは影響を受けない。埋め込みシームが公開する：自動マウントするバンドルはマウント前に `globalThis.__kumikiMount`（例 `{ router: "memory" }`）を読み、`defineKumikiElement(tag, app, { router: "memory" })` は Web Component へ転送する。
+
 ---
 
 ## 3.4 ルートライフサイクル

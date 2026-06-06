@@ -1,7 +1,11 @@
 # Feature: localStorage persistence — load on start (once), save on change (debounce).
+# Models BOTH branches: the `.err` reducers turn a storage backend that is
+# unavailable (sandbox / private mode) into a visible `unavailable` status
+# instead of a silent no-op (#37).
 
-slot text  : Text = ""
-slot ready : Bool = false
+slot text   : Text = ""
+slot ready  : Bool = false
+slot status : Text = "loading…"
 
 effect loadText cap=storage.read
                 in=Unit
@@ -15,15 +19,21 @@ effect saveText cap=storage.write
                 policy=debounce(300ms)
                 map-request={key: "note", value: $1}
 
-reducer boot   on=app.start          do= emit loadText()
-reducer loaded on=loadText.ok($o, _) do= text  := $o.get-or("")
-                                        ready := true
-reducer edit   on=ui.input(NoteInput)
+reducer boot     on=app.start          do= emit loadText()
+reducer loaded   on=loadText.ok($o, _) do= text   := $o.get-or("")
+                                          ready  := true
+                                          status := "ready"
+reducer loadFail on=loadText.err(_, _) do= ready  := true
+                                          status := "storage unavailable"
+reducer edit     on=ui.input(NoteInput)
     do= text := $el.value
         emit saveText(text)
+reducer saved    on=saveText.ok(_, _)  do= status := "saved"
+reducer saveFail on=saveText.err(_, _) do= status := "storage unavailable"
 
-tile NoteInput = textarea(bind=text, placeholder="Auto-saved note...")
-tile App = column(NoteInput, text("saved automatically")) {pad: "lg", gap: "md"}
+tile NoteInput  = textarea(bind=text, placeholder="Auto-saved note...")
+tile StatusLine = text(status)
+tile App = column(NoteInput, StatusLine) {pad: "lg", gap: "md"}
 
 app EffectStorage
     caps   = [storage.read, storage.write]

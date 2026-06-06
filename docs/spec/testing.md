@@ -249,6 +249,15 @@ Because it is heavy (browser binaries), it is not included in the default CI tes
 
 `@kumiki/mcp` provides an equivalent `kumiki_smoke`, allowing an AI agent to self-verify after editing.
 
+### Example-corpus guard: runtime truth, not just compilation
+
+The example corpus (`packages/tests`) is the standing guarantee that **"a broken example must never merge."** Asserting only that every example *compiles* is not enough: a value argument that is dropped during lowering compiles cleanly and even mounts, yet renders an empty-but-present node — it is "compiles but is actually broken," invisible to both layer 1 and the layer-2 "not empty / no throw" bar (this is exactly how the `03-union-and-match` heading bug, lowered to `_s.show(undefined)`, shipped green). The corpus guard therefore also asserts **runtime truth** for the dropped-expression class:
+
+- **Static codegen scan.** Every value-bearing display tile (`heading` / `text` / `button` / `label` / `link` / `markdown` / `image` / `icon` / `input`+`textarea` value) lowers its value through `show(...)`. A dropped expression in any of those positions surfaces as the exact token `show(undefined)`. Because Kumiki source has no `undefined` literal, that token can only originate from a dropped expression — a zero-false-positive sentinel (distinct from the pervasive, benign `undefined` in reducer read-back and selector-less reducers). The corpus fails if any example's generated JS contains it.
+- **Rendered-DOM scan.** Every example is mounted in jsdom and asserted to render no text node that is literally `"undefined"`, catching a raw `undefined` that reaches the DOM by a path the sentinel does not cover.
+
+These run in default CI (no browser binaries), so a re-introduced dropped-expression bug fails the build rather than shipping green.
+
 ### Scenario Execution (the bridge from layer 2 to 3) and the Autonomous Loop
 
 `kumiki run <file> <scenario.json>` (MCP: `kumiki_run_scenario`) drives the app with a **scenario** and returns a structured trace for each step. This becomes the foundation for a "generate → execute → observe → fix loop without a human in the loop."

@@ -181,6 +181,16 @@ export type MountOptions = {
    * passes its in-shadow container so theming stays encapsulated.
    */
   styleHost?: HTMLElement;
+  /**
+   * Routing source (#36). `"history"` (default) reads/writes the ambient
+   * document `location` / `history`. `"memory"` holds the current path in
+   * memory and never touches `history.*` — for embedded / sandboxed hosts (the
+   * docs playground `srcdoc`, a Web Component) where the Kumiki app does not own
+   * the top-level URL and `history.pushState` throws in an opaque origin.
+   */
+  router?: "history" | "memory";
+  /** Initial path for the memory router (default `"/"`). Ignored in history mode. */
+  initialPath?: string;
 };
 
 export type RouteEntry = {
@@ -226,7 +236,83 @@ type ParsedRoute = {
   hash: string | null;
 };
 
-function parseLocation(routes: AppShape["routes"], loc: Location): ParsedRoute {
+/** The slice of `Location` the routing path actually reads. */
+type LocationLike = { pathname: string; search: string; hash: string };
+
+/**
+ * Routing source abstraction (#36). `historyRouter` drives the ambient document
+ * `location` / `history`; `memoryRouter` holds the path in memory for embedded /
+ * sandboxed hosts (playground `srcdoc`, Web Component) where the app does not
+ * own the URL and `history.*` throws in an opaque origin.
+ */
+interface Router {
+  read(): LocationLike;
+  push(path: string): void;
+  replace(path: string): void;
+  back(): void;
+  /** Subscribe to out-of-band location changes (browser back/forward). */
+  subscribe(cb: () => void): () => void;
+}
+
+function historyRouter(): Router {
+  return {
+    read: () => ({ pathname: location.pathname, search: location.search, hash: location.hash }),
+    push: (p) => history.pushState(null, "", p),
+    replace: (p) => history.replaceState(null, "", p),
+    back: () => history.back(),
+    subscribe: (cb) => {
+      const h = (): void => cb();
+      window.addEventListener("popstate", h);
+      return () => window.removeEventListener("popstate", h);
+    },
+  };
+}
+
+/** Split a raw path into the `{ pathname, search, hash }` parseLocation reads. */
+function splitPath(p: string): LocationLike {
+  let rest = p || "/";
+  let hash = "";
+  const hi = rest.indexOf("#");
+  if (hi !== -1) {
+    hash = rest.slice(hi);
+    rest = rest.slice(0, hi);
+  }
+  let search = "";
+  const qi = rest.indexOf("?");
+  if (qi !== -1) {
+    search = rest.slice(qi);
+    rest = rest.slice(0, qi);
+  }
+  return { pathname: rest || "/", search, hash };
+}
+
+function memoryRouter(initialPath = "/"): Router {
+  const stack: string[] = [initialPath || "/"];
+  const listeners = new Set<() => void>();
+  return {
+    read: () => splitPath(stack[stack.length - 1] ?? "/"),
+    push: (p) => {
+      stack.push(p);
+    },
+    replace: (p) => {
+      stack[stack.length - 1] = p;
+    },
+    back: () => {
+      if (stack.length > 1) {
+        stack.pop();
+        for (const l of listeners) l();
+      }
+    },
+    subscribe: (cb) => {
+      listeners.add(cb);
+      return () => {
+        listeners.delete(cb);
+      };
+    },
+  };
+}
+
+function parseLocation(routes: AppShape["routes"], loc: LocationLike): ParsedRoute {
   const path = loc.pathname || "/";
   const query: Record<string, string> = {};
   const params = new URLSearchParams(loc.search);
@@ -290,6 +376,12 @@ export function mount(
   // Inject the app's `motion` keyframes (+ prefers-reduced-motion guard) once.
   ensureMotionStyles(app);
   const slotValues = app.live;
+
+  // Routing source: ambient location/history by default, or an in-memory path
+  // for embedded/sandboxed hosts that don't own the URL (#36).
+  const router: Router =
+    options.router === "memory" ? memoryRouter(options.initialPath) : historyRouter();
+  let routerUnsub: (() => void) | undefined;
 
   const caps = makeCapabilityRegistry(app.caps, options.providers);
   const dispatcher = makeEffectDispatcher(app, caps, (effect, outcome, value, key) => {
@@ -448,22 +540,29 @@ export function mount(
     value: unknown,
     key: unknown,
   ): void {
+    let matched = 0;
     for (const r of app.reducers) {
       if (r.event.kind === "effect" && r.event.effect === effect && r.event.outcome === outcome) {
         applyReducer(r, { $1: value, $2: key });
+        matched++;
       }
     }
+    // No-silent-failure contract (#37): an `err` result that no `.err` reducer
+    // consumes is a dropped error — surfaced (never swallowed) exactly like a
+    // live panic. An app that means to ignore an error opts in with an `.err`
+    // reducer (even an empty one).
+    if (outcome === "err" && matched === 0) reportUnhandledEffectError(effect, value);
   }
 
   function updateRoute(newPath: string, replace: boolean): void {
-    if (replace) history.replaceState(null, "", newPath);
-    else history.pushState(null, "", newPath);
+    if (replace) router.replace(newPath);
+    else router.push(newPath);
     syncRouteFromLocation();
   }
 
   function syncRouteFromLocation(): void {
     const oldRoute = slotValues.route as ParsedRoute;
-    const newRoute = parseLocation(app.routes, location);
+    const newRoute = parseLocation(app.routes, router.read());
     slotValues.route = newRoute;
     // Fire route.leave / route.enter reducers
     if (oldRoute && oldRoute.pattern !== newRoute.pattern) {
@@ -491,6 +590,7 @@ export function mount(
   registerBuiltinEffects(
     app,
     updateRoute,
+    () => router.back(),
     () => slotValues,
     () => render(),
   );
@@ -505,17 +605,14 @@ export function mount(
 
   // Initial route sync — but first check for a static redirect on the current path.
   if (app.routes && app.routes.length > 0) {
-    let redirected = false;
     for (const r of app.routes) {
-      if ("redirectTo" in r && matchPattern(r.pattern, location.pathname)) {
-        history.replaceState(null, "", r.redirectTo);
-        redirected = true;
+      if ("redirectTo" in r && matchPattern(r.pattern, router.read().pathname)) {
+        router.replace(r.redirectTo);
         break;
       }
     }
-    void redirected;
-    slotValues.route = parseLocation(app.routes, location);
-    window.addEventListener("popstate", () => syncRouteFromLocation());
+    slotValues.route = parseLocation(app.routes, router.read());
+    routerUnsub = router.subscribe(syncRouteFromLocation);
   }
 
   app._rerender = render;
@@ -579,6 +676,7 @@ export function mount(
       for (const h of anonTimers) clearInterval(h);
       for (const h of namedTimers.values()) clearInterval(h);
       namedTimers.clear();
+      routerUnsub?.();
       target.replaceChildren();
       dispatcher.dispose();
     },
@@ -693,6 +791,7 @@ function makeEffectDispatcher(
 function registerBuiltinEffects(
   app: AppShape,
   navigate: (path: string, replace: boolean) => void,
+  back: () => void,
   getLive: () => Record<string, unknown>,
   rerender: () => void,
 ): void {
@@ -739,7 +838,7 @@ function registerBuiltinEffects(
     name: "navigate-back",
     cap: "nav.back",
     invoke: overridable("nav.back", async () => {
-      history.back();
+      back();
       return { kind: "ok", value: null };
     }),
   };
@@ -838,6 +937,23 @@ function panicInfo(e: unknown): { message: string; location: string | undefined 
 function reportPanic(where: string, e: unknown): void {
   const { message } = panicInfo(e);
   console.error(`[kumiki] ${isPanic(e) ? "panic" : "error"} in ${where}: ${message}`);
+}
+
+/**
+ * Surface an effect `err` result that no `.err` reducer consumes (#37). A failed
+ * capability must never fail silently — the storage-unavailable case (sandbox /
+ * private mode) otherwise looks like the app does nothing. Reported via
+ * console.error so the verification tiers (smoke / runScenario, which patch
+ * console.error) flag it, consistent with the v0.3 panic model. Production noise
+ * is the app's own choice: wire an `.err` reducer to handle (or deliberately
+ * ignore) the error.
+ */
+function reportUnhandledEffectError(effect: string, value: unknown): void {
+  const message =
+    value && typeof value === "object" && "message" in value
+      ? String((value as { message: unknown }).message)
+      : String(value);
+  console.error(`[kumiki] effect "${effect}" returned an error with no .err reducer: ${message}`);
 }
 
 /** A minimal top-level fallback for a render panic with no enclosing boundary. */

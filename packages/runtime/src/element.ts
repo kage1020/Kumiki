@@ -44,6 +44,15 @@ export type KumikiElementOptions = {
    * apply, matching a standalone Kumiki page).
    */
   shadow?: boolean;
+  /**
+   * Routing source forwarded to mount (#36). An embedded element rarely owns the
+   * top-level URL, so a routed Kumiki app inside it should usually use
+   * `"memory"` (an in-memory path) rather than the default `"history"`, which
+   * reads/writes the host page's location/history.
+   */
+  router?: "history" | "memory";
+  /** Initial path for the memory router (default `"/"`). */
+  initialPath?: string;
 };
 
 type AppWithSetSlot = AppShape & {
@@ -104,6 +113,8 @@ export function defineKumikiElement(
       this.app = makeApp();
       let target: HTMLElement = this;
       const mountOpts: MountOptions = { providers: buildProviders(this) };
+      if (options.router) mountOpts.router = options.router;
+      if (options.initialPath !== undefined) mountOpts.initialPath = options.initialPath;
       if (options.shadow) {
         const root = this.shadowRoot ?? this.attachShadow({ mode: "open" });
         root.replaceChildren();

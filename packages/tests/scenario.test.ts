@@ -66,6 +66,25 @@ describe("scenario runner", () => {
     expect(report.ok).toBe(true);
   });
 
+  // M2 (#37): an unavailable storage backend (sandbox / private mode) returns
+  // `err`; the example's `.err` reducer turns that into a visible status instead
+  // of a silent no-op. Mock loadText → err and assert the status, not silence.
+  it("surfaces an unavailable storage backend as a status (20-effect-storage)", async () => {
+    const app = await loadApp(join(examples, "features", "20-effect-storage.kumiki"));
+    const report = await runScenario(app, freshRoot(), {
+      steps: [
+        {
+          expect: {
+            noErrors: true,
+            state: { status: "storage unavailable", ready: true },
+          },
+        },
+      ],
+      effects: { loadText: [{ outcome: "err", value: { message: "SecurityError" } }] },
+    });
+    expect(report.ok).toBe(true);
+  });
+
   // M1 (#24): a render panic under an `error-boundary` is caught and the
   // fallback shown — cleanly, with no surfaced error (the boundary recovery is
   // silent). Clicking "reveal" makes a child tile read `.get` on a None, which

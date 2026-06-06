@@ -448,11 +448,18 @@ export function mount(
     value: unknown,
     key: unknown,
   ): void {
+    let matched = 0;
     for (const r of app.reducers) {
       if (r.event.kind === "effect" && r.event.effect === effect && r.event.outcome === outcome) {
         applyReducer(r, { $1: value, $2: key });
+        matched++;
       }
     }
+    // No-silent-failure contract (#37): an `err` result that no `.err` reducer
+    // consumes is a dropped error — surfaced (never swallowed) exactly like a
+    // live panic. An app that means to ignore an error opts in with an `.err`
+    // reducer (even an empty one).
+    if (outcome === "err" && matched === 0) reportUnhandledEffectError(effect, value);
   }
 
   function updateRoute(newPath: string, replace: boolean): void {
@@ -838,6 +845,23 @@ function panicInfo(e: unknown): { message: string; location: string | undefined 
 function reportPanic(where: string, e: unknown): void {
   const { message } = panicInfo(e);
   console.error(`[kumiki] ${isPanic(e) ? "panic" : "error"} in ${where}: ${message}`);
+}
+
+/**
+ * Surface an effect `err` result that no `.err` reducer consumes (#37). A failed
+ * capability must never fail silently — the storage-unavailable case (sandbox /
+ * private mode) otherwise looks like the app does nothing. Reported via
+ * console.error so the verification tiers (smoke / runScenario, which patch
+ * console.error) flag it, consistent with the v0.3 panic model. Production noise
+ * is the app's own choice: wire an `.err` reducer to handle (or deliberately
+ * ignore) the error.
+ */
+function reportUnhandledEffectError(effect: string, value: unknown): void {
+  const message =
+    value && typeof value === "object" && "message" in value
+      ? String((value as { message: unknown }).message)
+      : String(value);
+  console.error(`[kumiki] effect "${effect}" returned an error with no .err reducer: ${message}`);
 }
 
 /** A minimal top-level fallback for a render panic with no enclosing boundary. */

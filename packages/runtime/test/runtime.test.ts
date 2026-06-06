@@ -1,5 +1,5 @@
 import type { AppShape } from "@kumikijs/runtime";
-import { _stdlib, KumikiPanic, mount } from "@kumikijs/runtime";
+import { _stdlib, builtinEffects, KumikiPanic, mount } from "@kumikijs/runtime";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 // Hand-crafted AppShape mirroring the counter example, using the Phase 2 runtime contract.
@@ -916,6 +916,110 @@ describe("capability providers", () => {
     await tick();
     expect(called).toBe(false);
     expect((app.live as Record<string, unknown>).sent).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// No-silent-failure contract (#37, v0.4 M2): an effect `err` result that no
+// `.err` reducer consumes must be surfaced (console.error → smoke/runScenario
+// flag it), never swallowed. The storage-unavailable case (sandbox / private
+// mode) otherwise looks like the app does nothing. An app opts into ignoring an
+// error by wiring an `.err` reducer.
+// ---------------------------------------------------------------------------
+
+// A custom-cap effect with no provider always returns `err` (mirrors
+// makeTrackApp). `withErrReducer` toggles whether the program handles it.
+function makeErringApp(withErrReducer: boolean): AppShape {
+  const cap = "telemetry.track";
+  const reducers: AppShape["reducers"] = [
+    {
+      name: "fire",
+      selector: { tile: "B" },
+      event: { kind: "ui", ev: "click" },
+      apply: () => ({ slots: {}, emits: [{ effect: "track", args: [{ name: "click" }] }] }),
+    },
+  ];
+  if (withErrReducer) {
+    reducers.push({
+      name: "onFail",
+      event: { kind: "effect", effect: "track", outcome: "err" },
+      apply: () => ({ slots: { failed: true }, emits: [] }),
+    });
+  }
+  return {
+    slots: { failed: { value: false } },
+    caps: [cap],
+    effects: {
+      track: {
+        name: "track",
+        cap,
+        invoke: async (input, caps) => {
+          const p = caps.provider(cap);
+          if (!p) return { kind: "err", value: { message: "no provider" } };
+          return p(input, caps);
+        },
+      },
+    },
+    init: [],
+    reducers,
+    root: () => ({ kind: "column", children: [] }),
+  };
+}
+
+describe("unhandled effect-error contract (#37)", () => {
+  let root: HTMLElement;
+  let errSpy: ReturnType<typeof vi.spyOn>;
+  const fire = (app: AppShape): void =>
+    (app as unknown as { _dispatch: (n: string, el: Record<string, unknown>) => void })._dispatch(
+      "fire",
+      {},
+    );
+  beforeEach(() => {
+    root = document.createElement("div");
+    document.body.appendChild(root);
+    errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    errSpy.mockRestore();
+    document.body.removeChild(root);
+  });
+
+  it("surfaces an err result with no .err reducer via console.error (AC1)", async () => {
+    const app = makeErringApp(false);
+    mount(app, root); // no provider → effect errs
+    fire(app);
+    await tick();
+    expect(errSpy).toHaveBeenCalledTimes(1);
+    expect(String(errSpy.mock.calls[0]?.[0])).toContain('effect "track" returned an error');
+    expect(String(errSpy.mock.calls[0]?.[0])).toContain("no .err reducer");
+  });
+
+  it("stays silent when an .err reducer handles the error (AC3)", async () => {
+    const app = makeErringApp(true);
+    mount(app, root);
+    fire(app);
+    await tick();
+    expect((app.live as Record<string, unknown>).failed).toBe(true);
+    expect(errSpy).not.toHaveBeenCalled();
+  });
+
+  it("a storage backend that throws yields err — surfaced when unhandled (AC3)", async () => {
+    // Simulate an unavailable localStorage (opaque-origin sandbox / private mode).
+    const result = await builtinEffects.storageRead({ key: "x" });
+    void result; // storage is available in jsdom; assert the contract shape below.
+    const throwing = {
+      getItem: () => {
+        throw new Error("SecurityError");
+      },
+    } as unknown as Storage;
+    const orig = globalThis.localStorage;
+    Object.defineProperty(globalThis, "localStorage", { value: throwing, configurable: true });
+    try {
+      const r = await builtinEffects.storageRead({ key: "x" });
+      expect(r.kind).toBe("err");
+    } finally {
+      Object.defineProperty(globalThis, "localStorage", { value: orig, configurable: true });
+    }
   });
 });
 

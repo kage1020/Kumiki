@@ -1,5 +1,107 @@
 # @kumikijs/compiler
 
+## 0.4.0
+
+### Minor Changes
+
+- c51b7b8: feat: host capability providers — the inbound ecosystem seam
+
+  Custom capabilities (registered via `kumiki.caps.json`) can now be backed by a
+  host-supplied implementation, so a Kumiki app can use any npm library / SDK
+  without language-level FFI.
+
+  - `mount(app, target, { providers })` accepts a `Record<string, CapabilityProvider>`
+    keyed by capability name. New runtime exports: `CapabilityProvider`,
+    `MountOptions`; `CapabilityRegistry` gains `provider(cap)`.
+  - Codegen now lowers a custom-capability effect to a provider lookup at the
+    capability boundary (`caps.provider(cap)`) instead of an always-failing
+    "not implemented" stub. With no provider registered it resolves to
+    `err {message: "Capability <name> has no provider"}`.
+  - The auto-mounted bundle threads `globalThis.__kumikiProviders` so an embedding
+    host can register providers before the module loads.
+
+  Standard capabilities keep their built-in implementations (not provider-overridable),
+  and scenario mocks still override providers at the same boundary. See
+  docs/spec/stdlib.md §2.5.
+
+- c51b7b8: feat: multiple independent instances via a `createApp()` factory
+
+  A compiled app previously bound its render closures to one module-level live
+  state, so mounting the same app twice (or two Web Component instances) shared
+  state. Codegen now wraps the per-instance pieces (slots, live, reducers, routes,
+  effects, tiles) in a `createApp()` factory whose closures bind to that call's own
+  `live`. Each `createApp()` returns a fully independent `AppShape`; no runtime
+  change is needed.
+
+  - Compiled modules expose `createApp` (and `export { createApp }` under
+    `exportApp` / the Vite plugin); the default export remains a single shared
+    instance for back-compat.
+  - `defineKumikiElement(tag, appOrFactory, …)` accepts a factory — pass the
+    module's `createApp` so each `<tag>` element gets its own state; passing an
+    `AppShape` keeps the shared single-instance behavior.
+  - `@kumikijs/vite/client` ambient types now declare the `createApp` export.
+
+- c51b7b8: feat: standard capabilities are now host-provider-overridable
+
+  Every effect invoke (standard and custom) consults `caps.provider(cap)` before
+  its built-in implementation. A host can therefore register a provider for a
+  _standard_ capability — `http.*`, `storage.*`, `nav.*`, `notification.show`,
+  `log.write` — to swap the HTTP transport (axios / ofetch), inject auth headers,
+  integrate a framework router, or replace the toast UI, without touching the
+  Kumiki source. The provider receives the effect's (already `map-request`-mapped)
+  request; with no provider registered the built-in behavior runs unchanged.
+
+  - `codegen` now lowers every effect to the uniform shape _map → provider check →
+    built-in fallback_ (custom caps fall back to the existing "no provider" error).
+  - The runtime built-ins (navigate / toast / log) defer to a registered provider
+    for their capability before running the default behavior.
+
+- c51b7b8: feat: `@kumikijs/vite` build integration + typed provider helpers (build seam)
+
+  New package **`@kumikijs/vite`** — a Vite plugin so any Vite/Next/Astro project can
+  `import App from "./app.kumiki"`. Each source compiles to an ESM module that
+  default-exports the compiled `AppShape` (the importer mounts it via `mount` /
+  `defineKumikiElement`). Sibling `kumiki.caps.json` is resolved automatically.
+  Options: `bundle` (inline the runtime, default true) and `types` (emit a sibling
+  `<name>.kumiki.gen.ts` of typed `Slots`/`Providers` helpers). Ambient import
+  typing via `@kumikijs/vite/client`.
+
+  Compiler additions backing it:
+
+  - `codegen` / `compile` gain `exportApp` — emit `export default App;` instead of
+    auto-mounting to `#root` (module mode for importers).
+  - New `generateDts(program)` API — maps the `type`/`slot`/`effect` layers to a
+    TypeScript declaration (typed `Slots` and per-custom-capability `Providers`),
+    so host provider adapters get real input/output types. Conservative mapping
+    (`unknown` fallback for shapes whose runtime representation isn't promised).
+
+### Patch Changes
+
+- c51b7b8: fix(dts): `generateDts` emits precise runtime shapes for Map and Set
+
+  `generateDts` now maps `Set(T)` to its actual runtime representation
+  `Record<string, true>` (a stringified-key object) instead of `T[]`, and keeps
+  `Map(K, V)` as `Record<string, V>` (Map keys are stringified at runtime). With
+  this, every standard-library container type generated for provider authoring —
+  List, Map, Set, Option, Result, unions — matches the values the runtime produces
+  and consumes.
+
+- c51b7b8: fix(dts): `generateDts` emits precise tagged unions for Option / Result / unions
+
+  `generateDts` now maps `Option(T)`, `Result(T, E)`, and user `type` unions to
+  their actual runtime representation — the tagged `{ _tag: "Some"; _0: T }` /
+  `{ _tag: "Ok"; _0: T } | { _tag: "Err"; _0: E }` / `{ _tag: "Name"; _0: … }`
+  forms — instead of `T | null` / `unknown`. Variant payloads are positional
+  (`_0`, `_1`, …) and nest correctly through `List` / `Option` so generated
+  provider types match the values the runtime produces and consumes.
+
+- Updated dependencies [c51b7b8]
+- Updated dependencies [c51b7b8]
+- Updated dependencies [c51b7b8]
+- Updated dependencies [c51b7b8]
+- Updated dependencies [c51b7b8]
+  - @kumikijs/runtime@0.4.0
+
 ## 0.3.1
 
 ### Patch Changes

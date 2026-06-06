@@ -3,8 +3,8 @@
 // replace / remove` operations on the source file, vs. shipping the whole
 // modified file or a unified diff?
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, resolve, join } from "node:path";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { encode as encodeCl100k } from "gpt-tokenizer/encoding/cl100k_base";
 import { load } from "../src/cli/store.ts";
@@ -94,19 +94,19 @@ function diffPatch(baseSrc, modSrc) {
       i++;
       j++;
     } else if (dp[i + 1][j] >= dp[i][j + 1]) {
-      patch += a[i] + "\n";
+      patch += `${a[i]}\n`;
       i++;
     } else {
-      patch += b[j] + "\n";
+      patch += `${b[j]}\n`;
       j++;
     }
   }
   while (i < n) {
-    patch += a[i] + "\n";
+    patch += `${a[i]}\n`;
     i++;
   }
   while (j < m) {
-    patch += b[j] + "\n";
+    patch += `${b[j]}\n`;
     j++;
   }
   return patch;
@@ -147,8 +147,9 @@ console.log(
 console.log("-".repeat(95));
 for (const r of rows) {
   console.log(
-    `${r.sc.padEnd(24)} ${fmt(r.opCount).slice(-5)}  ${fmt(r.fullChars)}  ${fmt(r.fullTokens)}  ${fmt(r.patchChars)}  ${fmt(r.patchTokens)} `.padEnd(75) +
-      ` ${fmt(r.opChars)}  ${fmt(r.opTokens)}`,
+    `${`${r.sc.padEnd(24)} ${fmt(r.opCount).slice(-5)}  ${fmt(r.fullChars)}  ${fmt(r.fullTokens)}  ${fmt(r.patchChars)}  ${fmt(r.patchTokens)} `.padEnd(
+      75,
+    )} ${fmt(r.opChars)}  ${fmt(r.opTokens)}`,
   );
 }
 
@@ -185,5 +186,9 @@ console.log(`  op-stream chars : ${totals.opChars}`);
 console.log(`  op-stream tokens: ${totals.opTokens}`);
 console.log("");
 console.log("Reduction (lower is better)");
-console.log(`  op vs full-file : chars ${(totals.opChars / totals.fullChars * 100).toFixed(1)}%   tokens ${(totals.opTokens / totals.fullTokens * 100).toFixed(1)}%`);
-console.log(`  op vs patch     : chars ${(totals.opChars / totals.patchChars * 100).toFixed(1)}%   tokens ${(totals.opTokens / totals.patchTokens * 100).toFixed(1)}%`);
+console.log(
+  `  op vs full-file : chars ${((totals.opChars / totals.fullChars) * 100).toFixed(1)}%   tokens ${((totals.opTokens / totals.fullTokens) * 100).toFixed(1)}%`,
+);
+console.log(
+  `  op vs patch     : chars ${((totals.opChars / totals.patchChars) * 100).toFixed(1)}%   tokens ${((totals.opTokens / totals.patchTokens) * 100).toFixed(1)}%`,
+);

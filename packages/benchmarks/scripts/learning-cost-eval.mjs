@@ -4,20 +4,16 @@
 //   - build?
 // Emits a JSON line summary to stdout.
 
-import { readFileSync, existsSync, statSync } from "node:fs";
-import { dirname, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { encode as encodeCl100k } from "gpt-tokenizer/encoding/cl100k_base";
+import { compile } from "../src/compiler/compile.ts";
 import { lex } from "../src/compiler/lexer.ts";
 import { parse } from "../src/compiler/parser.ts";
 import { check } from "../src/compiler/typecheck.ts";
-import { compile } from "../src/compiler/compile.ts";
-
-const here = dirname(fileURLToPath(import.meta.url));
 
 function classify(err) {
   const c = err.code || "unknown";
-  const m = err.message || "";
   if (c === "E0103" || c === "E0105") return "unknown-name";
   if (c === "E0102" || c === "E0104") return "unknown-type";
   if (c === "E0001") return "missing-404-route";

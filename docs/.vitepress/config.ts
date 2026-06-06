@@ -15,9 +15,7 @@ const kumikiGrammar = nodeRequire("@kumikijs/syntax/grammar.json");
 // sources live in `packages/examples` and are loaded by the Playground.
 export default defineConfig({
   title: "Kumiki",
-  head: [
-    ["link", { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" }],
-  ],
+  head: [["link", { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" }]],
   cleanUrls: true,
   ignoreDeadLinks: false,
   markdown: {
@@ -81,8 +79,7 @@ export default defineConfig({
     ja: {
       label: "日本語",
       lang: "ja",
-      description:
-        "AI が書き・直し・並列に触ることを最優先に設計した宣言的 Web アプリ言語",
+      description: "AI が書き・直し・並列に触ることを最優先に設計した宣言的 Web アプリ言語",
       themeConfig: {
         nav: [
           { text: "ガイド", link: "/ja/guide/getting-started" },

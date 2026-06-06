@@ -2,8 +2,8 @@
 // equivalent React implementation. Tokenizes with cl100k_base (GPT-4 family)
 // and o200k_base (GPT-4o family) for two reference points.
 
-import { readFileSync, existsSync, statSync, readdirSync } from "node:fs";
-import { join, resolve, dirname, extname } from "node:path";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { encode as encodeCl100k } from "gpt-tokenizer/encoding/cl100k_base";
 import { encode as encodeO200k } from "gpt-tokenizer/encoding/o200k_base";
@@ -31,7 +31,7 @@ function loc(text) {
 
 function collect(paths) {
   let buf = "";
-  for (const p of paths) buf += readFileSync(p, "utf8") + "\n";
+  for (const p of paths) buf += `${readFileSync(p, "utf8")}\n`;
   return buf;
 }
 
@@ -73,8 +73,6 @@ function render(rows) {
 
 const KUMIKI = resolve(ROOT, "../docs/examples/02-todomvc.kumiki");
 const REACT_APP = resolve(ROOT, "todomvc-react/src/App.tsx");
-const KUMIKI_COUNTER = resolve(ROOT, "../docs/examples/01-counter.kumiki");
-const KUMIKI_BLOG = resolve(ROOT, "../docs/examples/03-blog-spa.kumiki");
 
 const rows = [
   measure("kumiki (todomvc.kumiki)", [KUMIKI]),

@@ -1,0 +1,6 @@
+# Normalize line endings: store and check out all text files with LF.
+# Keeps Windows checkouts from introducing CRLF that Biome/CI would flag.
+* text=auto eol=lf
+
+# Binary assets — never touch their bytes.
+*.png binary

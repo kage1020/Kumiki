@@ -22,7 +22,7 @@ const mime = {
 };
 
 createServer((req, res) => {
-  let p = decodeURIComponent((req.url ?? "/").split("?")[0]);
+  const p = decodeURIComponent((req.url ?? "/").split("?")[0]);
 
   if (p.startsWith("/api/")) {
     if (req.method !== "GET" && req.method !== "HEAD") {

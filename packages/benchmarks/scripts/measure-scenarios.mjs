@@ -4,8 +4,8 @@
 //   - react-modified.tsx
 // They are diffed against the baseline files at the project root.
 
-import { readFileSync, readdirSync, statSync } from "node:fs";
-import { dirname, resolve, join } from "node:path";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { encode as encodeCl100k } from "gpt-tokenizer/encoding/cl100k_base";
 import { encode as encodeO200k } from "gpt-tokenizer/encoding/o200k_base";
@@ -41,22 +41,22 @@ function diffStats(baseLines, modLines) {
       j++;
     } else if (dp[i + 1][j] >= dp[i][j + 1]) {
       removed++;
-      removedText += baseLines[i] + "\n";
+      removedText += `${baseLines[i]}\n`;
       i++;
     } else {
       added++;
-      addedText += modLines[j] + "\n";
+      addedText += `${modLines[j]}\n`;
       j++;
     }
   }
   while (i < n) {
     removed++;
-    removedText += baseLines[i] + "\n";
+    removedText += `${baseLines[i]}\n`;
     i++;
   }
   while (j < m) {
     added++;
-    addedText += modLines[j] + "\n";
+    addedText += `${modLines[j]}\n`;
     j++;
   }
   const patch = addedText + removedText;
@@ -117,8 +117,12 @@ const totals = rows.reduce(
 
 console.log("");
 console.log("Totals across scenarios");
-console.log(`  kumiki : +${totals.kumiki.added}/-${totals.kumiki.removed}  chars=${totals.kumiki.chars}  cl100k=${totals.kumiki.cl100k}  o200k=${totals.kumiki.o200k}`);
-console.log(`  react  : +${totals.react.added}/-${totals.react.removed}  chars=${totals.react.chars}  cl100k=${totals.react.cl100k}  o200k=${totals.react.o200k}`);
+console.log(
+  `  kumiki : +${totals.kumiki.added}/-${totals.kumiki.removed}  chars=${totals.kumiki.chars}  cl100k=${totals.kumiki.cl100k}  o200k=${totals.kumiki.o200k}`,
+);
+console.log(
+  `  react  : +${totals.react.added}/-${totals.react.removed}  chars=${totals.react.chars}  cl100k=${totals.react.cl100k}  o200k=${totals.react.o200k}`,
+);
 console.log("");
 console.log("React / Kumiki ratios (totals)");
 console.log(`  +lines : ${(totals.react.added / totals.kumiki.added).toFixed(2)}x`);

@@ -16,14 +16,17 @@
       "!**/dist",
       "!**/.turbo",
       "!**/examples-build",
-      "!**/test-tmp"
+      "!**/test-tmp",
+      "!packages/benchmarks/scenarios/**/react-modified.tsx",
+      "!packages/benchmarks/todomvc-react"
     ]
   },
   "formatter": {
     "enabled": true,
     "indentStyle": "space",
     "indentWidth": 2,
-    "lineWidth": 100
+    "lineWidth": 100,
+    "lineEnding": "lf"
   },
   "linter": {
     "enabled": true,

@@ -1,5 +1,12 @@
 # @kumikijs/site
 
+## 0.1.5
+
+### Patch Changes
+
+- Updated dependencies [81d0791]
+  - @kumikijs/compiler@0.3.1
+
 ## 0.1.4
 
 ### Patch Changes

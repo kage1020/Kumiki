@@ -6,6 +6,18 @@
 
 ## [Unreleased]
 
+### Added
+
+- **v0.4 M1 (#39) — example ガードのランタイム真正性検証 tier**：`packages/tests/examples.test.ts` は `compile()` 成功しか、`smoke.test.ts` も例がマウント／描画する（「空でない／throw しない」）ことしか検証しなかったため、「コンパイルは通るが実際は壊れている」例が緑で出荷された——`03-union-and-match` の見出しバグが `_s.show(undefined)` に lower され、空だが存在する見出しを両方すり抜けて描画したのがまさにこれ。新しいコーパスガード（`packages/tests/render-guard.test.ts`）が dropped-expression クラスを狙う：全 example の生成 JS を `_s.show(undefined)` センチネルで静的スキャン（Kumiki ソースに `undefined` リテラルは無く、reducer 読み戻し／selector 無し reducer の偏在する良性 `undefined` とは別物のゼロ誤検出マーカーなので allowlist 不要）し、加えていずれの example もリテラル `"undefined"` に等しいテキストノードを生成しないことを jsdom で描画アサートする。スキャナは `03` の形で発火することを証明済みの単体テスト付き純関数として切り出してあり、再混入した dropped-expression バグは緑で出荷されず `pnpm test` を失敗させる。([spec/testing.md](./spec/testing.md) §8.10)
+
+### Planned — v0.4
+
+v0.4——**埋め込み堅牢性＆ランタイム真正性検証**のマイルストーン——は、全 feature example のプレイグラウンド監査が掘り当てた 4 つのギャップを閉じる：Kumiki アプリはコンパイルも型検査も緑で通るのに、自分が所有しない埋め込み／サンドボックス文脈では誤動作する、あるいは動かない。[v0.4 ロードマップ](design-notes/roadmap-v0.4.md) を参照。検証 tier を最初に、独立マイルストーンとして出荷する（M1 完了——Added 参照）。
+
+- **M2 (#37) — バックエンド利用不可時の storage capability 契約**：`localStorage` が使えない（サンドボックスプレビュー、プライベートモード）と storage capability は `err` を返すが、`.ok` しか配線しない例はそれを黙って捨てる。M2 は v0.3 の「黙って失敗しない」エートスを effect 結果へ拡張する——`.err` reducer の無い effect エラー時の dev モード `console.warn`（一般的・検証 tier で観測可能）——し、`20-effect-storage` で `.err` 分岐をモデル化する。デフォルト契約は `err` + 警告のまま。in-memory shim は明示的 opt-in。([spec/stdlib.md](./spec/stdlib.md) §2.5)
+- **M3 (#36) — 埋め込み文脈向けの仮想／メモリルータモード**：パスベースルーティングは周辺 `location`/`history` に依存するため、プレイグラウンド `srcdoc` サンドボックス（や URL を所有する任意の埋め込みホスト）内で初期化もナビゲートもできない。M3 は `mount(app, el, { router: "memory" })`——周辺 URL に依存しないインメモリパス——を追加し、プレイグラウンドが opt-in、Web Component へ公開可能にする。`router: "history"` はデフォルトのまま。([spec/lifecycle.md](./spec/lifecycle.md) §7)
+- **M4 (#38) — プレイグラウンドでの決定論的 HTTP ショーケース**：`19-effect-http` は予約済み `api.example.com` を叩くためショーケースが常に失敗状態を描画する。M4 はプレイグラウンドにデモエンドポイントの決定論的モック（プレビュー限定、サンドボックス弱体化なし）を与え、ショーケースがオフラインで成功パスを示すようにする。
+
 ## [0.3.0] - 2026-06-04
 
 v0.3——型健全性＆堅牢性のマイルストーン——は完了（2 項目とも出荷）。[v0.3 ロードマップ](design-notes/roadmap-v0.3.ja.md) を参照。

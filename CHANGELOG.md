@@ -6,6 +6,18 @@ The format follows [Keep a Changelog](https://keepachangelog.com/) and adopts [S
 
 ## [Unreleased]
 
+### Added
+
+- **v0.4 M1 (#39) — Runtime-truth verification tier in the example guard**: `packages/tests/examples.test.ts` asserted only that `compile()` succeeds and `smoke.test.ts` only that an example mounts/renders ("not empty / no throw"), so a "compiles but is actually broken" example shipped green — exactly how the `03-union-and-match` heading bug, lowered to `_s.show(undefined)`, rendered an empty-but-present heading past both. A new corpus guard (`packages/tests/render-guard.test.ts`) targets the dropped-expression class: a static scan of every example's generated JS for the `_s.show(undefined)` sentinel (a zero-false-positive marker — Kumiki source has no `undefined` literal, distinct from the pervasive benign `undefined` in reducer read-back / selector-less reducers, so no allowlist is needed), plus a jsdom render assertion that no example produces a text node literally equal to `"undefined"`. The scanner is extracted as a unit-tested pure function proven to fire on the `03` shape, so a re-introduced dropped-expression bug fails `pnpm test` instead of shipping green. ([spec/testing.md](./spec/testing.md) §8.10)
+
+### Planned — v0.4
+
+v0.4 — the **embedded-robustness & runtime-truth verification** milestone — closes the four gaps surfaced by the full playground audit of every feature example: a Kumiki app can compile and typecheck green yet still be wrong, or fail to work, in an embedded / sandboxed context it doesn't own. See the [v0.4 Roadmap](design-notes/roadmap-v0.4.md). Shipped as independent milestones, verification tier first (M1 done — see Added).
+
+- **M2 (#37) — Storage capability contract when the backend is unavailable**: when `localStorage` is unavailable (sandbox preview, private mode), the storage capability returns `err`, but an example wiring only `.ok` drops it silently. M2 extends the v0.3 "no silent failure" ethos to effect results — a dev-mode `console.warn` when an effect error has no `.err` reducer (general, observable by the verification tiers) — and models the `.err` branch in `20-effect-storage`. The default contract stays `err` + warning; any in-memory shim is an explicit opt-in. ([spec/stdlib.md](./spec/stdlib.md) §2.5)
+- **M3 (#36) — Virtual / memory router mode for embedded contexts**: path-based routing relies on the ambient `location`/`history`, so it can't initialise or navigate inside the playground `srcdoc` sandbox (or any embedded host that owns the URL). M3 adds `mount(app, el, { router: "memory" })` — an in-memory path with no dependence on the ambient URL — opted into by the playground and exposable to the Web Component. `router: "history"` stays the default. ([spec/lifecycle.md](./spec/lifecycle.md) §7)
+- **M4 (#38) — Deterministic HTTP showcase in the playground**: `19-effect-http` targets the reserved `api.example.com`, so the showcase always renders the failure state. M4 gives the playground a deterministic mock for the demo endpoint (preview-scoped, no sandbox weakening) so the showcase demonstrates the success path offline.
+
 ## [0.3.0] - 2026-06-04
 
 v0.3 — the type-soundness & robustness milestone — is complete (both items shipped). See the [v0.3 Roadmap](design-notes/roadmap-v0.3.md).

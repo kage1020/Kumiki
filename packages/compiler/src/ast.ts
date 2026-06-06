@@ -210,6 +210,11 @@ export type Expr =
   | { kind: "RecordLit"; fields: { name: string; value: Expr }[]; pos: Pos }
   | { kind: "ListLit"; items: Expr[]; pos: Pos }
   | { kind: "MapLit"; entries: { key: Expr; value: Expr }[]; pos: Pos } // also Set if values are unit
+  // Test `expect` wildcards (spec/testing.md §8.2.2). Legal only inside a
+  // reducer-test `expect`; rejected elsewhere (E0109). `<any-id>` matches any
+  // generated id; `<slots.X>` matches slot X's post-execution value.
+  | { kind: "Wildcard"; wild: "any-id"; pos: Pos }
+  | { kind: "Wildcard"; wild: "slot"; slot: string; pos: Pos }
   | { kind: "MatchExpr"; scrutinee: Expr; arms: MatchArm[]; pos: Pos }
   | { kind: "IfExpr"; cond: Expr; consequent: Expr; alternate: Expr; pos: Pos }
   | { kind: "LetIn"; name: string; value: Expr; body: Expr; pos: Pos }

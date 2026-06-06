@@ -708,9 +708,23 @@ function jsOfExpr(e: Expr, ctx: EvalCtx): string {
     case "ListLit":
       return `[${e.items.map((it) => jsOfExpr(it, ctx)).join(", ")}]`;
     case "MapLit": {
-      const parts = e.entries.map((en) => `[${jsOfExpr(en.key, ctx)}]: ${jsOfExpr(en.value, ctx)}`);
+      const parts = e.entries.map((en) => {
+        // A `<any-id>` map key (test expect, §8.2.2) lowers to the runtime's
+        // wild-key sentinel so the matcher pairs it with the one generated entry.
+        const keyJs =
+          en.key.kind === "Wildcard" && en.key.wild === "any-id"
+            ? "[_s.WILD_KEY]"
+            : `[${jsOfExpr(en.key, ctx)}]`;
+        return `${keyJs}: ${jsOfExpr(en.value, ctx)}`;
+      });
       return `{ ${parts.join(", ")} }`;
     }
+    case "Wildcard":
+      // Value-position wildcard (`<any-id>` / `<slots.X>`) → a runtime sentinel
+      // that `wcEqual` recognises during reducer-test comparison.
+      return e.wild === "any-id"
+        ? `_s.wild("any-id")`
+        : `_s.wild("slot", ${JSON.stringify(e.slot)})`;
     case "MatchExpr":
       return matchExprJs(e, ctx);
     case "IfExpr":

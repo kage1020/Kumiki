@@ -962,6 +962,27 @@ class Parser {
     if (t.kind === "op" && t.value === "[") {
       return this.parseListLit();
     }
+    // Test `expect` wildcards (spec/testing.md §8.2.2): `<any-id>` / `<slots.X>`.
+    // A leading `<` can only begin a wildcard — a real expression never starts
+    // with the comparison operator — so this stays unambiguous.
+    if (t.kind === "op" && t.value === "<") {
+      this.next();
+      const head = this.eat("ident");
+      if (head.value === "any-id") {
+        this.eat("op", ">");
+        return { kind: "Wildcard", wild: "any-id", pos: t.pos };
+      }
+      if (head.value === "slots") {
+        this.eat("op", ".");
+        const slot = this.eat("ident").value;
+        this.eat("op", ">");
+        return { kind: "Wildcard", wild: "slot", slot, pos: t.pos };
+      }
+      throw new ParseError(
+        `Unknown test wildcard "<${head.value}…>" (expected <any-id> or <slots.NAME>)`,
+        head.pos,
+      );
+    }
     if (t.kind === "ident") {
       this.next();
       const name = t.value;

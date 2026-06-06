@@ -748,6 +748,14 @@ function checkExpr(e: Expr, sym: SymbolTable, errors: KumikiError[], ctx: Ctx): 
         checkExpr(a, sym, errors, inner);
       }
       return;
+    case "Wildcard":
+      errors.push({
+        code: "E0109",
+        kind: "test-wildcard-misuse",
+        message: `Test wildcard "${wildcardText(e)}" is only valid inside a reducer-test \`expect\``,
+        pos: e.pos,
+      });
+      return;
     case "RecordLit":
       for (const f of e.fields) checkExpr(f.value, sym, errors, ctx);
       return;
@@ -985,7 +993,58 @@ function checkEffect(eff: EffectDef, sym: SymbolTable, errors: KumikiError[]): v
     });
 }
 
+/** Render a wildcard for diagnostics (`<any-id>` / `<slots.X>`). */
+function wildcardText(e: Expr & { kind: "Wildcard" }): string {
+  return e.wild === "any-id" ? "<any-id>" : `<slots.${e.slot}>`;
+}
+
+/**
+ * Report any `expect` wildcard that appears where it is not allowed (E0109).
+ * `checkExpr` covers reducer/tile/fn/app bodies; a test's `given` is not routed
+ * through `checkExpr`, so it is scanned explicitly. The `expect` of a
+ * reducer-test is the only legal home for a wildcard and is left untouched.
+ */
+function rejectWildcards(e: Expr | undefined, errors: KumikiError[]): void {
+  if (!e) return;
+  switch (e.kind) {
+    case "Wildcard":
+      errors.push({
+        code: "E0109",
+        kind: "test-wildcard-misuse",
+        message: `Test wildcard "${wildcardText(e)}" is only valid inside a reducer-test \`expect\``,
+        pos: e.pos,
+      });
+      return;
+    case "RecordLit":
+      for (const f of e.fields) rejectWildcards(f.value, errors);
+      return;
+    case "ListLit":
+      for (const it of e.items) rejectWildcards(it, errors);
+      return;
+    case "MapLit":
+      for (const en of e.entries) {
+        rejectWildcards(en.key, errors);
+        rejectWildcards(en.value, errors);
+      }
+      return;
+    case "Call":
+    case "Variant":
+      for (const a of e.kind === "Call" ? e.args : e.payload) rejectWildcards(a, errors);
+      return;
+    case "BinOp":
+      rejectWildcards(e.lhs, errors);
+      rejectWildcards(e.rhs, errors);
+      return;
+    case "UnaryOp":
+      rejectWildcards(e.rhs, errors);
+      return;
+  }
+}
+
 function checkTest(t: TestDef, sym: SymbolTable, errors: KumikiError[]): void {
+  // Wildcards are legal only in a reducer-test `expect`; the `given` (both kinds)
+  // and a tile-test `expect` must not use them.
+  rejectWildcards(t.given, errors);
   if (t.testKind === "reducer-test") {
     if (!sym.reducers.has(t.target)) {
       errors.push({

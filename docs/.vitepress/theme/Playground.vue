@@ -94,9 +94,29 @@ function buildPreview(src: string): void {
   //  - memory router (#36) so routing examples (18/23) initialise at "/" and
   //    navigate instead of falling to /404;
   //  - a deterministic http.get provider (#38) so the HTTP showcase (19) serves
-  //    its /api/quote offline and demonstrates the SUCCESS path. Both use the
-  //    runtime's own seams — no fetch patching, no sandbox weakening.
+  //    its /api/quote offline and demonstrates the SUCCESS path;
+  //  - a telemetry.track provider so the custom-capability showcase (27) — which
+  //    has no built-in and would otherwise always hit its `.err` branch ("no
+  //    telemetry provider") — demonstrates the SUCCESS path;
+  //  - an in-memory localStorage shim, installed only when the sandbox's opaque
+  //    origin makes the real one throw, so the storage showcase (20) persists
+  //    within the session and shows "saved" instead of always "storage
+  //    unavailable". The runtime's own storage built-in (Option-wrapping, JSON)
+  //    runs unchanged on top of it. All seams use the runtime's documented
+  //    embedding points — no fetch patching, no sandbox weakening.
   const preamble = `globalThis.__kumikiMount = { router: "memory" };
+try { void localStorage.length; } catch (_e) {
+  const _store = Object.create(null);
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (k) => (k in _store ? _store[k] : null),
+      setItem: (k, v) => { _store[k] = String(v); },
+      removeItem: (k) => { delete _store[k]; },
+      clear: () => { for (const k in _store) delete _store[k]; },
+    },
+  });
+}
 globalThis.__kumikiProviders = {
   "http.get": (input) => {
     const url = (input && input.url) || "";
@@ -104,6 +124,10 @@ globalThis.__kumikiProviders = {
       return { kind: "ok", value: { text: "Make it work, make it right, make it fast.", author: "Kent Beck" } };
     }
     return { kind: "err", value: { message: "no demo backend for " + url } };
+  },
+  "telemetry.track": (input) => {
+    console.log("[telemetry]", input);
+    return { kind: "ok", value: null };
   },
 };`;
   srcdoc.value = `<!doctype html><html><head><meta charset="utf-8">

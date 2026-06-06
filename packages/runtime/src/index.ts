@@ -1180,6 +1180,20 @@ function renderTileNode(node: TileNode): HTMLElement {
           }
         });
       }
+      // ui.input / ui.change reducers targeting a textarea (codegen emits these
+      // as onInput / onChange props, just like for `input`). Without this a
+      // textarea with `bind` would update its slot but never run its reducer —
+      // e.g. 20-effect-storage's `edit` reducer never emits the save effect.
+      if (node.props?.onInput) {
+        ta.addEventListener("input", () => {
+          node.props?.onInput?.({ ...(node.props?.el ?? {}), value: ta.value });
+        });
+      }
+      if (node.props?.onChange) {
+        ta.addEventListener("change", () => {
+          node.props?.onChange?.({ ...(node.props?.el ?? {}), value: ta.value });
+        });
+      }
       return ta;
     }
     case "check": {

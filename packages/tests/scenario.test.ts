@@ -85,6 +85,36 @@ describe("scenario runner", () => {
     expect(report.ok).toBe(true);
   });
 
+  // Regression (#20 example): typing must run the `edit` reducer
+  // (on=ui.input(NoteInput)) so it persists via `saveText`. The textarea
+  // renderer previously wired only `bind`, dropping the onInput/onChange props
+  // codegen emits — so a bound textarea updated its slot but never ran its
+  // reducer, and the auto-save never fired (status stuck, no `saveText` emit).
+  // settleMs covers the save effect's debounce(300ms).
+  it("runs a textarea's ui.input reducer so the note auto-saves (20-effect-storage)", async () => {
+    const app = await loadApp(join(examples, "features", "20-effect-storage.kumiki"));
+    const report = await runScenario(
+      app,
+      freshRoot(),
+      {
+        steps: [
+          { expect: { noErrors: true, state: { ready: true } } },
+          {
+            do: { fill: "textarea", value: "buy milk" },
+            expect: { noErrors: true, state: { text: "buy milk", status: "saved" } },
+          },
+        ],
+        effects: {
+          loadText: [{ outcome: "err", value: { message: "SecurityError" } }],
+          saveText: [{ outcome: "ok" }],
+        },
+      },
+      { settleMs: 400 },
+    );
+    expect(report.ok).toBe(true);
+    expect(report.steps[1]?.emits.some((e) => e.effect === "saveText")).toBe(true);
+  });
+
   // M1 (#24): a render panic under an `error-boundary` is caught and the
   // fallback shown — cleanly, with no surfaced error (the boundary recovery is
   // silent). Clicking "reveal" makes a child tile read `.get` on a None, which
@@ -156,6 +186,35 @@ describe("scenario runner", () => {
         steps: [
           { expect: { noErrors: true, domIncludes: ["Home"], domExcludes: ["not found"] } },
           { do: { clickText: "Go to item 42" }, expect: { domIncludes: ["Item 42"] } },
+        ],
+      },
+      { router: "memory" },
+    );
+    expect(report.ok).toBe(true);
+  });
+
+  // Regression (#23 example): a `route.enter(pattern)` reducer must fire on
+  // entering that route. The parser previously discarded the pattern argument,
+  // so the reducer's event name was the bare "route.enter" and never matched the
+  // runtime's `route.enter("/page")` lookup — navigation worked but the counter
+  // stayed at 0. Each entry into "/page" bumps `visits`.
+  it("fires a route.enter(pattern) reducer on navigation (23-lifecycle-route-enter)", async () => {
+    const app = await loadApp(join(examples, "features", "23-lifecycle-route-enter.kumiki"));
+    const report = await runScenario(
+      app,
+      freshRoot(),
+      {
+        steps: [
+          { expect: { noErrors: true, state: { started: true, visits: 0 } } },
+          {
+            do: { clickText: "Visit page" },
+            expect: { state: { visits: 1 }, domIncludes: ["entered 1 time(s)"] },
+          },
+          { do: { clickText: "Home" }, expect: { state: { visits: 1 } } },
+          {
+            do: { clickText: "Visit page" },
+            expect: { state: { visits: 2 }, domIncludes: ["entered 2 time(s)"] },
+          },
         ],
       },
       { router: "memory" },

@@ -571,10 +571,21 @@ class Parser {
         return { kind: "LifecycleEvent", name: `tile.${sub}`, pos: t.pos };
       }
       if (name === "route") {
+        // `route.enter("/p")` / `route.leave("/p")` carry the route pattern.
+        // The pattern is part of the event identity: the runtime dispatches by
+        // matching the reducer's name against `route.enter(${JSON.stringify(
+        // matchedPattern)})`, so the literal must be preserved here (dropping it
+        // would leave every route.enter/leave reducer dead). Encode it the same
+        // way the runtime does so the names match verbatim.
         if (this.matchOp("(")) {
           this.next();
-          this.eat("str");
+          const pattern = this.eat("str").value;
           this.eat("op", ")");
+          return {
+            kind: "LifecycleEvent",
+            name: `route.${sub}(${JSON.stringify(pattern)})`,
+            pos: t.pos,
+          };
         }
         return { kind: "LifecycleEvent", name: `route.${sub}`, pos: t.pos };
       }

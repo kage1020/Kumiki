@@ -224,6 +224,20 @@ function genTest(t: TestDef, gen: GenCtx): string {
       const effectsJs = xe ? effectListJs(xe, ctx) : "[]";
       expectJs = `{ kind: "state", slots: ${xsJs}, effects: ${effectsJs} }`;
     }
+    // §8.5: with `given.mocks`, drive the multi-step emit→result→reducer flow
+    // (effect results injected from the mocks) instead of a single reducer apply.
+    const mocks = recordField(t.given, "mocks");
+    if (mocks) {
+      return `  {
+    name: ${nameJs},
+    kind: "reducer-test",
+    run: () => {
+      _s.resetLive(App.live, App.slots, ${slotsJs});
+      const _el = ${elJs};
+      return _s.runReducerTestFlow({ name: ${nameJs}, app: App, target: ${JSON.stringify(t.target)}, el: _el, mocks: ${mocksJs(mocks, ctx)}, expect: ${expectJs} });
+    },
+  },`;
+    }
     return `  {
     name: ${nameJs},
     kind: "reducer-test",
@@ -275,6 +289,32 @@ function effectListJs(e: Expr, ctx: EvalCtx): string {
     return `{ effect: "?", args: [], argsSpecified: false }`;
   });
   return `[${items.join(", ")}]`;
+}
+
+/**
+ * Compile a reducer-test `given.mocks` record into a `{effect: {outcome, value, delayMs?}}`
+ * map for the flow runner (§8.5). Each value is `ok(v)` / `err(e)` / `delay(ms, ok(v)|err(e))`.
+ */
+function mocksJs(e: Expr, ctx: EvalCtx): string {
+  if (e.kind !== "RecordLit") return "{}";
+  const parts = e.fields.map((f) => `${JSON.stringify(f.name)}: ${mockScriptJs(f.value, ctx)}`);
+  return `{ ${parts.join(", ")} }`;
+}
+
+function mockScriptJs(v: Expr, ctx: EvalCtx): string {
+  if (v.kind === "Call" && (v.callee === "ok" || v.callee === "err")) {
+    const value = v.args[0] ? jsOfExpr(v.args[0], ctx) : "null";
+    return `{ outcome: ${JSON.stringify(v.callee)}, value: ${value} }`;
+  }
+  if (v.kind === "Call" && v.callee === "delay") {
+    const ms = v.args[0] ? jsOfExpr(v.args[0], ctx) : "0";
+    const inner = v.args[1];
+    if (inner?.kind === "Call" && (inner.callee === "ok" || inner.callee === "err")) {
+      const value = inner.args[0] ? jsOfExpr(inner.args[0], ctx) : "null";
+      return `{ outcome: ${JSON.stringify(inner.callee)}, value: ${value}, delayMs: ${ms} }`;
+    }
+  }
+  return `{ outcome: "ok", value: null }`;
 }
 
 /**

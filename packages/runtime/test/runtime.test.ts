@@ -677,6 +677,139 @@ describe("in-language test runner helpers", () => {
   });
 });
 
+// ----- v0.6 M2: effect-result mocks inside reducer-test (spec/testing.md §8.5) -----
+
+describe("runReducerTestFlow (reducer-test effect mocks)", () => {
+  // A two-step flow: `fetchUser` emits `loadUser`; its result drives `userLoaded`
+  // (`.ok`) or `userFailed` (`.err`). Built as a minimal AppShape-like object.
+  type FlowApp = Parameters<typeof _stdlib.runReducerTestFlow>[0]["app"];
+  const makeFlowApp = (): FlowApp =>
+    ({
+      slots: { users: { value: {} }, error: { value: "" } },
+      live: {},
+      effects: { loadUser: {}, track: {} },
+      reducers: [
+        {
+          name: "fetchUser",
+          event: { kind: "ui", ev: "click" },
+          apply: (_live, p) => ({
+            slots: {},
+            emits: [{ effect: "loadUser", args: [(p as { $el: unknown }).$el] }],
+          }),
+        },
+        {
+          name: "userLoaded",
+          event: { kind: "effect", effect: "loadUser", outcome: "ok" },
+          apply: (live, p) => {
+            const u = (p as { $1: { id: string } }).$1;
+            return {
+              slots: { users: { ...(live.users as object), [u.id]: u } },
+              emits: [],
+            };
+          },
+        },
+        {
+          name: "userFailed",
+          event: { kind: "effect", effect: "loadUser", outcome: "err" },
+          apply: (_live, p) => ({ slots: { error: (p as { $1: unknown }).$1 }, emits: [] }),
+        },
+      ],
+    }) as unknown as FlowApp;
+
+  const run = (app: FlowApp, given: Record<string, unknown>, rest: Record<string, unknown>) => {
+    _stdlib.resetLive(
+      (app as unknown as { live: Record<string, unknown> }).live,
+      (app as unknown as { slots: Record<string, { value: unknown }> }).slots,
+      given,
+    );
+    return _stdlib.runReducerTestFlow({
+      name: "t",
+      app,
+      target: "fetchUser",
+      el: { id: "u1" },
+      ...rest,
+    } as Parameters<typeof _stdlib.runReducerTestFlow>[0]);
+  };
+
+  it("delivers a mocked `ok` result to the .ok reducer", () => {
+    const r = run(
+      makeFlowApp(),
+      { users: {}, error: "" },
+      {
+        mocks: { loadUser: { outcome: "ok", value: { id: "u1", name: "Alice" } } },
+        expect: {
+          kind: "state",
+          slots: { users: { u1: { id: "u1", name: "Alice" } }, error: "" },
+          effects: [],
+        },
+      },
+    );
+    expect(r.pass).toBe(true);
+  });
+
+  it("delivers a mocked `err` result to the .err reducer", () => {
+    const r = run(
+      makeFlowApp(),
+      { users: {}, error: "" },
+      {
+        mocks: { loadUser: { outcome: "err", value: "boom" } },
+        expect: { kind: "state", slots: { users: {}, error: "boom" }, effects: [] },
+      },
+    );
+    expect(r.pass).toBe(true);
+  });
+
+  it("`delay(ms, ok(v))` resolves immediately (virtualized time)", () => {
+    const r = run(
+      makeFlowApp(),
+      { users: {}, error: "" },
+      {
+        mocks: { loadUser: { outcome: "ok", value: { id: "u1", name: "Z" }, delayMs: 500 } },
+        expect: {
+          kind: "state",
+          slots: { users: { u1: { id: "u1", name: "Z" } }, error: "" },
+          effects: [],
+        },
+      },
+    );
+    expect(r.pass).toBe(true);
+  });
+
+  it("a non-mocked emit is residual and asserted via expect.effects", () => {
+    const r = run(
+      makeFlowApp(),
+      { users: {}, error: "" },
+      {
+        mocks: {},
+        expect: {
+          kind: "state",
+          slots: { users: {}, error: "" },
+          effects: [{ effect: "loadUser", args: [], argsSpecified: false }],
+        },
+      },
+    );
+    expect(r.pass).toBe(true);
+  });
+
+  it("a mocked `err` with no matching .err reducer fails the test (M2 contract)", () => {
+    const app = makeFlowApp();
+    // Drop the `.err` handler so the error is unhandled.
+    (app as unknown as { reducers: { name: string }[] }).reducers = (
+      app as unknown as { reducers: { name: string }[] }
+    ).reducers.filter((r) => r.name !== "userFailed");
+    const r = run(
+      app,
+      { users: {}, error: "" },
+      {
+        mocks: { loadUser: { outcome: "err", value: "boom" } },
+        expect: { kind: "state", slots: { users: {}, error: "" }, effects: [] },
+      },
+    );
+    expect(r.pass).toBe(false);
+    expect(r.diffAt).toContain("unhandled");
+  });
+});
+
 describe("stdlib collection methods (issue #5)", () => {
   it("listChunk splits into n-sized chunks; last may be shorter", () => {
     expect(_stdlib.listChunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);

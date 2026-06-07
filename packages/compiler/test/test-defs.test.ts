@@ -120,4 +120,35 @@ app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
 test t = reducer-test inc given={slots:{count:0}, event:{type: ui.click, target: B}} expect={slots:{count:1}, effects:[persist(<slots.itms>)]}`;
     expect(checkSrc(src).some((e) => e.code === "E0103" && e.message.includes("itms"))).toBe(true);
   });
+
+  // ----- v0.6 M2: effect-result mocks (spec/testing.md §8.5) -----
+
+  it("accepts a reducer-test with `given.mocks` for a declared effect", () => {
+    const src = `
+type Item = {id: Text}
+slot items : Map(Text, Item) = {}
+slot status : Text = ""
+effect load cap=storage.read in=Unit out=Result(Map(Text, Item), Text) map-request={key: "items", decode: Decoder.Json(Map(Text, Item))}
+reducer reload on=ui.click(B) do= emit load()
+reducer loaded on=load.ok($m, _) do= items := $m
+reducer failed on=load.err($e, _) do= status := $e
+tile B = button(text="reload", onClick=reload)
+tile App = column(B)
+app A caps=[storage.read] routes={"/" -> App, "/404" -> App} init=[]
+test t = reducer-test reload
+  given  = {slots:{items:{}}, event:{type: ui.click, target: B}, mocks:{load: ok({"i1": {id: "i1"}})}}
+  expect = {slots:{items:{"i1": {id: "i1"}}}, effects:[]}`;
+    expect(checkSrc(src)).toEqual([]);
+  });
+
+  it("rejects a mock targeting an undefined effect (E0104)", () => {
+    const src = `
+slot count : Int = 0
+reducer inc on=ui.click(B) do= count := count + 1
+tile B = button(text="+1", onClick=inc)
+tile App = column(B)
+app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+test t = reducer-test inc given={slots:{count:0}, event:{type: ui.click, target: B}, mocks:{nope: ok(1)}} expect={slots:{count:1}, effects:[]}`;
+    expect(checkSrc(src).some((e) => e.code === "E0104" && e.message.includes("nope"))).toBe(true);
+  });
 });

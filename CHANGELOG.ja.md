@@ -10,12 +10,12 @@
 
 言語内 `test` レイヤ（[spec/testing.md](./spec/testing.md) §8）は v0.2 で `reducer-test` / `tile-test` / `kumiki test` ランナー / `fix --auto-patch` を出荷し、§8 の残りは仕様化済み・未実装のまま残った。v0.6 は言語面を閉じる（episode-test は v0.7 に分離——runtime.md §10.5 のランタイム episode ロガーを先に要するため）：
 
-- **M2 (#50) — `reducer-test` 内の effect 結果モック**（`given.mocks`、§8.5 の多段フロー）。
 - **M3 (#51) — `property-test`**（型別ジェネレータ、`invariant`、`count` / `shrink`、カスタムジェネレータ、シード決定論；§8.3）。
 - **M4 (#52) — ランナー仕上げ**——per-test timings + property ケース数の出力、`--coverage`、`--watch`（§8.7）。
 
 ### Added
 
+- **v0.6 M2 (#50) — `reducer-test` 内の effect 結果モック**（`spec/testing.md` §8.5）：reducer が effect を emit し、その結果が別の reducer を駆動する（`loadUser.ok($u, _)`）多段フローは、これまでブラウザ駆動の scenario ランナーでしかテストできなかった。`reducer-test` が `given.mocks = {effect: ok(v) | err(e) | delay(ms, ok(v))}` を受け付けるようになり、ランナーはトリガを dispatch して emit → 結果 → reducer のループを **headless かつ同期**に駆動する（DOM なし・実時間なし）：モックされた effect はその `.ok`/`.err` reducer に配送され（モックの `value` が reducer の第1バインド）**消費**される（よって `expect.effects` に出ない）。モックの無い emit は**残余**として `expect.effects` で照合。`delay(ms, …)` は即時解決（仮想時間・emit 順）。モックのキーは宣言済み effect 名でなければならず（**E0104**）、`.err` reducer が消費しないモック済み `err` は黙って通さず**失敗**させる（v0.5 #37 の no-silent-failure 契約）。`28-tests.kumiki` に `add-surfaces-persist-error`（`persist` を `err` にモックし `.err` reducer を駆動、設定された status をアサート）を追加。
 - **v0.6 M1 (#49) — `reducer-test` の `expect` ワイルドカード**（`spec/testing.md` §8.2.2）：生成された id（`TodoId.fresh()`）など非決定的なフィールドを含む `reducer-test` の結果は、リテラルな `expect` ではアサートできなかった。2 つのワイルドカードがその穴を埋める——`<any-id>` は任意の存在する値に一致（**map キー**位置では、他と一致しないエントリちょうど 1 件と対応；0 件や複数件は失敗）、`<slots.X>` は実行後のスロット `X` の値に一致（例：`effects: [persist(<slots.todos>)]`）。それ以外の一致は**厳密**のまま——レコードは全キー集合で比較し、ワイルドカードは予測不能なフィールド（`createdAt: <any-id>`）だけを潰すので、partial-record マッチで既存アサーションが緩むことはない。`reducer-test` の `expect` 外（本体や test の `given`）のワイルドカードはコンパイルエラー（**新規 E0109 `test-wildcard-misuse`**）。`28-tests.kumiki` に両ワイルドカードを使う `addItem` reducer-test を追加。
 
 - **v0.5 M1 (#39) — example ガードのランタイム真正性検証 tier**：`packages/tests/examples.test.ts` は `compile()` 成功しか、`smoke.test.ts` も例がマウント／描画する（「空でない／throw しない」）ことしか検証しなかったため、「コンパイルは通るが実際は壊れている」例が緑で出荷された——`03-union-and-match` の見出しバグが `_s.show(undefined)` に lower され、空だが存在する見出しを両方すり抜けて描画したのがまさにこれ。新しいコーパスガード（`packages/tests/render-guard.test.ts`）が dropped-expression クラスを狙う：全 example の生成 JS を `_s.show(undefined)` センチネルで静的スキャン（Kumiki ソースに `undefined` リテラルは無く、reducer 読み戻し／selector 無し reducer の偏在する良性 `undefined` とは別物のゼロ誤検出マーカーなので allowlist 不要）し、加えていずれの example もリテラル `"undefined"` に等しいテキストノードを生成しないことを jsdom で描画アサートする。スキャナは `03` の形で発火することを証明済みの単体テスト付き純関数として切り出してあり、再混入した dropped-expression バグは緑で出荷されず `pnpm test` を失敗させる。([spec/testing.md](./spec/testing.md) §8.10)

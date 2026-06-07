@@ -8,6 +8,7 @@ type Item   = {id: ItemId, label: Text}
 slot count : Int = 0
 slot items : Map(ItemId, Item) = {}
 slot draft : Text = ""
+slot status : Text = ""
 
 effect persist cap=storage.write
                in=Map(ItemId, Item)
@@ -23,6 +24,9 @@ reducer addItem on=ui.submit(AddForm) do=
     items[id] := {id, label=draft}
     emit persist(items)
     draft := ""
+
+# Effect-result reducer: drives off persist's `.err` outcome (mockable in a test).
+reducer persistFailed on=persist.err($e, _) do= status := $e
 
 tile IncBtn = button(text="+1", onClick=inc)
 tile DecBtn = button(text="-1", onClick=dec)
@@ -64,3 +68,14 @@ test add-creates-item =
             slots: {items: {<any-id>: {id: <any-id>, label: "Buy milk"}}, draft: ""},
             effects: [persist(<slots.items>)]
         }
+
+# §8.5 effect mock: mock persist's result to err, drive the `.err` reducer, and
+# assert the status it set. The mocked effect is consumed (not in expect.effects).
+test add-surfaces-persist-error =
+    reducer-test addItem
+        given  = {
+            slots: {items: {}, draft: "X"},
+            event: {type: ui.submit, target: AddForm},
+            mocks: {persist: err("disk full")}
+        }
+        expect = {slots: {status: "disk full"}, effects: []}

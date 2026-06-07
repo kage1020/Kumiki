@@ -2016,6 +2016,103 @@ function serializeTileNode(node: unknown): string {
   return `${kind}(${kids.map(serializeTileNode).join(", ")})`;
 }
 
+type ReducerExpect =
+  | { kind: "panic"; message: string }
+  | {
+      kind: "state";
+      slots: Record<string, unknown>;
+      effects: { effect: string; args: unknown[]; argsSpecified?: boolean }[];
+    };
+
+/**
+ * Compare a reducer-test's final state (slots + emitted/residual effects, or a
+ * panic) against `expect`. Shared by the single-apply `runReducerTest` and the
+ * multi-step `runReducerTestFlow`. Honors §8.2.2 wildcards via `wildcardEqual`.
+ */
+function compareReducerExpect(
+  name: string,
+  finalSlots: Record<string, unknown>,
+  emits: { effect: string; args: unknown[] }[],
+  panic: string | null,
+  expect: ReducerExpect,
+  unhandledErr: string | null = null,
+): TestResult {
+  if (expect.kind === "panic") {
+    const pass = panic !== null && String(panic).includes(expect.message);
+    return {
+      name,
+      pass,
+      expected: `panic: ${_jsonStr(expect.message)}`,
+      actual: panic === null ? "(no panic)" : `panic: ${_jsonStr(panic)}`,
+      ...(pass ? {} : { diffAt: "(panic)" }),
+    };
+  }
+  if (panic !== null) {
+    return {
+      name,
+      pass: false,
+      expected: _jsonStr(expect.slots),
+      actual: `panic: ${_jsonStr(panic)}`,
+      diffAt: "(unexpected panic)",
+    };
+  }
+  // M2 (§8.5): a mocked `err` that no `.err` reducer consumes is a dropped error
+  // (the v0.5 #37 contract) — a clear test failure rather than a silent pass.
+  if (unhandledErr !== null) {
+    return {
+      name,
+      pass: false,
+      expected: _jsonStr(expect.slots),
+      actual: `unhandled effect error: ${unhandledErr} (no .err reducer)`,
+      diffAt: "(unhandled effect error)",
+    };
+  }
+  let diffAt: string | undefined;
+  let leaf: { expected: unknown; actual: unknown } | undefined;
+  for (const k of Object.keys(expect.slots)) {
+    // Wildcard-aware (§8.2.2): `expect` is the pattern, `finalSlots[k]` the value.
+    if (!wildcardEqual(expect.slots[k], finalSlots[k], finalSlots)) {
+      diffAt = `slots.${k}`;
+      leaf = { expected: expect.slots[k], actual: finalSlots[k] };
+      break;
+    }
+  }
+  if (diffAt === undefined) {
+    if (emits.length !== expect.effects.length) {
+      diffAt = "effects.length";
+    } else {
+      for (let i = 0; i < expect.effects.length; i++) {
+        const ex = expect.effects[i];
+        const ac = emits[i];
+        if (!ex || !ac || ex.effect !== ac.effect) {
+          diffAt = `effects[${i}].effect`;
+          break;
+        }
+        // A bare effect name (`persist`) matches by name only; `persist(...)`
+        // (even `persist()`) pins the exact argument list. `<slots.X>` args
+        // (§8.2.2) match the post-execution slot value.
+        if (ex.argsSpecified && !wildcardEqual(ex.args, ac.args, finalSlots)) {
+          diffAt = `effects[${i}].args`;
+          break;
+        }
+      }
+    }
+  }
+  const pickExpected = (s: Record<string, unknown>): Record<string, unknown> => {
+    const o: Record<string, unknown> = {};
+    for (const k of Object.keys(expect.slots)) o[k] = s[k];
+    return o;
+  };
+  return {
+    name,
+    pass: diffAt === undefined,
+    expected: `slots=${_jsonStr(expect.slots)} effects=${_jsonStr(expect.effects.map((e) => e.effect))}`,
+    actual: `slots=${_jsonStr(pickExpected(finalSlots))} effects=${_jsonStr(emits.map((e) => e.effect))}`,
+    ...(diffAt ? { diffAt } : {}),
+    ...(leaf ? { leaf } : {}),
+  };
+}
+
 export const _stdlib = {
   // ----- reducer-test `expect` wildcards (spec/testing.md §8.2.2) -----
   /** The wildcard map-key sentinel; codegen lowers a `<any-id>` map key to it. */
@@ -2050,71 +2147,83 @@ export const _stdlib = {
         };
   }): TestResult {
     const { name, givenSlots, result, panic, expect } = input;
-    if (expect.kind === "panic") {
-      const pass = panic !== null && String(panic).includes(expect.message);
-      return {
-        name,
-        pass,
-        expected: `panic: ${_jsonStr(expect.message)}`,
-        actual: panic === null ? "(no panic)" : `panic: ${_jsonStr(panic)}`,
-        ...(pass ? {} : { diffAt: "(panic)" }),
-      };
-    }
-    if (panic !== null) {
-      return {
-        name,
-        pass: false,
-        expected: _jsonStr(expect.slots),
-        actual: `panic: ${_jsonStr(panic)}`,
-        diffAt: "(unexpected panic)",
-      };
-    }
     const finalSlots = { ...givenSlots, ...(result?.slots ?? {}) };
-    let diffAt: string | undefined;
-    let leaf: { expected: unknown; actual: unknown } | undefined;
-    for (const k of Object.keys(expect.slots)) {
-      // Wildcard-aware (§8.2.2): `expect` is the pattern, `finalSlots[k]` the value.
-      if (!wildcardEqual(expect.slots[k], finalSlots[k], finalSlots)) {
-        diffAt = `slots.${k}`;
-        leaf = { expected: expect.slots[k], actual: finalSlots[k] };
-        break;
+    return compareReducerExpect(name, finalSlots, result?.emits ?? [], panic, expect);
+  },
+  /**
+   * Multi-step reducer-test with effect mocks (spec/testing.md §8.5). Dispatches
+   * `target` headlessly, then drives the emit→result→reducer loop: an emitted
+   * effect with a `mocks` entry is delivered to its `.ok`/`.err` reducer (its
+   * result `value` as `$1`); one with no mock is *residual* and asserted via
+   * `expect.effects`. `delay(ms, …)` is resolved immediately (virtualized time —
+   * no real wait, FIFO order). A mocked `err` with no `.err` reducer fails the
+   * test (the v0.5 #37 no-silent-failure contract).
+   */
+  runReducerTestFlow(input: {
+    name: string;
+    app: {
+      live: Record<string, unknown>;
+      slots: Record<string, { value: unknown; refine?: (v: unknown) => boolean }>;
+      reducers: ReducerSpec[];
+    };
+    target: string;
+    el: Record<string, unknown>;
+    mocks: Record<string, { outcome: "ok" | "err"; value?: unknown; delayMs?: number }>;
+    expect: ReducerExpect;
+  }): TestResult {
+    const { name, app, target, el, mocks, expect } = input;
+    const { live, slots } = app;
+    const residual: { effect: string; args: unknown[] }[] = [];
+    const queue: { effect: string; outcome: "ok" | "err"; value: unknown }[] = [];
+    let panic: string | null = null;
+    let unhandledErr: string | null = null;
+
+    const writeSlots = (resSlots: Record<string, unknown> | undefined): void => {
+      for (const [k, v] of Object.entries(resSlots ?? {})) {
+        const meta = slots[k];
+        if (meta?.refine && !meta.refine(v)) continue;
+        live[k] = v;
       }
-    }
-    const emits = result?.emits ?? [];
-    if (diffAt === undefined) {
-      if (emits.length !== expect.effects.length) {
-        diffAt = "effects.length";
-      } else {
-        for (let i = 0; i < expect.effects.length; i++) {
-          const ex = expect.effects[i];
-          const ac = emits[i];
-          if (!ex || !ac || ex.effect !== ac.effect) {
-            diffAt = `effects[${i}].effect`;
-            break;
-          }
-          // A bare effect name (`persist`) matches by name only; `persist(...)`
-          // (even `persist()`) pins the exact argument list. `<slots.X>` args
-          // (§8.2.2) match the post-execution slot value.
-          if (ex.argsSpecified && !wildcardEqual(ex.args, ac.args, finalSlots)) {
-            diffAt = `effects[${i}].args`;
-            break;
+    };
+    const enqueue = (emits: { effect: string; args: unknown[] }[] | undefined): void => {
+      for (const emit of emits ?? []) {
+        const m = mocks[emit.effect];
+        if (m) queue.push({ effect: emit.effect, outcome: m.outcome, value: m.value ?? null });
+        else residual.push(emit);
+      }
+    };
+
+    try {
+      const tr = app.reducers.find((r) => r.name === target);
+      if (!tr) throw new Error(`reducer ${target} not found`);
+      const res0 = tr.apply(live, { $el: el, $event: el });
+      writeSlots(res0.slots);
+      enqueue(res0.emits);
+      let guard = 0;
+      while (queue.length > 0 && guard++ < 10000) {
+        const job = queue.shift();
+        if (!job) break;
+        let matched = 0;
+        for (const r of app.reducers) {
+          if (
+            r.event.kind === "effect" &&
+            r.event.effect === job.effect &&
+            r.event.outcome === job.outcome
+          ) {
+            const res = r.apply(live, { $1: job.value, $2: undefined });
+            writeSlots(res.slots);
+            enqueue(res.emits);
+            matched++;
           }
         }
+        if (job.outcome === "err" && matched === 0 && unhandledErr === null) {
+          unhandledErr = job.effect;
+        }
       }
+    } catch (e) {
+      panic = e && (e as Error).message ? (e as Error).message : String(e);
     }
-    const pickExpected = (s: Record<string, unknown>): Record<string, unknown> => {
-      const o: Record<string, unknown> = {};
-      for (const k of Object.keys(expect.slots)) o[k] = s[k];
-      return o;
-    };
-    return {
-      name,
-      pass: diffAt === undefined,
-      expected: `slots=${_jsonStr(expect.slots)} effects=${_jsonStr(expect.effects.map((e) => e.effect))}`,
-      actual: `slots=${_jsonStr(pickExpected(finalSlots))} effects=${_jsonStr(emits.map((e) => e.effect))}`,
-      ...(diffAt ? { diffAt } : {}),
-      ...(leaf ? { leaf } : {}),
-    };
+    return compareReducerExpect(name, { ...live }, residual, panic, expect, unhandledErr);
   },
   /** Structurally compare a rendered tile against the expected tile structure. */
   runTileTest(input: { name: string; actual: unknown; expected: unknown }): TestResult {

@@ -1093,6 +1093,24 @@ function checkTest(t: TestDef, sym: SymbolTable, errors: KumikiError[]): void {
         pos: t.pos,
       });
     }
+    // §8.5: each `given.mocks` key must name a declared effect — a typo would
+    // otherwise silently never match an emit (the M1-review no-silent-typo rule).
+    const given = t.given;
+    if (given.kind === "RecordLit") {
+      const mocks = given.fields.find((f) => f.name === "mocks")?.value;
+      if (mocks?.kind === "RecordLit") {
+        for (const m of mocks.fields) {
+          if (!sym.effects.has(m.name)) {
+            errors.push({
+              code: "E0104",
+              kind: "undef-effect",
+              message: `Mock targets undefined effect "${m.name}"`,
+              pos: mocks.pos,
+            });
+          }
+        }
+      }
+    }
     return;
   }
   // tile-test

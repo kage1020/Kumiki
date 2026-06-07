@@ -17,7 +17,7 @@ test-expr ::= reducer-test | tile-test | episode-test | property-test
 
 A `test` definition is **the sixth layer**. It is stored in the CRDT graph and run with `kumiki test`. It is not included in the production build.
 
-> **Implementation status (v0.6).** `reducer-test`, `tile-test`, the `kumiki test` runner (name / `prefix*` filtering), `kumiki fix --auto-patch <test-name>` (§8.7.2), and `expect` **wildcards** (`<any-id>` / `<slots.X>`, §8.2.2) are implemented. The runner prints `PASS` / `FAIL` lines plus `expected` / `actual` / `diff at <path>` and, when it can isolate a scalar leaf, the §8.7.1 value arrow (`"a" -> "b"`) on failure — per-test timings and property-test case counts are **not yet** produced. Also still specified but **not yet implemented**: `property-test` and `episode-test`, effect-result mocks inside `reducer-test` (§8.5's multi-step flow — the [scenario runner](#88-integration-tests-browser-driven) covers that shape today), and `--watch` / `--coverage`.
+> **Implementation status (v0.6).** `reducer-test`, `tile-test`, the `kumiki test` runner (name / `prefix*` filtering), `kumiki fix --auto-patch <test-name>` (§8.7.2), `expect` **wildcards** (`<any-id>` / `<slots.X>`, §8.2.2), and **effect-result mocks** inside `reducer-test` (`given.mocks`, §8.5) are implemented. The runner prints `PASS` / `FAIL` lines plus `expected` / `actual` / `diff at <path>` and, when it can isolate a scalar leaf, the §8.7.1 value arrow (`"a" -> "b"`) on failure — per-test timings and property-test case counts are **not yet** produced. Also still specified but **not yet implemented**: `property-test` and `episode-test`, and `--watch` / `--coverage`.
 
 ## 8.2 Reducer Tests
 
@@ -144,6 +144,8 @@ test loadUser-success =
 ```
 
 With `mocks: {effect-name: ok(value) | err(error) | delay(ms, ok(value))}`, you can replace the result of any effect.
+
+The runner dispatches the triggering event, then drives the emit → result → reducer loop headlessly: an emitted effect **with** a `mocks` entry is delivered to its `.ok` / `.err` reducer (the mock's `value` arrives as the reducer's first bind), and the loop continues until quiescent. An emitted effect **without** a mock is *residual* — recorded and asserted via `expect.effects`, with no result delivered (so a mocked effect is "consumed" and does not appear in `expect.effects`, which is why `loadUser` above leaves `effects: []`). `delay(ms, …)` resolves immediately — time is virtualized (no real wait), results process in emit order. A mock's key must name a declared effect (else **E0104**), and a mocked `err` that no `.err` reducer consumes fails the test (the §2.5 no-silent-failure contract), rather than passing silently.
 
 ## 8.6 Episode replay
 

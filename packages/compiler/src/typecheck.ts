@@ -1073,6 +1073,27 @@ function checkTest(t: TestDef, sym: SymbolTable, errors: KumikiError[]): void {
       });
     }
   });
+  if (t.testKind === "property-test") {
+    // The `for-all` types must resolve, and every `run-reducer(name)` in the
+    // invariant must name a declared reducer.
+    for (const f of t.forAll ?? []) resolveType(f.type, sym, errors);
+    const checkRunReducer = (arg: Expr | undefined): void => {
+      const rn = arg?.kind === "Ref" ? arg.name : arg?.kind === "Variant" ? arg.name : undefined;
+      if (rn !== undefined && !sym.reducers.has(rn)) {
+        errors.push({
+          code: "E0102",
+          kind: "undef-reducer",
+          message: `Reference to undefined reducer "${rn}" in run-reducer`,
+          pos: arg?.pos ?? t.pos,
+        });
+      }
+    };
+    walkExpr(t.invariant, (n) => {
+      if (n.kind === "Call" && n.callee === "run-reducer") checkRunReducer(n.args[0]);
+      if (n.kind === "MethodCall" && n.method === "run-reducer") checkRunReducer(n.args[0]);
+    });
+    return;
+  }
   if (t.testKind === "reducer-test") {
     // A reducer-test `expect` is always an Expr (a tile-test's is a TileExpr).
     walkExpr(t.expect as Expr, (n) => {
@@ -1085,7 +1106,7 @@ function checkTest(t: TestDef, sym: SymbolTable, errors: KumikiError[]): void {
         });
       }
     });
-    if (!sym.reducers.has(t.target)) {
+    if (!sym.reducers.has(t.target ?? "")) {
       errors.push({
         code: "E0102",
         kind: "undef-reducer",
@@ -1114,7 +1135,8 @@ function checkTest(t: TestDef, sym: SymbolTable, errors: KumikiError[]): void {
     return;
   }
   // tile-test
-  if (!BUILTIN_TILES.has(t.target) && !sym.tiles.has(t.target)) {
+  const tileTarget = t.target ?? "";
+  if (!BUILTIN_TILES.has(tileTarget) && !sym.tiles.has(tileTarget)) {
     errors.push({
       code: "E0105",
       kind: "undef-tile",

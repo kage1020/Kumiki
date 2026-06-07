@@ -1874,6 +1874,8 @@ export type TestResult = {
    * `kumiki fix --auto-patch` find the responsible source literal.
    */
   leaf?: { expected: unknown; actual: unknown };
+  /** Number of generated cases run by a `property-test` (for the §8.7.1 `(N cases)` tag). */
+  cases?: number;
 };
 
 function _jsonStr(v: unknown): string {
@@ -2113,6 +2115,168 @@ function compareReducerExpect(
   };
 }
 
+// ----- property-test generators / runner (spec/testing.md §8.3) -----
+
+/** A type's generation recipe, emitted by codegen from the `for-all` types. */
+export type GenDesc =
+  | { t: "Int"; min?: number; max?: number }
+  | { t: "Float"; min?: number; max?: number }
+  | { t: "Text"; minLen?: number; maxLen?: number }
+  | { t: "Bool" }
+  | { t: "List"; elem: GenDesc }
+  | { t: "Set"; elem: GenDesc }
+  | { t: "Map"; key: GenDesc; val: GenDesc }
+  | { t: "Option"; inner: GenDesc }
+  | { t: "Result"; ok: GenDesc; err: GenDesc }
+  | { t: "Record"; fields: { name: string; desc: GenDesc }[] }
+  | { t: "Union"; variants: { name: string; payloads: GenDesc[] }[] }
+  | { t: "Unknown" };
+
+/** Deterministic PRNG (mulberry32) so a failing property reproduces exactly. */
+function _rng(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function _hashStr(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+const _GEN_ASCII = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 ";
+
+function genValue(desc: GenDesc, rng: () => number): unknown {
+  switch (desc.t) {
+    case "Int": {
+      const lo = desc.min ?? -1000;
+      const hi = desc.max ?? 1000;
+      return lo + Math.floor(rng() * (hi - lo + 1));
+    }
+    case "Float": {
+      const lo = desc.min ?? -1000;
+      const hi = desc.max ?? 1000;
+      return lo + rng() * (hi - lo);
+    }
+    case "Text": {
+      const minLen = desc.minLen ?? 0;
+      const maxLen = desc.maxLen ?? 50;
+      const len = minLen + Math.floor(rng() * (maxLen - minLen + 1));
+      let s = "";
+      for (let i = 0; i < len; i++) s += _GEN_ASCII[Math.floor(rng() * _GEN_ASCII.length)];
+      return s;
+    }
+    case "Bool":
+      return rng() < 0.5;
+    case "List": {
+      const n = Math.floor(rng() * 11);
+      const a: unknown[] = [];
+      for (let i = 0; i < n; i++) a.push(genValue(desc.elem, rng));
+      return a;
+    }
+    case "Set": {
+      const n = Math.floor(rng() * 11);
+      const o: Record<string, true> = {};
+      for (let i = 0; i < n; i++) o[String(genValue(desc.elem, rng))] = true;
+      return o;
+    }
+    case "Map": {
+      const n = Math.floor(rng() * 11);
+      const o: Record<string, unknown> = {};
+      for (let i = 0; i < n; i++) o[String(genValue(desc.key, rng))] = genValue(desc.val, rng);
+      return o;
+    }
+    case "Option":
+      return rng() < 0.5 ? { _tag: "None" } : { _tag: "Some", _0: genValue(desc.inner, rng) };
+    case "Result":
+      return rng() < 0.5
+        ? { _tag: "Ok", _0: genValue(desc.ok, rng) }
+        : { _tag: "Err", _0: genValue(desc.err, rng) };
+    case "Record": {
+      const o: Record<string, unknown> = {};
+      for (const f of desc.fields) o[f.name] = genValue(f.desc, rng);
+      return o;
+    }
+    case "Union": {
+      const v = desc.variants[Math.floor(rng() * desc.variants.length)];
+      if (!v) return null;
+      const node: Record<string, unknown> = { _tag: v.name };
+      v.payloads.forEach((p, i) => {
+        node[`_${i}`] = genValue(p, rng);
+      });
+      return node;
+    }
+    default:
+      return null;
+  }
+}
+
+/** Candidate values "simpler" than `v`, for shrinking a counterexample. */
+function _shrink(v: unknown): unknown[] {
+  if (typeof v === "number") {
+    if (v === 0) return [];
+    const half = Math.trunc(v / 2);
+    return half === 0 ? [0] : [0, half];
+  }
+  if (typeof v === "string") {
+    if (v === "") return [];
+    return ["", v.slice(0, Math.floor(v.length / 2))];
+  }
+  if (Array.isArray(v)) {
+    if (v.length === 0) return [];
+    const out: unknown[] = [[]];
+    for (let i = 0; i < v.length; i++) out.push([...v.slice(0, i), ...v.slice(i + 1)]);
+    return out;
+  }
+  if (v && typeof v === "object") {
+    const o = v as Record<string, unknown>;
+    if ("_tag" in o) return o._tag === "Some" ? [{ _tag: "None" }] : [];
+    const keys = Object.keys(o);
+    if (keys.length === 0) return [];
+    const out: unknown[] = [{}];
+    for (const k of keys) {
+      const cp = { ...o };
+      delete cp[k];
+      out.push(cp);
+    }
+    return out;
+  }
+  return [];
+}
+
+/** Greedily minimize a failing binding set, holding each var's failure. */
+function shrinkCounterexample(
+  vars: Record<string, GenDesc>,
+  fails: (b: Record<string, unknown>) => boolean,
+  binds: Record<string, unknown>,
+): Record<string, unknown> {
+  let cur = { ...binds };
+  let improved = true;
+  let guard = 0;
+  while (improved && guard++ < 1000) {
+    improved = false;
+    for (const k of Object.keys(vars)) {
+      for (const cand of _shrink(cur[k])) {
+        const next = { ...cur, [k]: cand };
+        if (fails(next)) {
+          cur = next;
+          improved = true;
+          break;
+        }
+      }
+    }
+  }
+  return cur;
+}
+
 export const _stdlib = {
   // ----- reducer-test `expect` wildcards (spec/testing.md §8.2.2) -----
   /** The wildcard map-key sentinel; codegen lowers a `<any-id>` map key to it. */
@@ -2120,6 +2284,78 @@ export const _stdlib = {
   /** Build a value-position wildcard sentinel: `wild("any-id")` / `wild("slot", name)`. */
   wild(kind: "any-id" | "slot", slot?: string): Record<string, unknown> {
     return slot === undefined ? { [WILD]: kind } : { [WILD]: kind, slot };
+  },
+  /** Generate one value for a type descriptor (exposed for testing). */
+  genValue(desc: GenDesc, rng: () => number): unknown {
+    return genValue(desc, rng);
+  },
+  /**
+   * Apply one reducer to a `{slots}` state and return the next `{slots}` — the
+   * `run-reducer(name)` step used inside a `property-test` invariant (§8.3).
+   * Pure w.r.t. the test: it seeds `app.live` from `state.slots`, applies, and
+   * returns a fresh merged slots snapshot (emitted effects are ignored).
+   */
+  runReducerStep(
+    app: {
+      live: Record<string, unknown>;
+      slots: Record<string, { value: unknown; refine?: (v: unknown) => boolean }>;
+      reducers: ReducerSpec[];
+    },
+    state: { slots?: Record<string, unknown> } | undefined,
+    name: string,
+    event: Record<string, unknown>,
+  ): { slots: Record<string, unknown> } {
+    const slots = state?.slots ?? {};
+    this.resetLive(app.live, app.slots, slots);
+    const r = app.reducers.find((x) => x.name === name);
+    if (!r) throw new Error(`reducer "${name}" not found`);
+    const res = r.apply(app.live, { $el: event, $event: event });
+    const next: Record<string, unknown> = { ...slots };
+    for (const [k, v] of Object.entries(res.slots ?? {})) next[k] = v;
+    return { slots: next };
+  },
+  /**
+   * Run a `property-test` (spec/testing.md §8.3): generate `count` (default 100)
+   * cases for the `vars` descriptors with a seeded PRNG (reproducible), check
+   * `trial(binds) === true` each time, and on failure shrink to a minimal
+   * counterexample (unless `shrink === false`).
+   */
+  runPropertyTest(input: {
+    name: string;
+    vars: Record<string, GenDesc>;
+    trial: (binds: Record<string, unknown>) => boolean;
+    count?: number;
+    shrink?: boolean;
+    seed?: number;
+  }): TestResult {
+    const { name, vars, trial } = input;
+    const count = input.count ?? 100;
+    const doShrink = input.shrink ?? true;
+    const rng = _rng(input.seed ?? _hashStr(name));
+    // `fails` is true when the invariant does NOT hold (a throw counts as a fail).
+    const fails = (b: Record<string, unknown>): boolean => {
+      try {
+        return trial(b) !== true;
+      } catch {
+        return true;
+      }
+    };
+    for (let i = 0; i < count; i++) {
+      const binds: Record<string, unknown> = {};
+      for (const k of Object.keys(vars)) binds[k] = genValue(vars[k] as GenDesc, rng);
+      if (fails(binds)) {
+        const minimal = doShrink ? shrinkCounterexample(vars, fails, binds) : binds;
+        return {
+          name,
+          pass: false,
+          expected: "invariant holds for all generated inputs",
+          actual: `counterexample (case ${i + 1}/${count}): ${_jsonStr(minimal)}`,
+          diffAt: "(property)",
+          cases: i + 1,
+        };
+      }
+    }
+    return { name, pass: true, cases: count };
   },
   // ----- in-language test runner (`kumiki test`) -----
   /** Reset live slot state to slot defaults, then apply the test's `given` slots. */

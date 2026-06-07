@@ -32,13 +32,22 @@ export type Def =
 export type TestDef = {
   kind: "TestDef";
   name: string;
-  /** `reducer-test` targets a reducer name; `tile-test` targets a tile name. */
-  testKind: "reducer-test" | "tile-test";
-  target: string;
+  /** `reducer-test` targets a reducer; `tile-test` a tile; `property-test` has no target. */
+  testKind: "reducer-test" | "tile-test" | "property-test";
+  /** Reducer / tile name. Absent for `property-test`. */
+  target?: string;
   /** The `given = { ... }` record literal (interpreted, not codegen'd as-is). */
   given: Expr;
-  /** `expect = { slots, effects }` / `{ panic }` (record) for reducer-test; a tile expression for tile-test. */
-  expect: Expr | TileExpr;
+  /** `expect = { slots, effects }` / `{ panic }` (record) for reducer-test; a tile expression for tile-test. Absent for `property-test`. */
+  expect?: Expr | TileExpr;
+  /** `property-test` only: the `for-all = { name: Type }` generators. */
+  forAll?: { name: string; type: TypeExpr }[];
+  /** `property-test` only: the boolean `invariant` expression checked per case. */
+  invariant?: Expr;
+  /** `property-test` only: trial count (default 100). */
+  count?: number;
+  /** `property-test` only: shrink on failure (default true). */
+  shrink?: boolean;
   pos: Pos;
 };
 

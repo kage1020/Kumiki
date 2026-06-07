@@ -810,6 +810,92 @@ describe("runReducerTestFlow (reducer-test effect mocks)", () => {
   });
 });
 
+// ----- v0.6 M3: property-test generators + runner (spec/testing.md §8.3) -----
+
+describe("runPropertyTest", () => {
+  it("genValue keeps an Int within its [min, max] bounds", () => {
+    const rng = (() => {
+      let i = 0;
+      const seq = [0, 0.25, 0.5, 0.75, 0.999];
+      return () => seq[i++ % seq.length] as number;
+    })();
+    for (let k = 0; k < 20; k++) {
+      const v = _stdlib.genValue({ t: "Int", min: 0, max: 100 }, rng) as number;
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThanOrEqual(100);
+    }
+  });
+
+  it("genValue Text honors minLen (nonempty)", () => {
+    let a = 1;
+    const rng = () => {
+      a = (a * 1103515245 + 12345) & 0x7fffffff;
+      return a / 0x7fffffff;
+    };
+    for (let k = 0; k < 20; k++) {
+      const v = _stdlib.genValue({ t: "Text", minLen: 1, maxLen: 5 }, rng) as string;
+      expect(v.length).toBeGreaterThanOrEqual(1);
+      expect(v.length).toBeLessThanOrEqual(5);
+    }
+  });
+
+  it("passes (and reports the case count) when the invariant always holds", () => {
+    const r = _stdlib.runPropertyTest({
+      name: "always",
+      vars: { n: { t: "Int", min: 0, max: 10 } },
+      trial: (b) => (b.n as number) >= 0,
+    });
+    expect(r.pass).toBe(true);
+    expect(r.cases).toBe(100);
+  });
+
+  it("fails with a counterexample when the invariant is violated", () => {
+    const r = _stdlib.runPropertyTest({
+      name: "too-big",
+      vars: { n: { t: "Int", min: 0, max: 100 } },
+      trial: (b) => (b.n as number) < 5,
+    });
+    expect(r.pass).toBe(false);
+    expect(r.actual).toContain("counterexample");
+    expect(r.cases).toBeGreaterThanOrEqual(1);
+  });
+
+  it("a thrown invariant counts as a failure (not a crash)", () => {
+    const r = _stdlib.runPropertyTest({
+      name: "throws",
+      vars: { n: { t: "Int", min: 0, max: 10 } },
+      trial: () => {
+        throw new Error("boom");
+      },
+    });
+    expect(r.pass).toBe(false);
+  });
+
+  it("is deterministic — the same seed yields the same counterexample", () => {
+    const mk = () =>
+      _stdlib.runPropertyTest({
+        name: "same",
+        vars: { n: { t: "Int", min: 0, max: 100 } },
+        trial: (b) => (b.n as number) < 5,
+        seed: 42,
+      });
+    expect(mk().actual).toBe(mk().actual);
+  });
+
+  it("shrinks a failing List toward the minimal length", () => {
+    const r = _stdlib.runPropertyTest({
+      name: "short-list",
+      vars: { xs: { t: "List", elem: { t: "Int", min: 0, max: 9 } } },
+      trial: (b) => (b.xs as unknown[]).length < 3,
+      seed: 7,
+    });
+    expect(r.pass).toBe(false);
+    // Shrinking drops elements until removing one more would pass: minimal len 3.
+    const m = JSON.parse((r.actual ?? "").replace(/^.*?(\{.*\})$/, "$1")) as { xs: unknown[] };
+    expect(m.xs.length).toBe(3);
+  });
+});
+
 describe("stdlib collection methods (issue #5)", () => {
   it("listChunk splits into n-sized chunks; last may be shorter", () => {
     expect(_stdlib.listChunk([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]]);

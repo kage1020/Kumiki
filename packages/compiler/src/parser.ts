@@ -1613,9 +1613,12 @@ class Parser {
     const name = this.eat("ident").value;
     this.eat("op", "=");
     const kindTok = this.eat("ident");
+    if (kindTok.value === "property-test") {
+      return this.parsePropertyTest(name, start.pos);
+    }
     if (kindTok.value !== "reducer-test" && kindTok.value !== "tile-test") {
       throw new ParseError(
-        `Unknown test kind "${kindTok.value}" (expected reducer-test or tile-test)`,
+        `Unknown test kind "${kindTok.value}" (expected reducer-test, tile-test, or property-test)`,
         kindTok.pos,
       );
     }
@@ -1644,6 +1647,76 @@ class Parser {
       expect,
       pos: start.pos,
     };
+  }
+
+  /** `property-test for-all={n: T, …} given={…} invariant=expr (count=int)? (shrink=bool)?` */
+  private parsePropertyTest(name: string, pos: Pos): TestDef {
+    this.expectIdent("for-all", name);
+    this.eat("op", "=");
+    const forAll = this.parseForAllRecord();
+
+    this.expectIdent("given", name);
+    this.eat("op", "=");
+    const given = this.parseExpr();
+
+    this.expectIdent("invariant", name);
+    this.eat("op", "=");
+    const invariant = this.parseExpr();
+
+    let count: number | undefined;
+    let shrink: boolean | undefined;
+    // Optional `count = int` / `shrink = bool`, in any order.
+    while (this.matchT("ident", "count") || this.matchT("ident", "shrink")) {
+      const kw = this.next();
+      this.eat("op", "=");
+      if ("value" in kw && kw.value === "count") {
+        const n = this.eat("num");
+        count = n.value;
+      } else {
+        const b = this.peek();
+        if (b.kind === "kw" && (b.value === "true" || b.value === "false")) {
+          this.next();
+          shrink = b.value === "true";
+        } else {
+          throw new ParseError(`property-test "${name}" shrink must be true/false`, b.pos);
+        }
+      }
+    }
+
+    return {
+      kind: "TestDef",
+      name,
+      testKind: "property-test",
+      given,
+      forAll,
+      invariant,
+      ...(count !== undefined ? { count } : {}),
+      ...(shrink !== undefined ? { shrink } : {}),
+      pos,
+    };
+  }
+
+  private expectIdent(word: string, testName: string): void {
+    const t = this.eat("ident");
+    if (t.value !== word) {
+      throw new ParseError(`Expected "${word}" in test "${testName}"`, t.pos);
+    }
+  }
+
+  /** `{ name: TypeExpr, … }` — the `for-all` generators (types, not values). */
+  private parseForAllRecord(): { name: string; type: TypeExpr }[] {
+    this.eat("op", "{");
+    const out: { name: string; type: TypeExpr }[] = [];
+    if (!this.matchOp("}")) {
+      do {
+        const id = this.eat("ident").value;
+        this.eat("op", ":");
+        const type = this.parseTypeExpr();
+        out.push({ name: id, type });
+      } while (this.matchOp(",") && (this.next(), true));
+    }
+    this.eat("op", "}");
+    return out;
   }
 
   private parseQualifiedList(): string[] {

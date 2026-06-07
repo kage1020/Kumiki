@@ -17,7 +17,7 @@ test-expr ::= reducer-test | tile-test | episode-test | property-test
 
 A `test` definition is **the sixth layer**. It is stored in the CRDT graph and run with `kumiki test`. It is not included in the production build.
 
-> **Implementation status (v0.6).** `reducer-test`, `tile-test`, the `kumiki test` runner (name / `prefix*` filtering), `kumiki fix --auto-patch <test-name>` (§8.7.2), `expect` **wildcards** (`<any-id>` / `<slots.X>`, §8.2.2), and **effect-result mocks** inside `reducer-test` (`given.mocks`, §8.5) are implemented. The runner prints `PASS` / `FAIL` lines plus `expected` / `actual` / `diff at <path>` and, when it can isolate a scalar leaf, the §8.7.1 value arrow (`"a" -> "b"`) on failure — per-test timings and property-test case counts are **not yet** produced. Also still specified but **not yet implemented**: `property-test` and `episode-test`, and `--watch` / `--coverage`.
+> **Implementation status (v0.6).** `reducer-test`, `tile-test`, `property-test` (§8.3), the `kumiki test` runner (name / `prefix*` filtering), `kumiki fix --auto-patch <test-name>` (§8.7.2), `expect` **wildcards** (`<any-id>` / `<slots.X>`, §8.2.2), and **effect-result mocks** inside `reducer-test` (`given.mocks`, §8.5) are implemented. The runner prints `PASS` / `FAIL` lines plus `expected` / `actual` / `diff at <path>`, the property-test case count (`(100 cases)`), and — when it can isolate a scalar leaf — the §8.7.1 value arrow (`"a" -> "b"`) on failure; per-test **timings** are **not yet** produced. Also still specified but **not yet implemented**: `episode-test`, and `--watch` / `--coverage`.
 
 ## 8.2 Reducer Tests
 
@@ -97,7 +97,9 @@ Each type has an automatic generator:
 | `Option(T)` | 50% None / 50% Some |
 | `Result(T, E)` | 50% Ok / 50% Err |
 | `nominal T` | T's generator |
-| `refinement T where p` | generate T and reject until p is satisfied |
+| `refinement T where p` | generate T constrained by p |
+| record `{…}` | each field generated recursively |
+| union | a random variant, payloads generated recursively |
 
 Custom generators:
 
@@ -107,6 +109,8 @@ test foo =
         for-all = {x: Int where between(0, 100)}
         ...
 ```
+
+> **Implementation note.** A refinement folds into its base generator as a bound rather than reject-sampling: `between(a, b)` constrains the numeric range, `nonempty` / `len-*` the string length, `positive` the lower bound. Refinements with no generator constraint (`uuid` / `email` / `url`) generate the unconstrained base type (the runtime does not enforce them either, so the value is an opaque token). Generation is **seeded** (default: a hash of the test name), so a failing case reproduces exactly across runs; on failure the counterexample is **shrunk** (unless `shrink = false`) toward a minimal value (numbers → 0, strings → "", collections → fewer elements). `run-reducer(name)` inside `invariant` applies a reducer to the current `{slots}` state using the `given` event and returns the next state, so steps chain (`run-reducer(toggle).run-reducer(toggle).slots.todos`).
 
 ## 8.4 Tile snapshot Tests
 

@@ -6,7 +6,17 @@
 
 ## [Unreleased]
 
+### Planned — v0.6（testing DSL の完成）
+
+言語内 `test` レイヤ（[spec/testing.md](./spec/testing.md) §8）は v0.2 で `reducer-test` / `tile-test` / `kumiki test` ランナー / `fix --auto-patch` を出荷し、§8 の残りは仕様化済み・未実装のまま残った。v0.6 は言語面を閉じる（episode-test は v0.7 に分離——runtime.md §10.5 のランタイム episode ロガーを先に要するため）：
+
+- **M2 (#50) — `reducer-test` 内の effect 結果モック**（`given.mocks`、§8.5 の多段フロー）。
+- **M3 (#51) — `property-test`**（型別ジェネレータ、`invariant`、`count` / `shrink`、カスタムジェネレータ、シード決定論；§8.3）。
+- **M4 (#52) — ランナー仕上げ**——per-test timings + property ケース数の出力、`--coverage`、`--watch`（§8.7）。
+
 ### Added
+
+- **v0.6 M1 (#49) — `reducer-test` の `expect` ワイルドカード**（`spec/testing.md` §8.2.2）：生成された id（`TodoId.fresh()`）など非決定的なフィールドを含む `reducer-test` の結果は、リテラルな `expect` ではアサートできなかった。2 つのワイルドカードがその穴を埋める——`<any-id>` は任意の存在する値に一致（**map キー**位置では、他と一致しないエントリちょうど 1 件と対応；0 件や複数件は失敗）、`<slots.X>` は実行後のスロット `X` の値に一致（例：`effects: [persist(<slots.todos>)]`）。それ以外の一致は**厳密**のまま——レコードは全キー集合で比較し、ワイルドカードは予測不能なフィールド（`createdAt: <any-id>`）だけを潰すので、partial-record マッチで既存アサーションが緩むことはない。`reducer-test` の `expect` 外（本体や test の `given`）のワイルドカードはコンパイルエラー（**新規 E0109 `test-wildcard-misuse`**）。`28-tests.kumiki` に両ワイルドカードを使う `addItem` reducer-test を追加。
 
 - **v0.5 M1 (#39) — example ガードのランタイム真正性検証 tier**：`packages/tests/examples.test.ts` は `compile()` 成功しか、`smoke.test.ts` も例がマウント／描画する（「空でない／throw しない」）ことしか検証しなかったため、「コンパイルは通るが実際は壊れている」例が緑で出荷された——`03-union-and-match` の見出しバグが `_s.show(undefined)` に lower され、空だが存在する見出しを両方すり抜けて描画したのがまさにこれ。新しいコーパスガード（`packages/tests/render-guard.test.ts`）が dropped-expression クラスを狙う：全 example の生成 JS を `_s.show(undefined)` センチネルで静的スキャン（Kumiki ソースに `undefined` リテラルは無く、reducer 読み戻し／selector 無し reducer の偏在する良性 `undefined` とは別物のゼロ誤検出マーカーなので allowlist 不要）し、加えていずれの example もリテラル `"undefined"` に等しいテキストノードを生成しないことを jsdom で描画アサートする。スキャナは `03` の形で発火することを証明済みの単体テスト付き純関数として切り出してあり、再混入した dropped-expression バグは緑で出荷されず `pnpm test` を失敗させる。([spec/testing.md](./spec/testing.md) §8.10)
 - **v0.5 M2 (#37) — effect エラーの no-silent-failure 契約**：`localStorage` が使えない（opaque-origin サンドボックスプレビュー、プライベートモード）と storage capability は `err` を返すが、`20-effect-storage` は `.ok` しか配線しておらず、エラーが捨てられアプリが死んで見えた。M2 は v0.3 の live-panic エートス（「失敗は決して黙って失敗してはならない」）を **effect 結果**へ拡張する：対応する `.err` reducer の**無い** `err` outcome は `console.error`（`[kumiki] effect "<name>" returned an error with no .err reducer: …`）で surface され、検証 tier（`console.error` を捕捉する `smoke` / `runScenario`）が検知する——storage に限らず全 capability で一般的。デフォルト契約は **`err` + surface された報告**のまま；プログラムは `.err` reducer（空でもよい）を配線してエラーを処理（または意図的に無視）することを選び、in-memory storage フォールバックは silent なデフォルトには明示的にしない。`20-effect-storage` と `27-custom-capability` は `.err` 分岐（可視の `unavailable` / `no provider` ステータス）をモデル化した。_（実装上の注：チャネルは roadmap が当初スケッチした dev 限定 `console.warn` ではなく `console.error`——live-panic モデルとの一貫性、および検証 tier が `console.error` を捕捉して失敗を無視不能にするため。）_ ([spec/stdlib.md](./spec/stdlib.md) §2.5)

@@ -106,6 +106,14 @@ A `recv.member` access where the **inferred type** of `recv` is known, but `memb
 
 **Fix**: Correct the member name, or — if `recv` is a record — use a field that exists. See [Standard Library](./stdlib.md) §2.2.3.
 
+### E0109 `test-wildcard-misuse`
+
+A test wildcard (`<any-id>` / `<slots.X>`) appears outside a `reducer-test` `expect` — in a reducer/tile/fn/app body, or in a test's `given`. Wildcards are a matching construct for the expected result only (§8.2.2); they have no meaning as a value to compute or feed in.
+
+> `Test wildcard "<any-id>" is only valid inside a reducer-test \`expect\``
+
+**Fix**: Remove the wildcard, or move it into the `reducer-test` `expect`.
+
 ## E02xx — Types
 
 ### E0201 `type-mismatch`

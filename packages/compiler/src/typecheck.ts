@@ -748,6 +748,14 @@ function checkExpr(e: Expr, sym: SymbolTable, errors: KumikiError[], ctx: Ctx): 
         checkExpr(a, sym, errors, inner);
       }
       return;
+    case "Wildcard":
+      errors.push({
+        code: "E0109",
+        kind: "test-wildcard-misuse",
+        message: `Test wildcard "${wildcardText(e)}" is only valid inside a reducer-test \`expect\``,
+        pos: e.pos,
+      });
+      return;
     case "RecordLit":
       for (const f of e.fields) checkExpr(f.value, sym, errors, ctx);
       return;
@@ -985,8 +993,98 @@ function checkEffect(eff: EffectDef, sym: SymbolTable, errors: KumikiError[]): v
     });
 }
 
+function wildcardText(e: Expr & { kind: "Wildcard" }): string {
+  return e.wild === "any-id" ? "<any-id>" : `<slots.${e.slot}>`;
+}
+
+/**
+ * Visit every node of an expression tree (pre-order). A test's `given` / `expect`
+ * are not routed through `checkExpr`, so wildcard enforcement walks them directly;
+ * a generic walk keeps a wildcard from escaping under any nesting (e.g. a
+ * `FieldAccess` base), which a per-form scan would miss as the grammar grows.
+ */
+function walkExpr(e: Expr | undefined, visit: (n: Expr) => void): void {
+  if (!e) return;
+  visit(e);
+  switch (e.kind) {
+    case "BinOp":
+      walkExpr(e.lhs, visit);
+      walkExpr(e.rhs, visit);
+      return;
+    case "UnaryOp":
+      walkExpr(e.rhs, visit);
+      return;
+    case "FieldAccess":
+      walkExpr(e.base, visit);
+      return;
+    case "Index":
+      walkExpr(e.base, visit);
+      walkExpr(e.index, visit);
+      return;
+    case "Call":
+      for (const a of e.args) walkExpr(a, visit);
+      return;
+    case "MethodCall":
+      walkExpr(e.receiver, visit);
+      for (const a of e.args) walkExpr(a, visit);
+      return;
+    case "RecordLit":
+      for (const f of e.fields) walkExpr(f.value, visit);
+      return;
+    case "ListLit":
+      for (const it of e.items) walkExpr(it, visit);
+      return;
+    case "MapLit":
+      for (const en of e.entries) {
+        walkExpr(en.key, visit);
+        walkExpr(en.value, visit);
+      }
+      return;
+    case "MatchExpr":
+      walkExpr(e.scrutinee, visit);
+      for (const arm of e.arms) walkExpr(arm.body, visit);
+      return;
+    case "IfExpr":
+      walkExpr(e.cond, visit);
+      walkExpr(e.consequent, visit);
+      walkExpr(e.alternate, visit);
+      return;
+    case "LetIn":
+      walkExpr(e.value, visit);
+      walkExpr(e.body, visit);
+      return;
+    case "Variant":
+      for (const p of e.payload) walkExpr(p, visit);
+      return;
+  }
+}
+
 function checkTest(t: TestDef, sym: SymbolTable, errors: KumikiError[]): void {
+  // Wildcards are legal only in a reducer-test `expect`. The `given` (both kinds)
+  // and a tile-test `expect` must not use them (E0109); a reducer-test `expect`
+  // may, but a `<slots.X>` there must name a real slot (E0103).
+  walkExpr(t.given, (n) => {
+    if (n.kind === "Wildcard") {
+      errors.push({
+        code: "E0109",
+        kind: "test-wildcard-misuse",
+        message: `Test wildcard "${wildcardText(n)}" is only valid inside a reducer-test \`expect\``,
+        pos: n.pos,
+      });
+    }
+  });
   if (t.testKind === "reducer-test") {
+    // A reducer-test `expect` is always an Expr (a tile-test's is a TileExpr).
+    walkExpr(t.expect as Expr, (n) => {
+      if (n.kind === "Wildcard" && n.wild === "slot" && !sym.slots.has(n.slot)) {
+        errors.push({
+          code: "E0103",
+          kind: "undef-slot",
+          message: `Reference to undefined slot "${n.slot}" in <slots.${n.slot}>`,
+          pos: n.pos,
+        });
+      }
+    });
     if (!sym.reducers.has(t.target)) {
       errors.push({
         code: "E0102",

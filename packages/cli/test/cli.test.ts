@@ -74,7 +74,8 @@ describe("kumiki test (in-language test runner)", () => {
     expect(out).toContain("PASS  inc-increments");
     expect(out).toContain("PASS  app-renders-count");
     expect(out).toContain("PASS  greeting-renders-input");
-    expect(out).toContain("4/4 passed");
+    expect(out).toContain("PASS  add-creates-item");
+    expect(out).toContain("5/5 passed");
   });
 
   it("filters by a name prefix", { timeout: 30000 }, () => {

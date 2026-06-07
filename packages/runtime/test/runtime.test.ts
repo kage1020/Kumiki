@@ -558,6 +558,123 @@ describe("in-language test runner helpers", () => {
     expect(r.pass).toBe(false);
     expect(r.leaf).toBeUndefined();
   });
+
+  // ----- v0.6 M1: `expect` wildcards (spec/testing.md §8.2.2) -----
+
+  it("wildcard <any-id> matches any value at a slot position", () => {
+    const r = _stdlib.runReducerTest({
+      name: "t",
+      givenSlots: {},
+      result: { slots: { id: "9ab3-generated-uuid" }, emits: [] },
+      panic: null,
+      expect: { kind: "state", slots: { id: _stdlib.wild("any-id") }, effects: [] },
+    });
+    expect(r.pass).toBe(true);
+  });
+
+  it("wildcard <slots.X> in an effect arg matches the post-execution slot value", () => {
+    const r = _stdlib.runReducerTest({
+      name: "t",
+      givenSlots: {},
+      result: {
+        slots: { todos: { a: { text: "Hi" } } },
+        emits: [{ effect: "persist", args: [{ a: { text: "Hi" } }] }],
+      },
+      panic: null,
+      expect: {
+        kind: "state",
+        slots: { todos: { a: { text: "Hi" } } },
+        effects: [
+          { effect: "persist", args: [_stdlib.wild("slot", "todos")], argsSpecified: true },
+        ],
+      },
+    });
+    expect(r.pass).toBe(true);
+  });
+
+  it("a <slots.X> effect arg fails when it does not equal the slot value", () => {
+    const r = _stdlib.runReducerTest({
+      name: "t",
+      givenSlots: {},
+      result: {
+        slots: { todos: { a: 1 } },
+        emits: [{ effect: "persist", args: [{ a: 2 }] }],
+      },
+      panic: null,
+      expect: {
+        kind: "state",
+        slots: { todos: { a: 1 } },
+        effects: [
+          { effect: "persist", args: [_stdlib.wild("slot", "todos")], argsSpecified: true },
+        ],
+      },
+    });
+    expect(r.pass).toBe(false);
+    expect(r.diffAt).toContain("args");
+  });
+
+  it("a <any-id> map key matches exactly one generated entry (value shape compared)", () => {
+    const r = _stdlib.runReducerTest({
+      name: "t",
+      givenSlots: {},
+      result: {
+        slots: {
+          todos: { "uuid-xyz": { id: "uuid-xyz", text: "Hello", done: false, createdAt: 1717 } },
+          draft: "",
+        },
+        emits: [],
+      },
+      panic: null,
+      expect: {
+        kind: "state",
+        slots: {
+          todos: {
+            [_stdlib.WILD_KEY]: {
+              id: _stdlib.wild("any-id"),
+              text: "Hello",
+              done: false,
+              createdAt: _stdlib.wild("any-id"),
+            },
+          },
+          draft: "",
+        },
+        effects: [],
+      },
+    });
+    expect(r.pass).toBe(true);
+  });
+
+  it("a <any-id> map key fails when zero entries match (AC1)", () => {
+    const r = _stdlib.runReducerTest({
+      name: "t",
+      givenSlots: {},
+      result: { slots: { todos: {} }, emits: [] },
+      panic: null,
+      expect: {
+        kind: "state",
+        slots: { todos: { [_stdlib.WILD_KEY]: { text: "Hello" } } },
+        effects: [],
+      },
+    });
+    expect(r.pass).toBe(false);
+    expect(r.diffAt).toBe("slots.todos");
+  });
+
+  it("a <any-id> map key fails when more than one entry is present (AC1)", () => {
+    const r = _stdlib.runReducerTest({
+      name: "t",
+      givenSlots: {},
+      result: { slots: { todos: { a: { text: "Hello" }, b: { text: "Hello" } } }, emits: [] },
+      panic: null,
+      expect: {
+        kind: "state",
+        slots: { todos: { [_stdlib.WILD_KEY]: { text: "Hello" } } },
+        effects: [],
+      },
+    });
+    expect(r.pass).toBe(false);
+    expect(r.diffAt).toBe("slots.todos");
+  });
 });
 
 describe("stdlib collection methods (issue #5)", () => {

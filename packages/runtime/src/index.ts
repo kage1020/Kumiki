@@ -1903,6 +1903,64 @@ function deepEqualValue(a: unknown, b: unknown): boolean {
   return ak.every((k) => Object.hasOwn(bo, k) && deepEqualValue(ao[k], bo[k]));
 }
 
+// ----- reducer-test `expect` wildcards (spec/testing.md §8.2.2) -----
+// `@@`-prefixed sentinels never collide with a Kumiki field name (identifiers
+// are alphanumeric + hyphen, so `@` can never appear in one).
+const WILD = "@@kumiki:wild";
+/** A wildcard map key (`<any-id>` in key position): pairs with the one generated entry. */
+const WILD_KEY = "@@kumiki:wild-key";
+
+function isWildValue(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === "object" && Object.hasOwn(v, WILD);
+}
+
+/**
+ * Wildcard-aware structural match for reducer-test `expect` (§8.2.2). Records are
+ * matched by exact key set; `<any-id>` (value) matches any present value, a
+ * `<any-id>` map key pairs with exactly one otherwise-unmatched entry (0 or >1 →
+ * fail), and `<slots.X>` matches slot X's post-execution value. Falls back to
+ * deep equality when no wildcard is involved.
+ */
+function wildcardEqual(
+  expected: unknown,
+  actual: unknown,
+  finalSlots: Record<string, unknown>,
+): boolean {
+  if (isWildValue(expected)) {
+    const kind = expected[WILD];
+    if (kind === "any-id") return actual !== undefined;
+    if (kind === "slot") return deepEqualValue(actual, finalSlots[expected.slot as string]);
+    return false;
+  }
+  if (expected === actual) return true;
+  if (
+    expected === null ||
+    actual === null ||
+    typeof expected !== "object" ||
+    typeof actual !== "object"
+  ) {
+    return false;
+  }
+  const eArr = Array.isArray(expected);
+  const aArr = Array.isArray(actual);
+  if (eArr || aArr) {
+    if (!eArr || !aArr || expected.length !== actual.length) return false;
+    return expected.every((x, i) => wildcardEqual(x, (actual as unknown[])[i], finalSlots));
+  }
+  const eo = expected as Record<string, unknown>;
+  const ao = actual as Record<string, unknown>;
+  const literalKeys = Object.keys(eo).filter((k) => k !== WILD_KEY);
+  for (const k of literalKeys) {
+    if (!Object.hasOwn(ao, k) || !wildcardEqual(eo[k], ao[k], finalSlots)) return false;
+  }
+  const leftover = Object.keys(ao).filter((k) => !literalKeys.includes(k));
+  if (Object.hasOwn(eo, WILD_KEY)) {
+    if (leftover.length !== 1) return false;
+    return wildcardEqual(eo[WILD_KEY], ao[leftover[0] as string], finalSlots);
+  }
+  return leftover.length === 0;
+}
+
 function tileField(node: unknown, k: string): unknown {
   return (node as Record<string, unknown> | null | undefined)?.[k];
 }
@@ -1959,6 +2017,13 @@ function serializeTileNode(node: unknown): string {
 }
 
 export const _stdlib = {
+  // ----- reducer-test `expect` wildcards (spec/testing.md §8.2.2) -----
+  /** The wildcard map-key sentinel; codegen lowers a `<any-id>` map key to it. */
+  WILD_KEY,
+  /** Build a value-position wildcard sentinel: `wild("any-id")` / `wild("slot", name)`. */
+  wild(kind: "any-id" | "slot", slot?: string): Record<string, unknown> {
+    return slot === undefined ? { [WILD]: kind } : { [WILD]: kind, slot };
+  },
   // ----- in-language test runner (`kumiki test`) -----
   /** Reset live slot state to slot defaults, then apply the test's `given` slots. */
   resetLive(
@@ -2008,7 +2073,8 @@ export const _stdlib = {
     let diffAt: string | undefined;
     let leaf: { expected: unknown; actual: unknown } | undefined;
     for (const k of Object.keys(expect.slots)) {
-      if (!deepEqualValue(finalSlots[k], expect.slots[k])) {
+      // Wildcard-aware (§8.2.2): `expect` is the pattern, `finalSlots[k]` the value.
+      if (!wildcardEqual(expect.slots[k], finalSlots[k], finalSlots)) {
         diffAt = `slots.${k}`;
         leaf = { expected: expect.slots[k], actual: finalSlots[k] };
         break;
@@ -2027,8 +2093,9 @@ export const _stdlib = {
             break;
           }
           // A bare effect name (`persist`) matches by name only; `persist(...)`
-          // (even `persist()`) pins the exact argument list.
-          if (ex.argsSpecified && !deepEqualValue(ac.args, ex.args)) {
+          // (even `persist()`) pins the exact argument list. `<slots.X>` args
+          // (§8.2.2) match the post-execution slot value.
+          if (ex.argsSpecified && !wildcardEqual(ex.args, ac.args, finalSlots)) {
             diffAt = `effects[${i}].args`;
             break;
           }

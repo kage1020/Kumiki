@@ -17,7 +17,7 @@ test-expr ::= reducer-test | tile-test | episode-test | property-test
 
 A `test` definition is **the sixth layer**. It is stored in the CRDT graph and run with `kumiki test`. It is not included in the production build.
 
-> **Implementation status (v0.2).** `reducer-test`, `tile-test`, the `kumiki test` runner (name / `prefix*` filtering), and `kumiki fix --auto-patch <test-name>` (§8.7.2) are implemented. The runner prints `PASS` / `FAIL` lines plus `expected` / `actual` / `diff at <path>` and, when it can isolate a scalar leaf, the §8.7.1 value arrow (`"a" -> "b"`) on failure — per-test timings and property-test case counts are **not yet** produced. Also still specified but **not yet implemented**: `property-test` and `episode-test`, `expect` wildcards (`<any-id>` / `<slots.X>`), effect-result mocks inside `reducer-test` (§8.5's multi-step flow — the [scenario runner](#88-integration-tests-browser-driven) covers that shape today), and `--watch` / `--coverage`.
+> **Implementation status (v0.6).** `reducer-test`, `tile-test`, the `kumiki test` runner (name / `prefix*` filtering), `kumiki fix --auto-patch <test-name>` (§8.7.2), and `expect` **wildcards** (`<any-id>` / `<slots.X>`, §8.2.2) are implemented. The runner prints `PASS` / `FAIL` lines plus `expected` / `actual` / `diff at <path>` and, when it can isolate a scalar leaf, the §8.7.1 value arrow (`"a" -> "b"`) on failure — per-test timings and property-test case counts are **not yet** produced. Also still specified but **not yet implemented**: `property-test` and `episode-test`, effect-result mocks inside `reducer-test` (§8.5's multi-step flow — the [scenario runner](#88-integration-tests-browser-driven) covers that shape today), and `--watch` / `--coverage`.
 
 ## 8.2 Reducer Tests
 
@@ -48,6 +48,8 @@ effect-list ::= '[' (effect-call (',' effect-call)*)? ']'
 ### 8.2.2 Wildcards
 
 `<any-id>` means "any generated ID," and `<slots.todos>` means "a reference to the slot value after execution."
+
+A wildcard is legal only inside a `reducer-test` `expect` (anywhere else is **E0109**). Matching is otherwise **exact**: records are compared by their full key set, with wildcards filling the holes a deterministic test cannot predict. As a **value**, `<any-id>` matches any present value (e.g. a freshly generated id) and `<slots.X>` matches slot `X`'s post-execution value. As a **map key**, `<any-id>` pairs with exactly one otherwise-unmatched entry — zero or more than one is a failure. Use a value wildcard to blank out other non-deterministic fields (e.g. `createdAt: <any-id>`) rather than relying on partial-record matching.
 
 ### 8.2.3 Expecting a panic
 

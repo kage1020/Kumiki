@@ -2,18 +2,36 @@
 # A reducer-test checks a reducer's pure output; a tile-test checks rendered
 # structure. Tests are excluded from the production build.
 
+type ItemId = nominal Text where uuid
+type Item   = {id: ItemId, label: Text}
+
 slot count : Int = 0
+slot items : Map(ItemId, Item) = {}
+slot draft : Text = ""
+
+effect persist cap=storage.write
+               in=Map(ItemId, Item)
+               out=Result(Unit, Text)
 
 reducer inc on=ui.click(IncBtn) do= count := count + 1
 reducer dec on=ui.click(DecBtn) do= count := count - 1
 
+# Generates a fresh id, so its slot result + emitted effect arg cannot be
+# predicted literally — `<any-id>` / `<slots.X>` wildcards (§8.2.2) match them.
+reducer addItem on=ui.submit(AddForm) do=
+    let id = ItemId.fresh()
+    items[id] := {id, label=draft}
+    emit persist(items)
+    draft := ""
+
 tile IncBtn = button(text="+1", onClick=inc)
 tile DecBtn = button(text="-1", onClick=dec)
+tile AddForm = form(input(bind=draft))
 tile Greeting in=Text = heading("Hi, " + $1)
-tile App = column(heading("Count: " + count.show), row(DecBtn, IncBtn)) {pad: "lg", gap: "md"}
+tile App = column(heading("Count: " + count.show), row(DecBtn, IncBtn), AddForm) {pad: "lg", gap: "md"}
 
 app TestsFeature
-    caps   = []
+    caps   = [storage.write]
     routes = {"/" -> App, "/404" -> App}
     init   = []
 
@@ -30,9 +48,19 @@ test dec-decrements =
 test app-renders-count =
     tile-test App
         given  = {slots: {count: 5}}
-        expect = column(heading("Count: 5"), row(button(text="-1"), button(text="+1")))
+        expect = column(heading("Count: 5"), row(button(text="-1"), button(text="+1")), form(input()))
 
 test greeting-renders-input =
     tile-test Greeting
         given  = {slots: {}, in: "Ada"}
         expect = heading("Hi, Ada")
+
+# Wildcards (§8.2.2): `<any-id>` matches the generated key + id, `<slots.items>`
+# matches the slot value the effect was emitted with.
+test add-creates-item =
+    reducer-test addItem
+        given  = {slots: {items: {}, draft: "Buy milk"}, event: {type: ui.submit, target: AddForm}}
+        expect = {
+            slots: {items: {<any-id>: {id: <any-id>, label: "Buy milk"}}, draft: ""},
+            effects: [persist(<slots.items>)]
+        }

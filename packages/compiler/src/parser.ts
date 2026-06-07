@@ -1708,12 +1708,14 @@ class Parser {
     this.eat("op", "{");
     const out: { name: string; type: TypeExpr }[] = [];
     if (!this.matchOp("}")) {
-      do {
+      while (true) {
         const id = this.eat("ident").value;
         this.eat("op", ":");
         const type = this.parseTypeExpr();
         out.push({ name: id, type });
-      } while (this.matchOp(",") && (this.next(), true));
+        if (!this.matchOp(",")) break;
+        this.next();
+      }
     }
     this.eat("op", "}");
     return out;

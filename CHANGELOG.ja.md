@@ -6,14 +6,11 @@
 
 ## [Unreleased]
 
-### Planned — v0.6（testing DSL の完成）
-
-言語内 `test` レイヤ（[spec/testing.md](./spec/testing.md) §8）は v0.2 で `reducer-test` / `tile-test` / `kumiki test` ランナー / `fix --auto-patch` を出荷し、§8 の残りは仕様化済み・未実装のまま残った。v0.6 は言語面を閉じる（episode-test は v0.7 に分離——runtime.md §10.5 のランタイム episode ロガーを先に要するため）：
-
-- **M4 (#52) — ランナー仕上げ**——per-test timings の出力、`--coverage`、`--watch`（§8.7）。
-
 ### Added
 
+v0.6——**testing DSL の完成**マイルストーン——は、v0.2 で部分出荷した言語内 `test` レイヤ（[spec/testing.md](./spec/testing.md) §8）の言語面を閉じる（`episode-test` は v0.7 に分離——runtime.md §10.5 のランタイム episode ロガーを先に要するため）。
+
+- **v0.6 M4 (#52) — `kumiki test` ランナー仕上げ**（`spec/testing.md` §8.7）：各行に **per-test timings** を表示するようになった（`PASS inc-increments (1ms)`；property-test はケース数も付与し `(100 cases, 23ms)`）。新規 **`--coverage`** は reducer / effect / tile ごとにスイートが何件を exercise したかと未カバー名を表示する——reducer-test/property-test はターゲット reducer とそれが emit する effect をカバーし、モックされた effect 結果はそれが駆動する `.ok`/`.err` reducer もカバー、tile-test はその tile をカバー（codegen が `globalThis.__kumikiCoverage` へ静的に算出）。新規 **`--watch`** は `.kumiki` 変更時に（フィルタ済み）スイートを再実行する（デバウンス付き、Ctrl-C でクリーン終了）。
 - **v0.6 M3 (#51) — `property-test`**（`spec/testing.md` §8.3）：reducer 不変条件の生成的テスト。`property-test for-all={n: T, …} given={…} invariant=<bool式> (count=N)? (shrink=bool)?` が型ごとに `count`（既定 100）ケースを生成する——`Int`/`Float`/`Text`/`Bool`/`List`/`Map`/`Set`/`Option`/`Result`、加えてレコード（フィールドごと）・ユニオン（ランダムな variant）。refinement は reject-sampling ではなく基底ジェネレータの**制約**に畳み込む（`between`→範囲、`nonempty`/`len-*`→長さ、`positive`→下限）。`invariant` は `run-reducer(name)` を連鎖でき（各ステップが現在の `{slots}` 状態に `given` イベントで reducer を適用し次状態を返す）、結果を比較する（`run-reducer(toggle).run-reducer(toggle).slots.todos == todos`）。生成は**シード付き**（既定：テスト名のハッシュ）で失敗が厳密に再現し、失敗時はカウンタ例を最小値へ**シュリンク**する（`shrink = false` で無効化）。ランナーはケース数を表示する（`(100 cases)`、§8.7.1）。`for-all` の型参照は解決可能でなければならず、すべての `run-reducer` ターゲットは宣言済み reducer であること（E0102）。`28-tests.kumiki` に `inc-dec-roundtrips` を追加。
 - **v0.6 M2 (#50) — `reducer-test` 内の effect 結果モック**（`spec/testing.md` §8.5）：reducer が effect を emit し、その結果が別の reducer を駆動する（`loadUser.ok($u, _)`）多段フローは、これまでブラウザ駆動の scenario ランナーでしかテストできなかった。`reducer-test` が `given.mocks = {effect: ok(v) | err(e) | delay(ms, ok(v))}` を受け付けるようになり、ランナーはトリガを dispatch して emit → 結果 → reducer のループを **headless かつ同期**に駆動する（DOM なし・実時間なし）：モックされた effect はその `.ok`/`.err` reducer に配送され（モックの `value` が reducer の第1バインド）**消費**される（よって `expect.effects` に出ない）。モックの無い emit は**残余**として `expect.effects` で照合。`delay(ms, …)` は即時解決（仮想時間・emit 順）。モックのキーは宣言済み effect 名でなければならず（**E0104**）、`.err` reducer が消費しないモック済み `err` は黙って通さず**失敗**させる（v0.5 #37 の no-silent-failure 契約）。`28-tests.kumiki` に `add-surfaces-persist-error`（`persist` を `err` にモックし `.err` reducer を駆動、設定された status をアサート）を追加。
 - **v0.6 M1 (#49) — `reducer-test` の `expect` ワイルドカード**（`spec/testing.md` §8.2.2）：生成された id（`TodoId.fresh()`）など非決定的なフィールドを含む `reducer-test` の結果は、リテラルな `expect` ではアサートできなかった。2 つのワイルドカードがその穴を埋める——`<any-id>` は任意の存在する値に一致（**map キー**位置では、他と一致しないエントリちょうど 1 件と対応；0 件や複数件は失敗）、`<slots.X>` は実行後のスロット `X` の値に一致（例：`effects: [persist(<slots.todos>)]`）。それ以外の一致は**厳密**のまま——レコードは全キー集合で比較し、ワイルドカードは予測不能なフィールド（`createdAt: <any-id>`）だけを潰すので、partial-record マッチで既存アサーションが緩むことはない。`reducer-test` の `expect` 外（本体や test の `given`）のワイルドカードはコンパイルエラー（**新規 E0109 `test-wildcard-misuse`**）。`28-tests.kumiki` に両ワイルドカードを使う `addItem` reducer-test を追加。

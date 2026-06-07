@@ -1876,6 +1876,8 @@ export type TestResult = {
   leaf?: { expected: unknown; actual: unknown };
   /** Number of generated cases run by a `property-test` (for the §8.7.1 `(N cases)` tag). */
   cases?: number;
+  /** Wall-clock milliseconds the test took (filled in by the runner, §8.7.1). */
+  ms?: number;
 };
 
 function _jsonStr(v: unknown): string {

@@ -176,6 +176,8 @@ export function codegen(program: Program, opts: CodegenOptions): string {
     for (const t of tests) lines.push(genTest(t, ctx));
     lines.push("];");
     lines.push("globalThis.__kumikiTests = __kumikiTests;");
+    // Static coverage for `kumiki test --coverage` (§8.7).
+    lines.push(`globalThis.__kumikiCoverage = ${coverageJs(tests, reducers, tiles, effects)};`);
   }
   lines.push("");
 
@@ -203,6 +205,142 @@ export function codegen(program: Program, opts: CodegenOptions): string {
 function recordField(e: Expr | TileExpr, name: string): Expr | undefined {
   if ((e as Expr).kind !== "RecordLit") return undefined;
   return (e as Expr & { kind: "RecordLit" }).fields.find((f) => f.name === name)?.value;
+}
+
+/** All effect names emitted anywhere in a reducer body (descends into control flow). */
+function collectEmits(stmts: Statement[]): string[] {
+  const out: string[] = [];
+  const walk = (ss: Statement[]): void => {
+    for (const s of ss) {
+      if (s.kind === "Emit") out.push(s.effect);
+      else if (s.kind === "ForStmt") walk(s.body);
+      else if (s.kind === "IfStmt") {
+        walk(s.consequent);
+        walk(s.alternate);
+      } else if (s.kind === "MatchStmt") for (const a of s.arms) walk(a.body);
+    }
+  };
+  walk(stmts);
+  return out;
+}
+
+/** Invoke `cb` with each `run-reducer(name)` target inside an expression. */
+function scanRunReducers(e: Expr | undefined, cb: (name: string) => void): void {
+  if (!e) return;
+  if (e.kind === "Call" && e.callee === "run-reducer") cb(reducerNameArg(e.args[0]));
+  if (e.kind === "MethodCall" && e.method === "run-reducer") cb(reducerNameArg(e.args[0]));
+  switch (e.kind) {
+    case "BinOp":
+      scanRunReducers(e.lhs, cb);
+      scanRunReducers(e.rhs, cb);
+      break;
+    case "UnaryOp":
+      scanRunReducers(e.rhs, cb);
+      break;
+    case "FieldAccess":
+      scanRunReducers(e.base, cb);
+      break;
+    case "Index":
+      scanRunReducers(e.base, cb);
+      scanRunReducers(e.index, cb);
+      break;
+    case "Call":
+      for (const a of e.args) scanRunReducers(a, cb);
+      break;
+    case "MethodCall":
+      scanRunReducers(e.receiver, cb);
+      for (const a of e.args) scanRunReducers(a, cb);
+      break;
+    case "RecordLit":
+      for (const f of e.fields) scanRunReducers(f.value, cb);
+      break;
+    case "ListLit":
+      for (const it of e.items) scanRunReducers(it, cb);
+      break;
+    case "MapLit":
+      for (const en of e.entries) {
+        scanRunReducers(en.key, cb);
+        scanRunReducers(en.value, cb);
+      }
+      break;
+    case "MatchExpr":
+      scanRunReducers(e.scrutinee, cb);
+      for (const a of e.arms) scanRunReducers(a.body, cb);
+      break;
+    case "IfExpr":
+      scanRunReducers(e.cond, cb);
+      scanRunReducers(e.consequent, cb);
+      scanRunReducers(e.alternate, cb);
+      break;
+    case "LetIn":
+      scanRunReducers(e.value, cb);
+      scanRunReducers(e.body, cb);
+      break;
+    case "Variant":
+      for (const p of e.payload) scanRunReducers(p, cb);
+      break;
+  }
+}
+
+/**
+ * Static `--coverage` data (§8.7): which reducers / tiles / effects the test
+ * suite exercises. A reducer-test/property-test covers its target reducer(s)
+ * and the effects those reducers emit; a tile-test covers its tile; mocked
+ * effects count as covered too.
+ */
+function coverageJs(
+  tests: TestDef[],
+  reducers: ReducerDef[],
+  tiles: TileDef[],
+  effects: EffectDef[],
+): string {
+  const usedReducers = new Set<string>();
+  const usedTiles = new Set<string>();
+  const usedEffects = new Set<string>();
+  const byName = new Map(reducers.map((r) => [r.name, r]));
+  const markReducer = (name: string): void => {
+    const r = byName.get(name);
+    if (!r) return;
+    usedReducers.add(name);
+    for (const eff of collectEmits(r.do)) usedEffects.add(eff);
+  };
+  // A mocked effect result drives its `.ok`/`.err` reducers, so those count too.
+  const markEffectReducers = (effect: string, outcome: "ok" | "err"): void => {
+    for (const r of reducers) {
+      if (r.on.kind === "EffectEvent" && r.on.effect === effect && r.on.outcome === outcome) {
+        markReducer(r.name);
+      }
+    }
+  };
+  for (const t of tests) {
+    if (t.testKind === "reducer-test") {
+      if (t.target) markReducer(t.target);
+      const mocks = recordField(t.given, "mocks");
+      if (mocks?.kind === "RecordLit") {
+        for (const f of mocks.fields) {
+          usedEffects.add(f.name);
+          const outcome = mockOutcome(f.value);
+          if (outcome) markEffectReducers(f.name, outcome);
+        }
+      }
+    } else if (t.testKind === "tile-test") {
+      if (t.target) usedTiles.add(t.target);
+    } else if (t.testKind === "property-test") {
+      scanRunReducers(t.invariant, markReducer);
+    }
+  }
+  const cat = (all: string[], used: Set<string>): string =>
+    `{ total: ${JSON.stringify(all)}, used: ${JSON.stringify(all.filter((n) => used.has(n)))} }`;
+  return `{ reducers: ${cat(
+    reducers.map((r) => r.name),
+    usedReducers,
+  )}, tiles: ${cat(
+    tiles.map((t) => t.name),
+    usedTiles,
+  )}, effects: ${cat(
+    effects.map((e) => e.name),
+    usedEffects,
+  )} }`;
 }
 
 function genTest(t: TestDef, gen: GenCtx): string {
@@ -1689,6 +1827,18 @@ function addBind(ctx: EvalCtx, name: string): EvalCtx {
 function jsName(name: string): string {
   // Map kebab-case and Kumiki-special names to safe JS identifiers.
   return name.replace(/^\$/, "_d_").replace(/-/g, "_").replace(/\./g, "_");
+}
+
+/** The outcome of a mock value `ok(v)` / `err(e)` / `delay(ms, ok(v)|err(e))`. */
+function mockOutcome(v: Expr): "ok" | "err" | undefined {
+  if (v.kind === "Call" && (v.callee === "ok" || v.callee === "err")) return v.callee;
+  if (v.kind === "Call" && v.callee === "delay") {
+    const inner = v.args[1];
+    if (inner?.kind === "Call" && (inner.callee === "ok" || inner.callee === "err")) {
+      return inner.callee;
+    }
+  }
+  return undefined;
 }
 
 /** Extract the reducer name from a `run-reducer(name)` argument (a bare ref). */

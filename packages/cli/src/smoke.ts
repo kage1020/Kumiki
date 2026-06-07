@@ -213,12 +213,14 @@ export async function testCmd(
   }
   let failed = 0;
   for (const r of results) {
+    // §8.7.1: a property-test reports how many cases it ran, e.g. `(100 cases)`.
+    const cases = r.cases !== undefined ? ` (${r.cases} cases)` : "";
     if (r.pass) {
-      console.log(`PASS  ${r.name}`);
+      console.log(`PASS  ${r.name}${cases}`);
       continue;
     }
     failed++;
-    console.log(`FAIL  ${r.name}`);
+    console.log(`FAIL  ${r.name}${cases}`);
     if (r.expected !== undefined) console.log(`  expected: ${r.expected}`);
     if (r.actual !== undefined) console.log(`  actual:   ${r.actual}`);
     if (r.diffAt !== undefined) {

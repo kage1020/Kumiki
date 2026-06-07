@@ -79,3 +79,11 @@ test add-surfaces-persist-error =
             mocks: {persist: err("disk full")}
         }
         expect = {slots: {status: "disk full"}, effects: []}
+
+# §8.3 property-test: for any starting count (custom generator `between`),
+# inc-then-dec round-trips. `run-reducer` chains apply reducers to the state.
+test inc-dec-roundtrips =
+    property-test
+        for-all   = {count: Int where between(0, 50)}
+        given     = {slots: {count: count}, event: {type: ui.click, target: IncBtn}}
+        invariant = run-reducer(inc).run-reducer(dec).slots.count == count

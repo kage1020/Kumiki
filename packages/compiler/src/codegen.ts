@@ -208,18 +208,60 @@ function recordField(e: Expr | TileExpr, name: string): Expr | undefined {
 function genTest(t: TestDef, gen: GenCtx): string {
   const ctx = makeEvalCtx(gen, new Set());
   const nameJs = JSON.stringify(t.name);
+  if (t.testKind === "property-test") {
+    const forAll = t.forAll ?? [];
+    // forAll var names are local binds, so invariant/given refs lower to the
+    // `const <name> = _b[...]` we destructure at the top of the trial fn.
+    const pctx = makeEvalCtx(gen, new Set(forAll.map((f) => f.name)));
+    const varsJs = forAll
+      .map(
+        (f) =>
+          `${JSON.stringify(f.name)}: ${JSON.stringify(typeToGenDesc(f.type, gen, new Set()))}`,
+      )
+      .join(", ");
+    const binds = forAll
+      .map((f) => `const ${jsName(f.name)} = _b[${JSON.stringify(f.name)}];`)
+      .join(" ");
+    const givenSlots = recordField(t.given, "slots");
+    const initSlotsJs = givenSlots ? jsOfExpr(givenSlots, pctx) : "({})";
+    const event = recordField(t.given, "event");
+    const eventJs = eventPayloadJs(event, pctx);
+    const invariantJs = t.invariant ? jsOfExpr(t.invariant, pctx) : "true";
+    const opts = [
+      t.count !== undefined ? `count: ${t.count}` : null,
+      t.shrink !== undefined ? `shrink: ${t.shrink}` : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
+    return `  {
+    name: ${nameJs},
+    kind: "property-test",
+    run: () => _s.runPropertyTest({
+      name: ${nameJs},
+      vars: { ${varsJs} },
+      trial: (_b) => {
+        ${binds}
+        const _init = { slots: ${initSlotsJs} };
+        const _event = ${eventJs};
+        return ${invariantJs};
+      },${opts ? ` ${opts},` : ""}
+    }),
+  },`;
+  }
   if (t.testKind === "reducer-test") {
+    // A reducer-test always has an Expr `expect` (only property-test omits it).
+    const expectExpr = t.expect as Expr;
     const slots = recordField(t.given, "slots");
     const event = recordField(t.given, "event");
     const slotsJs = slots ? jsOfExpr(slots, ctx) : "({})";
     const elJs = eventPayloadJs(event, ctx);
-    const panic = recordField(t.expect, "panic");
+    const panic = recordField(expectExpr, "panic");
     let expectJs: string;
     if (panic) {
       expectJs = `{ kind: "panic", message: ${jsOfExpr(panic, ctx)} }`;
     } else {
-      const xs = recordField(t.expect, "slots");
-      const xe = recordField(t.expect, "effects");
+      const xs = recordField(expectExpr, "slots");
+      const xe = recordField(expectExpr, "effects");
       const xsJs = xs ? jsOfExpr(xs, ctx) : "({})";
       const effectsJs = xe ? effectListJs(xe, ctx) : "[]";
       expectJs = `{ kind: "state", slots: ${xsJs}, effects: ${effectsJs} }`;
@@ -688,6 +730,12 @@ function jsOfExpr(e: Expr, ctx: EvalCtx): string {
     }
     case "Call": {
       const cn = e.callee;
+      // `run-reducer(name)` inside a property-test invariant (§8.3): apply the
+      // named reducer to the trial's initial state (`_init` / `_event` are bound
+      // in the generated trial fn). Chained `.run-reducer(...)` is in methodCallJs.
+      if (cn === "run-reducer") {
+        return `_s.runReducerStep(App, _init, ${JSON.stringify(reducerNameArg(e.args[0]))}, _event)`;
+      }
       // Module calls like TodoId.fresh, now, etc.
       if (cn === "now") return `_s.now()`;
       if (/^[A-Z][A-Za-z0-9_]*\.fresh$/.test(cn)) return `_s.freshId()`;
@@ -922,6 +970,11 @@ export const KNOWN_MEMBERS: ReadonlySet<string> = new Set([
 ]);
 
 function methodCallJs(recv: Expr, method: string, args: Expr[], ctx: EvalCtx): string {
+  // Chained `recv.run-reducer(name)` in a property-test invariant (§8.3): apply
+  // the reducer to the receiver state. `_event` is bound in the generated trial.
+  if (method === "run-reducer") {
+    return `_s.runReducerStep(App, ${jsOfExpr(recv, ctx)}, ${JSON.stringify(reducerNameArg(args[0]))}, _event)`;
+  }
   // Build inner ctx with $1, $2 bound for predicate expression fragments.
   const inner = makeEvalCtx(ctx.gen, ctx.localBinds);
   inner.localBinds.add("$1");
@@ -1636,6 +1689,92 @@ function addBind(ctx: EvalCtx, name: string): EvalCtx {
 function jsName(name: string): string {
   // Map kebab-case and Kumiki-special names to safe JS identifiers.
   return name.replace(/^\$/, "_d_").replace(/-/g, "_").replace(/\./g, "_");
+}
+
+/** Extract the reducer name from a `run-reducer(name)` argument (a bare ref). */
+function reducerNameArg(e: Expr | undefined): string {
+  if (e?.kind === "Ref") return e.name;
+  if (e?.kind === "Variant") return e.name;
+  return "";
+}
+
+type GenDescData = { t: string; [k: string]: unknown };
+
+/** Translate a type into a property-test generation descriptor (spec §8.3.2). */
+function typeToGenDesc(t: TypeExpr, gen: GenCtx, seen: Set<string>): GenDescData {
+  switch (t.kind) {
+    case "TypePrim":
+      return primGenDesc(t.name);
+    case "TypeApp": {
+      const a = t.args;
+      const d = (x: TypeExpr | undefined): GenDescData =>
+        x ? typeToGenDesc(x, gen, seen) : { t: "Unknown" };
+      if (t.name === "List") return { t: "List", elem: d(a[0]) };
+      if (t.name === "Set") return { t: "Set", elem: d(a[0]) };
+      if (t.name === "Map") return { t: "Map", key: d(a[0]), val: d(a[1]) };
+      if (t.name === "Option") return { t: "Option", inner: d(a[0]) };
+      if (t.name === "Result") return { t: "Result", ok: d(a[0]), err: d(a[1]) };
+      return { t: "Unknown" };
+    }
+    case "TypeRef": {
+      if (seen.has(t.name)) return { t: "Unknown" };
+      const def = gen.types.get(t.name);
+      if (!def) return { t: "Unknown" };
+      const next = new Set(seen);
+      next.add(t.name);
+      return typeToGenDesc(def.body, gen, next);
+    }
+    case "TypeNominal":
+    case "TypeRefinement":
+      return applyRefine(typeToGenDesc(t.inner, gen, seen), t.refinement);
+    case "TypeRecord":
+      return {
+        t: "Record",
+        fields: t.fields.map((f) => ({ name: f.name, desc: typeToGenDesc(f.type, gen, seen) })),
+      };
+    case "TypeUnion":
+      return {
+        t: "Union",
+        variants: t.variants.map((v) => ({
+          name: v.name,
+          payloads: v.payloads.map((p) => typeToGenDesc(p, gen, seen)),
+        })),
+      };
+    default:
+      return { t: "Unknown" };
+  }
+}
+
+function primGenDesc(name: string): GenDescData {
+  if (name === "Int" || name === "Time") return { t: "Int" };
+  if (name === "Float") return { t: "Float" };
+  if (name === "Text" || name === "Bytes") return { t: "Text" };
+  if (name === "Bool") return { t: "Bool" };
+  return { t: "Unknown" };
+}
+
+/** Fold a refinement into a base descriptor so generation respects it (§8.3.2). */
+function applyRefine(desc: GenDescData, r: Refinement | undefined): GenDescData {
+  if (!r) return desc;
+  const num = (i: number): number => (typeof r.args[i] === "number" ? (r.args[i] as number) : 0);
+  switch (r.pred) {
+    case "between":
+      return desc.t === "Int" || desc.t === "Float" ? { ...desc, min: num(0), max: num(1) } : desc;
+    case "positive":
+      if (desc.t === "Int") return { ...desc, min: 1 };
+      if (desc.t === "Float") return { ...desc, min: 0 };
+      return desc;
+    case "nonempty":
+      return desc.t === "Text" ? { ...desc, minLen: 1 } : desc;
+    case "len-eq":
+      return desc.t === "Text" ? { ...desc, minLen: num(0), maxLen: num(0) } : desc;
+    case "len-gt":
+      return desc.t === "Text" ? { ...desc, minLen: num(0) + 1 } : desc;
+    case "len-lt":
+      return desc.t === "Text" ? { ...desc, maxLen: Math.max(0, num(0) - 1) } : desc;
+    default:
+      return desc;
+  }
 }
 
 function refinementJs(t: TypeExpr, gen: GenCtx): string | undefined {

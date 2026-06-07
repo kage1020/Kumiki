@@ -76,11 +76,12 @@ describe("kumiki test (in-language test runner)", () => {
     expect(out).toContain("PASS  greeting-renders-input");
     expect(out).toContain("PASS  add-creates-item");
     expect(out).toContain("PASS  add-surfaces-persist-error");
-    expect(out).toContain("6/6 passed");
+    expect(out).toContain("PASS  inc-dec-roundtrips (100 cases)");
+    expect(out).toContain("7/7 passed");
   });
 
   it("filters by a name prefix", { timeout: 30000 }, () => {
-    const out = execFileSync("npx", ["tsx", CLI_PATH, "test", TESTS, "inc*"], {
+    const out = execFileSync("npx", ["tsx", CLI_PATH, "test", TESTS, "inc-i*"], {
       stdio: "pipe",
       shell: true,
       encoding: "utf8",

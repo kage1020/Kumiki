@@ -151,4 +151,58 @@ app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
 test t = reducer-test inc given={slots:{count:0}, event:{type: ui.click, target: B}, mocks:{nope: ok(1)}} expect={slots:{count:1}, effects:[]}`;
     expect(checkSrc(src).some((e) => e.code === "E0104" && e.message.includes("nope"))).toBe(true);
   });
+
+  // ----- v0.6 M3: property-test (spec/testing.md §8.3) -----
+
+  it("parses and accepts a property-test with for-all / invariant / run-reducer", () => {
+    const src = `
+slot count : Int = 0
+reducer inc on=ui.click(B) do= count := count + 1
+reducer dec on=ui.click(B) do= count := count - 1
+tile B = button(text="+1", onClick=inc)
+tile App = column(B)
+app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+test rt = property-test
+  for-all   = {count: Int where between(0, 50)}
+  given     = {slots: {count: count}, event: {type: ui.click, target: B}}
+  invariant = run-reducer(inc).run-reducer(dec).slots.count == count`;
+    const program = parse(lex(src));
+    const tests = program.defs.filter((d): d is TestDef => d.kind === "TestDef");
+    expect(tests[0]?.testKind).toBe("property-test");
+    expect(tests[0]?.forAll?.[0]?.name).toBe("count");
+    expect(checkSrc(src)).toEqual([]);
+  });
+
+  it("parses optional count / shrink on a property-test", () => {
+    const src = `
+slot count : Int = 0
+reducer inc on=ui.click(B) do= count := count + 1
+tile B = button(text="+1", onClick=inc)
+tile App = column(B)
+app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+test rt = property-test
+  for-all   = {count: Int}
+  given     = {slots: {count: count}, event: {type: ui.click, target: B}}
+  invariant = run-reducer(inc).slots.count == count + 1
+  count     = 50
+  shrink    = false`;
+    const tests = parse(lex(src)).defs.filter((d): d is TestDef => d.kind === "TestDef");
+    expect(tests[0]?.count).toBe(50);
+    expect(tests[0]?.shrink).toBe(false);
+    expect(checkSrc(src)).toEqual([]);
+  });
+
+  it("rejects run-reducer naming an undefined reducer (E0102)", () => {
+    const src = `
+slot count : Int = 0
+reducer inc on=ui.click(B) do= count := count + 1
+tile B = button(text="+1", onClick=inc)
+tile App = column(B)
+app A caps=[] routes={"/" -> App, "/404" -> App} init=[]
+test rt = property-test
+  for-all   = {count: Int}
+  given     = {slots: {count: count}, event: {type: ui.click, target: B}}
+  invariant = run-reducer(nope).slots.count == count`;
+    expect(checkSrc(src).some((e) => e.code === "E0102" && e.message.includes("nope"))).toBe(true);
+  });
 });

@@ -176,7 +176,11 @@ export async function runTestsSource(
   ensureDom();
   await loadApp(source, capabilities, { includeTests: true });
   const tests = (globalThis as unknown as { __kumikiTests?: TestRunner[] }).__kumikiTests ?? [];
-  return tests.map((t) => t.run());
+  return tests.map((t) => {
+    const t0 = performance.now();
+    const r = t.run();
+    return { ...r, ms: Math.round(performance.now() - t0) };
+  });
 }
 
 export async function testFile(path: string, capabilities: string[] = []): Promise<TestResult[]> {
@@ -199,28 +203,51 @@ function matchesFilter(name: string, filter: string | undefined): boolean {
   return name === filter;
 }
 
-/** CLI entry: run `test` definitions, print the §8.7.1 report, exit non-zero on any failure. */
-export async function testCmd(
+type CoverageCat = { total: string[]; used: string[] };
+type Coverage = { reducers: CoverageCat; tiles: CoverageCat; effects: CoverageCat };
+
+/** Print the §8.7 coverage report (per reducer / effect / tile), listing the uncovered. */
+function printCoverage(): void {
+  const cov = (globalThis as unknown as { __kumikiCoverage?: Coverage }).__kumikiCoverage;
+  if (!cov) return;
+  console.log("\ncoverage");
+  for (const [label, cat] of [
+    ["reducers", cov.reducers],
+    ["effects", cov.effects],
+    ["tiles", cov.tiles],
+  ] as const) {
+    const uncovered = cat.total.filter((n) => !cat.used.includes(n));
+    const tail = uncovered.length > 0 ? `  (uncovered: ${uncovered.join(", ")})` : "";
+    console.log(`  ${label.padEnd(9)} ${cat.used.length}/${cat.total.length}${tail}`);
+  }
+}
+
+/** Run the suite once, print the §8.7.1 report (+ optional coverage). Returns the failure count. */
+async function runAndReport(
   path: string,
   filter: string | undefined,
-  capabilities: string[] = [],
-): Promise<void> {
+  capabilities: string[],
+  coverage: boolean,
+): Promise<number> {
   const all = await testFile(path, capabilities);
   const results = all.filter((r) => matchesFilter(r.name, filter));
   if (results.length === 0) {
     console.log(filter ? `no tests match "${filter}"` : "no tests found");
-    return;
+    return 0;
   }
   let failed = 0;
   for (const r of results) {
-    // §8.7.1: a property-test reports how many cases it ran, e.g. `(100 cases)`.
-    const cases = r.cases !== undefined ? ` (${r.cases} cases)` : "";
+    // §8.7.1 tag: `(1ms)`, or `(100 cases, 23ms)` for a property-test.
+    const bits: string[] = [];
+    if (r.cases !== undefined) bits.push(`${r.cases} cases`);
+    if (r.ms !== undefined) bits.push(`${r.ms}ms`);
+    const tag = bits.length > 0 ? ` (${bits.join(", ")})` : "";
     if (r.pass) {
-      console.log(`PASS  ${r.name}${cases}`);
+      console.log(`PASS  ${r.name}${tag}`);
       continue;
     }
     failed++;
-    console.log(`FAIL  ${r.name}${cases}`);
+    console.log(`FAIL  ${r.name}${tag}`);
     if (r.expected !== undefined) console.log(`  expected: ${r.expected}`);
     if (r.actual !== undefined) console.log(`  actual:   ${r.actual}`);
     if (r.diffAt !== undefined) {
@@ -231,5 +258,47 @@ export async function testCmd(
     }
   }
   console.log(`\n${results.length - failed}/${results.length} passed`);
+  if (coverage) printCoverage();
+  return failed;
+}
+
+/** CLI entry: run `test` definitions, print the §8.7.1 report, exit non-zero on any failure. */
+export async function testCmd(
+  path: string,
+  filter: string | undefined,
+  capabilities: string[] = [],
+  opts: { coverage?: boolean; watch?: boolean } = {},
+): Promise<void> {
+  if (opts.watch) {
+    // §8.7: re-run on change. Errors are caught so a transient compile failure
+    // doesn't kill the watcher; SIGINT exits cleanly.
+    const runSafe = async (): Promise<void> => {
+      try {
+        await runAndReport(path, filter, capabilities, opts.coverage ?? false);
+      } catch (e) {
+        console.error(`test run failed: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    };
+    await runSafe();
+    console.log("\nwatching for changes… (Ctrl-C to stop)");
+    const { watch } = await import("node:fs");
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const watcher = watch(path, () => {
+      // fs.watch can fire several events per save — debounce.
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        console.log("\n— change detected —");
+        void runSafe();
+      }, 100);
+    });
+    process.on("SIGINT", () => {
+      watcher.close();
+      console.log("\nwatch stopped");
+      process.exit(0);
+    });
+    await new Promise<never>(() => {});
+    return;
+  }
+  const failed = await runAndReport(path, filter, capabilities, opts.coverage ?? false);
   if (failed > 0) process.exit(1);
 }

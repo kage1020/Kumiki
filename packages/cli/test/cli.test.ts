@@ -76,7 +76,7 @@ describe("kumiki test (in-language test runner)", () => {
     expect(out).toContain("PASS  greeting-renders-input");
     expect(out).toContain("PASS  add-creates-item");
     expect(out).toContain("PASS  add-surfaces-persist-error");
-    expect(out).toContain("PASS  inc-dec-roundtrips (100 cases)");
+    expect(out).toMatch(/PASS {2}inc-dec-roundtrips \(100 cases, \d+ms\)/);
     expect(out).toContain("7/7 passed");
   });
 
@@ -89,6 +89,28 @@ describe("kumiki test (in-language test runner)", () => {
     expect(out).toContain("PASS  inc-increments");
     expect(out).toContain("1/1 passed");
     expect(out).not.toContain("dec-decrements");
+  });
+
+  it("reports per-test timings and a property case count (v0.6 M4)", { timeout: 30000 }, () => {
+    const out = execFileSync("npx", ["tsx", CLI_PATH, "test", TESTS], {
+      stdio: "pipe",
+      shell: true,
+      encoding: "utf8",
+    });
+    expect(out).toMatch(/PASS {2}inc-increments \(\d+ms\)/);
+    expect(out).toMatch(/PASS {2}inc-dec-roundtrips \(100 cases, \d+ms\)/);
+  });
+
+  it("--coverage reports reducer / effect / tile coverage (v0.6 M4)", { timeout: 30000 }, () => {
+    const out = execFileSync("npx", ["tsx", CLI_PATH, "test", TESTS, "--coverage"], {
+      stdio: "pipe",
+      shell: true,
+      encoding: "utf8",
+    });
+    expect(out).toContain("coverage");
+    expect(out).toMatch(/reducers {2}4\/4/);
+    expect(out).toMatch(/tiles {5}2\/5/);
+    expect(out).toContain("uncovered:");
   });
 });
 

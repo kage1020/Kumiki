@@ -17,7 +17,7 @@ test-expr ::= reducer-test | tile-test | episode-test | property-test
 
 A `test` definition is **the sixth layer**. It is stored in the CRDT graph and run with `kumiki test`. It is not included in the production build.
 
-> **Implementation status (v0.6).** `reducer-test`, `tile-test`, `property-test` (§8.3), the `kumiki test` runner (name / `prefix*` filtering), `kumiki fix --auto-patch <test-name>` (§8.7.2), `expect` **wildcards** (`<any-id>` / `<slots.X>`, §8.2.2), and **effect-result mocks** inside `reducer-test` (`given.mocks`, §8.5) are implemented. The runner prints `PASS` / `FAIL` lines plus `expected` / `actual` / `diff at <path>`, the property-test case count (`(100 cases)`), and — when it can isolate a scalar leaf — the §8.7.1 value arrow (`"a" -> "b"`) on failure; per-test **timings** are **not yet** produced. Also still specified but **not yet implemented**: `episode-test`, and `--watch` / `--coverage`.
+> **Implementation status (v0.6).** Implemented: `reducer-test`, `tile-test`, `property-test` (§8.3); the `kumiki test` runner with name / `prefix*` filtering, per-test **timings** (`(1ms)` / `(100 cases, 23ms)`), `--coverage`, and `--watch`; `kumiki fix --auto-patch <test-name>` (§8.7.2); `expect` **wildcards** (`<any-id>` / `<slots.X>`, §8.2.2); and **effect-result mocks** inside `reducer-test` (`given.mocks`, §8.5). The runner prints `PASS` / `FAIL` lines plus `expected` / `actual` / `diff at <path>` and — when it can isolate a scalar leaf — the §8.7.1 value arrow (`"a" -> "b"`) on failure. Still specified but **not yet implemented**: `episode-test` (it needs the runtime episode logger of [runtime.md](./runtime.md) §10.5).
 
 ## 8.2 Reducer Tests
 

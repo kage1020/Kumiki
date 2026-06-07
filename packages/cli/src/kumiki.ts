@@ -153,7 +153,10 @@ async function main(argv: string[]): Promise<void> {
       if (!input) usage();
       const inputPath = resolve(process.cwd(), input);
       const filter = argv.find((a, i) => i > 3 && !a.startsWith("--"));
-      await testCmd(inputPath, filter, capsFor(inputPath));
+      await testCmd(inputPath, filter, capsFor(inputPath), {
+        coverage: argv.includes("--coverage"),
+        watch: argv.includes("--watch"),
+      });
       return;
     }
     case "run": {

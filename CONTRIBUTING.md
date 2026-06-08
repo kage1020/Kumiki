@@ -51,6 +51,16 @@ Everything must be green. In particular:
 - Don't commit directly to `main` / `dev`. Create a feature branch.
 - Commit frequently.
 
+### Branching & release train
+
+`dev` is the integration branch; `main` is release-only. Feature PRs target `dev`,
+so changesets accumulate there without triggering a release. When it's time to
+release, merge `dev` → `main` (one PR): the `release` workflow then opens a single
+"Version Packages" PR for the whole batch, and merging that publishes to npm.
+
+- Feature / fix work → PR into `dev`.
+- Release → PR `dev` → `main`, then merge the auto-generated "Version Packages" PR.
+
 ## Where things go, by directory
 
 | Change | Location |

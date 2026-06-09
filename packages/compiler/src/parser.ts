@@ -28,6 +28,7 @@ import type {
   TypeExpr,
   UiEventKind,
 } from "./ast.ts";
+import { BUILTIN_TILES, VALUE_ARG_BUILTINS } from "./builtins.ts";
 
 export class ParseError extends Error {
   constructor(
@@ -41,15 +42,6 @@ export class ParseError extends Error {
 const PRIM_TYPES = new Set(["Int", "Text", "Bool", "Unit", "Float", "Time", "Bytes"]);
 const _GENERIC_TYPES = new Set(["Map", "Set", "List", "Option", "Result", "Tuple"]);
 // Builtins whose positional argument is a value expression (Text/Number), not a tile.
-const VALUE_ARG_BUILTINS = new Set([
-  "text",
-  "heading",
-  "markdown",
-  "label",
-  "link",
-  "image",
-  "icon",
-]);
 // Named args whose value is always a value expression (Text / Number / etc.),
 // independent of the enclosing builtin. This lets `button(text=if c then "A" else "B")`
 // parse the `if` as a value-level `IfExpr` instead of a `TileIf`.
@@ -86,56 +78,6 @@ const VALUE_NAMED_ARGS = new Set([
   "rows",
   "cols",
   "aspect",
-]);
-const BUILTIN_TILES = new Set([
-  "page",
-  "region",
-  "row",
-  "column",
-  "stack",
-  "overlay",
-  "grid",
-  "box",
-  "card",
-  "panel",
-  "divider",
-  "scroll",
-  "text",
-  "heading",
-  "link",
-  "code",
-  "markdown",
-  "image",
-  "icon",
-  "video",
-  "button",
-  "input",
-  "textarea",
-  "check",
-  "radio",
-  "select",
-  "slider",
-  "switch",
-  "form",
-  "label",
-  "fieldset",
-  "error",
-  "list",
-  "list-item",
-  "table",
-  "table-head",
-  "table-body",
-  "table-row",
-  "table-cell",
-  "modal",
-  "drawer",
-  "tooltip",
-  "popover",
-  "toast",
-  "spinner",
-  "progress",
-  "skeleton",
-  "route-outlet",
 ]);
 const REFINE_PREDS = new Set([
   "between",

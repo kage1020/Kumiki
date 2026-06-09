@@ -104,17 +104,65 @@ export type TileNode =
       children: TileNode[];
       props?: TileProps;
     }
-  | { kind: "divider"; props?: TileProps };
+  | { kind: "divider"; props?: TileProps }
+  | { kind: "code"; text: string; lang?: string; props?: TileProps }
+  | { kind: "video"; src?: string; controls?: boolean; autoplay?: boolean; props?: TileProps }
+  | { kind: "list"; ordered?: boolean; children: TileNode[]; props?: TileProps }
+  | {
+      kind: "list-item" | "table" | "table-head" | "table-body" | "table-row";
+      children: TileNode[];
+      props?: TileProps;
+    }
+  | {
+      kind: "table-cell";
+      children: TileNode[];
+      colspan?: number;
+      rowspan?: number;
+      props?: TileProps;
+    }
+  | {
+      kind: "modal" | "drawer" | "popover";
+      children: TileNode[];
+      open?: boolean;
+      title?: string;
+      side?: string;
+      placement?: string;
+      props?: TileProps;
+    }
+  | { kind: "tooltip"; children: TileNode[]; text?: string; placement?: string; props?: TileProps }
+  | { kind: "toast"; level?: string; text?: string; props?: TileProps }
+  | { kind: "progress"; value?: number; max?: number; props?: TileProps }
+  | {
+      kind: "slider";
+      props?: TileProps;
+      bind?: string;
+      bindPath?: string[];
+      value?: number;
+      min?: number;
+      max?: number;
+      step?: number;
+    }
+  | { kind: "switch"; checked: boolean; props?: TileProps }
+  | { kind: "error"; field: string; props?: TileProps }
+  | { kind: "route-outlet"; children: TileNode[]; props?: TileProps };
 
 export type TileProps = Record<string, unknown> & {
   onClick?: EventHandler;
   onSubmit?: EventHandler;
   onChange?: EventHandler;
   onInput?: EventHandler;
+  onClose?: EventHandler;
   el?: Record<string, unknown>;
 };
 
-export type SlotMeta = { value: unknown; refine?: RefinementCheck; volatile?: boolean };
+export type SlotMeta = {
+  value: unknown;
+  refine?: RefinementCheck;
+  volatile?: boolean;
+  /** Refinement predicate name + args — drives the `error` tile's message. */
+  refineKind?: string;
+  refineArgs?: (number | string)[];
+};
 
 export type ReducerSpec = {
   name: string;
@@ -1372,6 +1420,255 @@ function renderTileNode(node: TileNode): HTMLElement {
       span.textContent = `[${node.name}]`;
       return span;
     }
+    case "code": {
+      const pre = document.createElement("pre");
+      pre.dataset.kumikiTile = "code";
+      const code = document.createElement("code");
+      code.textContent = node.text;
+      if (node.lang) code.dataset.lang = node.lang;
+      pre.appendChild(code);
+      return pre;
+    }
+    case "video": {
+      const v = document.createElement("video");
+      v.dataset.kumikiTile = "video";
+      if (node.src) v.src = node.src;
+      if (node.controls) v.controls = true;
+      if (node.autoplay) v.autoplay = true;
+      return v;
+    }
+    case "list": {
+      const list = document.createElement(node.ordered ? "ol" : "ul");
+      list.dataset.kumikiTile = "list";
+      applyContainerProps(list, node.props);
+      for (const child of node.children) {
+        if (child != null) list.appendChild(renderTile(child));
+      }
+      return list;
+    }
+    case "list-item": {
+      const li = document.createElement("li");
+      li.dataset.kumikiTile = "list-item";
+      for (const child of node.children) {
+        if (child != null) li.appendChild(renderTile(child));
+      }
+      return li;
+    }
+    case "table":
+    case "table-head":
+    case "table-body":
+    case "table-row": {
+      const tag = {
+        table: "table",
+        "table-head": "thead",
+        "table-body": "tbody",
+        "table-row": "tr",
+      }[node.kind] as string;
+      const el = document.createElement(tag);
+      el.dataset.kumikiTile = node.kind;
+      for (const child of node.children) {
+        if (child != null) el.appendChild(renderTile(child));
+      }
+      return el;
+    }
+    case "table-cell": {
+      const td = document.createElement("td");
+      td.dataset.kumikiTile = "table-cell";
+      if (node.colspan) td.colSpan = node.colspan;
+      if (node.rowspan) td.rowSpan = node.rowspan;
+      for (const child of node.children) {
+        if (child != null) td.appendChild(renderTile(child));
+      }
+      return td;
+    }
+    case "modal":
+    case "drawer":
+    case "popover": {
+      const wrap = document.createElement("div");
+      wrap.dataset.kumikiTile = node.kind;
+      // `open=false` renders a present-but-hidden host so toggling open/closed
+      // is a style flip, not a mount/unmount — and smoke still "renders".
+      if (node.open === false) wrap.style.display = "none";
+      if (node.kind === "modal") {
+        wrap.style.position = "fixed";
+        wrap.style.inset = "0";
+        wrap.style.display = node.open === false ? "none" : "flex";
+        wrap.style.alignItems = "center";
+        wrap.style.justifyContent = "center";
+        wrap.style.background = "rgba(0,0,0,0.4)";
+      } else if (node.kind === "drawer") {
+        wrap.style.position = "fixed";
+        wrap.style.top = "0";
+        wrap.style.bottom = "0";
+        wrap.style[node.side === "right" ? "right" : "left"] = "0";
+      }
+      if (node.props?.onClose) {
+        wrap.addEventListener("click", (e) => {
+          if (e.target === wrap) node.props?.onClose?.(node.props?.el ?? {});
+        });
+      }
+      const inner = document.createElement("div");
+      inner.dataset.kumikiTile = `${node.kind}-content`;
+      inner.style.background = "#fff";
+      if (node.title) {
+        const h = document.createElement("h2");
+        h.textContent = node.title;
+        inner.appendChild(h);
+      }
+      for (const child of node.children) {
+        if (child != null) inner.appendChild(renderTile(child));
+      }
+      wrap.appendChild(inner);
+      return wrap;
+    }
+    case "tooltip": {
+      const span = document.createElement("span");
+      span.dataset.kumikiTile = "tooltip";
+      if (node.text) span.title = node.text;
+      if (node.placement) span.dataset.placement = node.placement;
+      for (const child of node.children) {
+        if (child != null) span.appendChild(renderTile(child));
+      }
+      return span;
+    }
+    case "toast": {
+      const div = document.createElement("div");
+      div.dataset.kumikiTile = "toast";
+      if (node.level) div.dataset.level = node.level;
+      div.style.padding = "8px 12px";
+      div.style.borderRadius = "6px";
+      div.textContent = node.text ?? "";
+      return div;
+    }
+    case "progress": {
+      const p = document.createElement("progress");
+      p.dataset.kumikiTile = "progress";
+      if (typeof node.value === "number") p.value = node.value;
+      if (typeof node.max === "number") p.max = node.max;
+      return p;
+    }
+    case "slider": {
+      const inp = document.createElement("input");
+      inp.dataset.kumikiTile = "slider";
+      inp.type = "range";
+      if (typeof node.min === "number") inp.min = String(node.min);
+      if (typeof node.max === "number") inp.max = String(node.max);
+      if (typeof node.step === "number") inp.step = String(node.step);
+      if (node.bind) {
+        const fullPath =
+          node.bindPath && node.bindPath.length > 0
+            ? `${node.bind}.${node.bindPath.join(".")}`
+            : node.bind;
+        inp.dataset.kumikiBind = fullPath;
+      }
+      if (node.value != null) inp.value = String(node.value);
+      if (node.bind) {
+        const slotName = node.bind;
+        const bindPath = node.bindPath;
+        inp.addEventListener("input", () => {
+          const win = window as unknown as { __kumikiApp?: AppShape };
+          const app = win.__kumikiApp as AppShape & {
+            _setSlot?: (n: string, v: unknown) => void;
+            live?: Record<string, unknown>;
+          };
+          if (!app?._setSlot) return;
+          const num = Number(inp.value);
+          if (bindPath && bindPath.length > 0) {
+            const current = app.live?.[slotName] ?? {};
+            app._setSlot(slotName, _setPathHelper(current, bindPath, num));
+          } else {
+            app._setSlot(slotName, num);
+          }
+        });
+      }
+      if (node.props?.onChange) {
+        inp.addEventListener("change", () => {
+          node.props?.onChange?.({ ...(node.props?.el ?? {}), value: Number(inp.value) });
+        });
+      }
+      return inp;
+    }
+    case "switch": {
+      const wrap = document.createElement("label");
+      wrap.dataset.kumikiTile = "switch";
+      wrap.setAttribute("role", "switch");
+      const inp = document.createElement("input");
+      inp.type = "checkbox";
+      inp.checked = node.checked;
+      if (node.props?.onClick) {
+        inp.addEventListener("change", () => {
+          node.props?.onClick?.(node.props?.el ?? {});
+        });
+      }
+      wrap.appendChild(inp);
+      return wrap;
+    }
+    case "error": {
+      const span = document.createElement("span");
+      span.dataset.kumikiTile = "error";
+      span.dataset.field = node.field;
+      span.style.color = "#c00";
+      span.textContent = resolveFieldError(node.field);
+      return span;
+    }
+    case "route-outlet": {
+      const div = document.createElement("div");
+      div.dataset.kumikiTile = "route-outlet";
+      return div;
+    }
+  }
+}
+
+/**
+ * Resolve the current validation message for a slot, for the `error` tile.
+ * Returns "" (no error shown) when the slot's value passes its refinement, when
+ * the slot has no refinement, or when no app is mounted. The message text comes
+ * from `theme.errors[<pred>]` if overridden, else the spec §5.7.2 default.
+ */
+function resolveFieldError(field: string): string {
+  const win = window as unknown as { __kumikiApp?: AppShape };
+  const app = win.__kumikiApp;
+  if (!app || !field) return "";
+  const meta = app.slots?.[field];
+  if (!meta?.refine) return "";
+  const value = app.live?.[field] ?? meta.value;
+  if (meta.refine(value)) return "";
+  const pred = meta.refineKind ?? "";
+  const args = meta.refineArgs ?? [];
+  const theme = currentTheme();
+  const overrides = theme?.errors as Record<string, string> | undefined;
+  return overrides?.[pred] ?? defaultFieldError(pred, args);
+}
+
+/** Spec §5.7.2 default validation messages, keyed by refinement predicate. */
+function defaultFieldError(pred: string, args: (number | string)[]): string {
+  switch (pred) {
+    case "email":
+      return "Invalid email format";
+    case "url":
+      return "Invalid URL";
+    case "uuid":
+      return "Invalid identifier";
+    case "nonempty":
+      return "Required";
+    case "len-eq":
+      return `Must be exactly ${args[0]} characters`;
+    case "len-lt":
+      return `Must be less than ${args[0]} characters`;
+    case "len-gt":
+      return `Must be more than ${args[0]} characters`;
+    case "between":
+      return `Must be between ${args[0]} and ${args[1]}`;
+    case "positive":
+      return "Must be positive";
+    case "negative":
+      return "Must be negative";
+    case "regex":
+      return "Does not match pattern";
+    case "one-of":
+      return `Must be one of: ${args.join(", ")}`;
+    default:
+      return "Invalid value";
   }
 }
 

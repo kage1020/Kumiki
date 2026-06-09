@@ -12,6 +12,9 @@ catalogs:
     '@types/node':
       specifier: ^25.9.1
       version: 25.9.1
+    gpt-tokenizer:
+      specifier: ^3.4.0
+      version: 3.4.0
     jsdom:
       specifier: ^29.1.1
       version: 29.1.1
@@ -69,6 +72,24 @@ importers:
       vue:
         specifier: ^3.5.35
         version: 3.5.35(typescript@6.0.3)
+
+  packages/benchmarks:
+    devDependencies:
+      '@kumikijs/cli':
+        specifier: workspace:*
+        version: link:../cli
+      '@kumikijs/compiler':
+        specifier: workspace:*
+        version: link:../compiler
+      gpt-tokenizer:
+        specifier: 'catalog:'
+        version: 3.4.0
+      tsx:
+        specifier: 'catalog:'
+        version: 4.22.3
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
 
   packages/cli:
     dependencies:
@@ -1758,6 +1779,9 @@ packages:
   gopd@1.2.0:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
     engines: {node: '>= 0.4'}
+
+  gpt-tokenizer@3.4.0:
+    resolution: {integrity: sha512-wxFLnhIXTDjYebd9A9pGl3e31ZpSypbpIJSOswbgop5jLte/AsZVDvjlbEuVFlsqZixVKqbcoNmRlFDf6pz/UQ==}
 
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
@@ -4192,6 +4216,8 @@ snapshots:
       slash: 3.0.0
 
   gopd@1.2.0: {}
+
+  gpt-tokenizer@3.4.0: {}
 
   graceful-fs@4.2.11: {}
 

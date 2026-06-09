@@ -24,7 +24,7 @@ Kumiki has none of the "optimized for human cognition" machinery like JSX, Hooks
 
 ## Why Kumiki
 
-Cross-vendor measurements confirm that LLMs can write Kumiki apps up to a scale of 1300 lines from the specification alone. Token efficiency is also high compared to React.
+Cross-vendor measurements (Claude / Codex / Gemini) show that, from the specification alone and in a single pass, LLMs can write mid-size Kumiki apps — up to a ~600-line multi-route issue tracker — that typecheck and build; larger apps (~1000+ lines) still need an edit loop. Token efficiency is also high: an equivalent app is roughly 1.4–2.0× smaller than React (tokens / lines). See [packages/benchmarks](./packages/benchmarks/).
 
 ## Repository layout
 

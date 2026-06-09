@@ -22,7 +22,7 @@ features:
   - title: AI が部分編集しやすい
     details: 各定義が独立し参照が明示的。CLI と MCP サーバーが定義単位の list / view / add / replace / fix を提供する。
   - title: 実測された学習しやすさ
-    details: 仕様書だけで複数の LLM が 1300 行規模のアプリを書けることをクロスベンダーで確認済み。
+    details: クロスベンダー（Claude / Codex / Gemini）実測 — 仕様書だけ・単一パスで中規模アプリ（〜600 行）はビルドが通る。大規模は編集ループが必要。
   - title: 動く例ですべてに答える
     details: 機能別ミニマル例とサイズ順アプリを網羅。質問・バグは example と test を足して答える運用。
 ---

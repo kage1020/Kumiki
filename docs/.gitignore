@@ -1,12 +1,3 @@
-# Synced docs (single source lives at repo root: ../spec, ../guide, ...)
-/spec
-/guide
-/examples
-
-# Generated Japanese locale tree (built from *.ja.md by scripts/sync-docs.mjs)
-/ja
-
 # VitePress build output / cache
-/dist
-/.vitepress/dist
-/.vitepress/cache
+.vitepress/dist
+.vitepress/cache

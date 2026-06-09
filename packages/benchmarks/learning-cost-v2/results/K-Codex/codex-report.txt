@@ -1,7 +1,0 @@
-{
-  "condition": "K-Codex",
-  "self_confidence": "med",
-  "loc_estimate": 200,
-  "notable_uncertainties": ["Did not run strand check/build per rule", "Some button/style props follow examples but may depend on runtime prop normalization"],
-  "docs_read": ["task-spec.md", "01-language.md", "02-stdlib.md", "04-style.md", "06-http-storage.md", "07-lifecycle-errors.md", "examples/02-todomvc.strand", "examples/03-blog-spa.strand"]
-}

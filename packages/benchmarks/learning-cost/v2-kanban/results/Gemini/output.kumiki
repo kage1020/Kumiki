@@ -1,0 +1,152 @@
+type Column = Todo | Doing | Done
+type CardId = nominal Text where uuid
+type Card   = {id: CardId, title: Text, column: Column, createdAt: Time}
+
+slot cards : Map(CardId, Card) = {}
+slot draft : Text = ""
+
+theme KanbanTheme = {
+    colors: {
+        bg: "#f3f4f6",
+        fg: "#111827",
+        muted: "#6b7280",
+        primary: "#3b82f6",
+        surface: "#ffffff",
+        border: "#e5e7eb",
+        danger: "#ef4444"
+    },
+    spacing: {
+        xs: "4px", sm: "8px", md: "16px", lg: "24px"
+    },
+    radius: {
+        sm: "4px", md: "8px", lg: "16px"
+    },
+    typography: {
+        family: "system-ui, sans-serif",
+        size: {
+            sm: "14px", md: "16px", lg: "20px"
+        },
+        weight: {
+            normal: "400", bold: "700"
+        },
+        line-height: "1.5"
+    },
+    shadow: {
+        sm: "0 1px 2px rgba(0,0,0,0.1)",
+        md: "0 4px 6px rgba(0,0,0,0.1)"
+    },
+    breakpoints: {
+        sm: "640px", md: "768px", lg: "1024px", xl: "1280px"
+    }
+}
+
+effect saveCards cap=storage.write
+                 in=Map(CardId, Card)
+                 out=Result(Unit, Text)
+                 policy=debounce(300ms)
+                 map-request={key="kanban-cards", value=$1}
+
+effect loadCards cap=storage.read
+                 in=Unit
+                 out=Result(Option(Map(CardId, Card)), Text)
+                 policy=once
+                 map-request={key="kanban-cards", decode=Decoder.Json(Map(CardId, Card))}
+
+reducer boot
+    on=app.start
+    do= emit loadCards()
+
+reducer cardsLoaded
+    on=loadCards.ok($maybeMap, $key)
+    do= cards := $maybeMap.get-or({})
+
+fn prevCol(c: Column) -> Column = match c with | Done -> Doing | Doing -> Todo | Todo -> Todo
+fn nextCol(c: Column) -> Column = match c with | Todo -> Doing | Doing -> Done | Done -> Done
+
+fn countInCol(allCards: Map(CardId, Card), col: Column) -> Int
+    = allCards.values.filter($1.column == col).length
+
+fn cardsInCol(allCards: Map(CardId, Card), col: Column) -> List(CardId)
+    = allCards.entries.filter($2.column == col).sort-by($2.createdAt).map($1)
+
+tile LeftBtn   in=CardId = button(text="←") {cardId: $1, disabled: cards[$1].column == Todo}
+tile RightBtn  in=CardId = button(text="→") {cardId: $1, disabled: cards[$1].column == Done}
+tile DeleteBtn in=CardId = button(text="✕") {cardId: $1, color: "danger"}
+
+tile CardUI in=CardId =
+    box(
+        column(
+            text(cards[$1].title) {weight: "bold"},
+            row(
+                LeftBtn($1),
+                RightBtn($1),
+                DeleteBtn($1)
+            ) {gap: "sm", justify: "between"}
+        ) {gap: "md"}
+    ) {bg: "surface", pad: "md", shadow: "sm", radius: "md"}
+
+tile ColHeader in=Column =
+    heading((match $1 with | Todo -> "Todo" | Doing -> "Doing" | Done -> "Done") + " (" + countInCol(cards, $1).show + ")") {size: "lg"}
+
+tile ColumnUI in=Column =
+    column(
+        ColHeader($1),
+        column(
+            for id in cardsInCol(cards, $1)
+                CardUI(id) {key: id.show}
+        ) {gap: "sm"}
+    ) {gap: "md", pad: "md", bg: "bg", radius: "md"}
+
+tile Board = grid(
+                 ColumnUI(Todo),
+                 ColumnUI(Doing),
+                 ColumnUI(Done)
+             ) {cols: 3, gap: "md", pad: "md"}
+
+tile NewCardForm = form(
+                       row(
+                           input(bind=draft, placeholder="New card..."),
+                           button(text="Add", type="submit") {disabled: draft.is-empty, bg: "primary", color: "surface"}
+                       ) {gap: "sm"}
+                   ) {pad: "md", bg: "surface", shadow: "sm"}
+
+tile Home = page(
+                NewCardForm,
+                Board
+            ) {title: "Kanban Board", bg: "bg"}
+
+tile NotFound = page(heading("Not Found"))
+
+reducer addCard
+    on=ui.submit(NewCardForm)
+    do= if not draft.is-empty
+        then {
+            let id = CardId.fresh()
+            cards[id] := {id=id, title=draft, column=Todo, createdAt=now}
+            draft := ""
+            emit saveCards(cards)
+        }
+
+reducer moveLeft
+    on=ui.click(LeftBtn)
+    do= cards[$el.cardId].column := prevCol(cards[$el.cardId].column)
+        emit saveCards(cards)
+
+reducer moveRight
+    on=ui.click(RightBtn)
+    do= cards[$el.cardId].column := nextCol(cards[$el.cardId].column)
+        emit saveCards(cards)
+
+reducer deleteCard
+    on=ui.click(DeleteBtn)
+    do= cards := cards.remove($el.cardId)
+        emit saveCards(cards)
+
+app KanbanApp
+    caps   = [storage.read, storage.write]
+    routes = {
+        "/"    -> Home,
+        "/404" -> NotFound
+    }
+    init   = [loadCards()]
+    theme  = KanbanTheme

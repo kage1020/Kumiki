@@ -26,7 +26,7 @@ features:
   - title: Easy for AI to edit in parts
     details: Each definition is independent and references are explicit. The CLI and MCP server provide per-definition list / view / add / replace / fix.
   - title: Measured ease of learning
-    details: Cross-vendor confirmed that multiple LLMs can write 1300-line-scale apps from the spec alone.
+    details: Cross-vendor (Claude / Codex / Gemini) — mid-size apps (~600 LOC) build from the spec alone in a single pass; larger ones still need an edit loop.
   - title: Answers everything with working examples
     details: Comprehensive per-feature minimal examples and apps ordered by size. Questions and bugs are answered by adding an example and a test.
 ---

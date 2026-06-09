@@ -370,11 +370,13 @@ issue.copy(status=Done, priority=High)
 
 | Syntax | Meaning |
 |---|---|
-| `$1`, `$2`, ... | the bind order of an `effect-event`; within a `fn`, the argument order |
+| `$1`, `$2`, ... | the bind order of an `effect-event`; within a `fn`, the argument order; **within a tile, the tile's `in=` argument** (`$1` only — a tile takes a single positional argument) |
 | `$el` | the `{...}` props of the tile that fired the event |
 | `$event` | the event payload |
 | `$route` | the Route at route.enter/leave |
 | `$now` | the current time |
+
+> **`$1` in a tile requires `in=`.** A tile may reference `$1` (e.g. `todos[$1]`) only if it declares an `in=` argument type — `tile TodoRow in=TodoId = … todos[$1] …`. Using `$1` in a tile with no `in=` is an undefined reference (**E0103**): there is no positional argument to bind. See §1.7.4.
 
 ### 1.6.6 Examples
 
@@ -434,6 +436,11 @@ pattern      ::= identifier
                | '_'
 ```
 
+**`( … )` vs `{ … }` — arguments/children vs props**:
+- `( … )` is the **argument & children list**: positional child tiles (`column(A, B)`), value arguments (`heading("Hi")`), and named arguments (`button(text="Save", onClick=r)`, `input(bind=draft)`). A child tile or another tile call goes **here**.
+- `{ … }` is the **props block**: `key: value` pairs only — style/layout/ARIA props and event-handler bindings (`{pad: "lg", gap: "md"}`, `{todoId: $1}`, `{onClick: r}`). It contains **no tile calls and no children**. Writing a tile call inside `{ … }` (e.g. `link(to="/x") {text("Home")}`) is a parse error.
+- A tile's **label/content** is passed in `( … )`: it is a positional value-arg for the text builtins (`text("Home")`, `heading("Hi")`, `code("…")`) and a **named** arg for the interactive builtins (`button(text="Save")`, `link(to="/x", text="Home")`). The canonical place for a label is the `text=` **argument**, consistent across `button` and `link`. (`link` additionally accepts the older `{text: "…"}` prop form, which most existing examples use; both compile to the same node.)
+
 **Semantics of `when(cond, tile)`**:
 - `cond` is true → render `tile`
 - `cond` is false → **omit that child from the tree** (no effect on siblings)
@@ -467,6 +474,11 @@ button(text="Save", onClick=saveTodo) {todoId: $1}
 With `onClick=saveTodo`, the reducer `saveTodo` is called on click. `{todoId: $1}` is delivered to the reducer as `$el.todoId`.
 
 ### 1.7.4 Examples
+
+A tile that takes a positional argument declares its type with `in=` and reads
+the argument as `$1`. **`$1` is available only when `in=` is declared** — using
+`$1` in a tile with no `in=` is an undefined reference (E0103). Callers pass the
+argument positionally: `TodoRow(id)`.
 
 ```kumiki
 tile TodoRow  in=TodoId
@@ -602,10 +614,10 @@ collection-lit ::= '[' (expr (',' expr)*)? ']'
 entry       ::= expr ':' expr
 
 match-arm   ::= '|' pattern '->' expr
-pattern     ::= identifier
-              | identifier '(' bind (',' bind)* ')'
+pattern     ::= identifier                            ; a union variant, or a binding name
+              | identifier '(' bind (',' bind)* ')'   ; variant with payload binds
               | '(' pattern (',' pattern)* ')'        ; tuple
-              | '_'
+              | '_'                                   ; wildcard
 
 binop       ::= '+' | '-' | '*' | '/' | '%'
               | '==' | '!=' | '<' | '>' | '<=' | '>='
@@ -620,6 +632,19 @@ unop        ::= '-' | '!'
 - **`null` / `undefined` prohibited**
 - **`while` loops prohibited**
 - **Assignment expressions prohibited** (`:=` is a statement and cannot be used within an expression)
+- **Literal patterns prohibited.** A `match` pattern is a union variant, `Variant(binds)`, a tuple, or `_` — **only**. Patterns matching against a literal value (`match s with | "Overdue" -> … | "Today" -> …`, or numeric/bool literals) are **not supported** and fail to parse. `match` is for destructuring a *union/variant*, not for branching on a `Text`/`Int`/`Bool` value. To branch on a value, use `if/else` (or chained `if`), or model the cases as a union type and match on that:
+
+  ```kumiki
+  # ❌ literal patterns — not supported
+  match label with | "Overdue" -> red | "Today" -> amber | _ -> gray
+
+  # ✅ branch on a value with if/else
+  if label == "Overdue" then red else if label == "Today" then amber else gray
+
+  # ✅ or lift the cases into a union and match the variant
+  type Urgency = Overdue | Today | Later
+  match urgency with | Overdue -> red | Today -> amber | Later -> gray
+  ```
 
 ### 1.9.2 Alternatives to Higher-Order Functions
 
@@ -714,6 +739,15 @@ fn current() = todos                          # receive it via a fn argument
 
 # ❌ CSS attribute selector
 reducer r on=ui.change(input[type=file]) do= ...   # write it by tile name
+
+# ❌ literal match pattern
+match status with | "open" -> ... | "closed" -> ...   # patterns are variant/_ only; use if/else or a union (§1.9.1)
+
+# ❌ $1 in a tile with no in=
+tile Row = card(text(issues[$1].title))               # E0103: declare `tile Row in=IssueId = …` (§1.6.5, §1.7.4)
+
+# ❌ a tile call inside the props block
+link(to="/x") {text("Home")}                           # `{...}` is key:value props only; pass the label as text="Home" (§1.7.1)
 ```
 
 ---

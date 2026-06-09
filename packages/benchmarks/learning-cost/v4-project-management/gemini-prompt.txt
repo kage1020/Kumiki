@@ -3,21 +3,21 @@ You are participating in an experiment to measure how accurately an LLM can writ
 ## Task
 
 Implement a Project Management Tool SPA (Asana/Linear style) in Kumiki (estimated 800-1500 LOC). The full requirements are in:
-  C:\Users\delta\repositories\kage1020\Kumiki\packages\benchmarks\learning-cost\v4-project-management\task-spec.md
+  /Kumiki/packages/benchmarks/learning-cost/v4-project-management/task-spec.md
 
 Read that file first.
 
 ## Reference materials (read ONLY these)
 
 Specification docs (the normative spec):
-  C:\Users\delta\repositories\kage1020\Kumiki\docs\spec\language.md   (core, required)
-  C:\Users\delta\repositories\kage1020\Kumiki\docs\spec\stdlib.md     (stdlib, required)
-  C:\Users\delta\repositories\kage1020\Kumiki\docs\spec\routing.md
-  C:\Users\delta\repositories\kage1020\Kumiki\docs\spec\style.md
-  C:\Users\delta\repositories\kage1020\Kumiki\docs\spec\forms.md
-  C:\Users\delta\repositories\kage1020\Kumiki\docs\spec\http.md
-  C:\Users\delta\repositories\kage1020\Kumiki\docs\spec\lifecycle.md
-  C:\Users\delta\repositories\kage1020\Kumiki\docs\spec\errors.md
+  /Kumiki/docs/spec/language.md   (core, required)
+  /Kumiki/docs/spec/stdlib.md     (stdlib, required)
+  /Kumiki/docs/spec/routing.md
+  /Kumiki/docs/spec/style.md
+  /Kumiki/docs/spec/forms.md
+  /Kumiki/docs/spec/http.md
+  /Kumiki/docs/spec/lifecycle.md
+  /Kumiki/docs/spec/errors.md
 
 ## Rules (IMPORTANT — keeps the measurement honest)
 

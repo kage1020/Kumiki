@@ -1,0 +1,58 @@
+# Pomodoro Timer
+
+type Mode = Work | Break
+
+slot remaining : Int  = 1500
+slot mode      : Mode = Work
+slot running   : Bool = false
+
+fn maxFor(m: Mode) -> Int
+   = match m with
+       | Work  -> 1500
+       | Break -> 300
+
+fn nextMode(m: Mode) -> Mode
+   = match m with
+       | Work  -> Break
+       | Break -> Work
+
+fn modeLabel(m: Mode) -> Text
+   = match m with
+       | Work  -> "Work"
+       | Break -> "Break"
+
+reducer start
+    on=ui.click(StartBtn)
+    do= running := true
+
+reducer pause
+    on=ui.click(PauseBtn)
+    do= running := false
+
+reducer reset
+    on=ui.click(ResetBtn)
+    do= remaining := maxFor(mode)
+        running := false
+
+reducer tick
+    on=timer(1s, name=pomodoro)
+    do= if running
+        then if remaining <= 1
+             then { mode := nextMode(mode); remaining := maxFor(nextMode(mode)) }
+             else remaining := remaining - 1
+        else ()
+
+tile StartBtn = button(text="Start", onClick=start)
+tile PauseBtn = button(text="Pause", onClick=pause)
+tile ResetBtn = button(text="Reset", onClick=reset)
+
+tile App = page(
+             heading("Pomodoro"),
+             text("Mode: " + modeLabel(mode)),
+             text("Remaining: " + remaining.show + "s"),
+             row(StartBtn, PauseBtn, ResetBtn) {gap: "sm"})
+
+app Pomodoro
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

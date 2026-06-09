@@ -17,8 +17,8 @@
       "!**/.turbo",
       "!**/examples-build",
       "!**/test-tmp",
-      "!packages/benchmarks/scenarios/**/react-modified.tsx",
-      "!packages/benchmarks/todomvc-react"
+      "!packages/benchmarks/size-comparison/scenarios/**/react-modified.tsx",
+      "!packages/benchmarks/size-comparison/todomvc-react"
     ]
   },
   "formatter": {

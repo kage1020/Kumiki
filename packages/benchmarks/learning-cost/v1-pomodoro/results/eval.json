@@ -1,0 +1,14 @@
+[
+  {
+    "path": "packages/benchmarks/learning-cost/v1-pomodoro/results/Claude/output.kumiki",
+    "chars": 1347,
+    "loc": 59,
+    "cl100k": 384,
+    "parse": true,
+    "typecheck": true,
+    "build": true,
+    "errorCount": 0,
+    "errorCategories": {},
+    "firstError": null
+  }
+]

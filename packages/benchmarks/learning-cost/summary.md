@@ -7,7 +7,16 @@ for token-efficiency.
 
 The committed `results/*/eval.json` were generated in the old **"Strand"** era
 (pre-rename, an earlier compiler). This re-take refreshes them against the
-current toolchain (`main`, v0.6-era) across three vendors **under one protocol**.
+current toolchain across three vendors **under one protocol**.
+
+> **Re-scored after [#61](https://github.com/kage1020/Kumiki/issues/61) +
+> [#62](https://github.com/kage1020/Kumiki/issues/62) were fixed.** The *same*
+> single-pass model outputs are re-evaluated against the patched compiler. The
+> `error` built-in tile now builds, which flips **Codex's v3 and v4 from
+> build-fail to build-green** — Codex now builds all three tasks it attempted,
+> including the ~880-LOC v4. The remaining failures (v3 Gemini, v4 Claude, v4
+> Gemini) are genuine authoring errors that #62 now documents as *intentionally*
+> rejected — the toolchain is correctly refusing them, not gapping.
 
 ## Protocol (uniform — single pass, spec only)
 
@@ -34,25 +43,27 @@ current toolchain (`main`, v0.6-era) across three vendors **under one protocol**
 | v2 Kanban | Codex | 243 | 6,517 | 1,881 | ✅ | ✅ | ✅ | — |
 | v2 Kanban | Gemini | 152 | 4,591 | 1,314 | ✅ | ✅ | ✅ | — |
 | v3 Issue Tracker | Claude | 629 | 23,915 | 5,325 | ✅ | ✅ | ✅ | — |
-| v3 Issue Tracker | Codex | 674 | 23,210 | 6,417 | ✅ | ✅ | ❌ | build: `Tile "error" not found` |
-| v3 Issue Tracker | Gemini | 440 | 20,270 | 4,995 | ✅ | ❌ | ❌ | typecheck E0103: undefined `$1` (×23) |
-| v4 Project Mgmt | Claude | 1029 | 39,178 | 9,552 | ❌ | ❌ | ❌ | parse @201:20 `Expected a definition keyword` |
-| v4 Project Mgmt | Codex | 877 | 32,376 | 8,703 | ✅ | ✅ | ❌ | build: `Tile "error" not found` |
-| v4 Project Mgmt | Gemini | 294 | 16,517 | 4,397 | ❌ | ❌ | ❌ | parse @152:50 `Expected op(:)` |
+| v3 Issue Tracker | Codex | 674 | 23,210 | 6,417 | ✅ | ✅ | ✅ | — |
+| v3 Issue Tracker | Gemini | 440 | 20,270 | 4,995 | ✅ | ❌ | ❌ | typecheck E0103: `$1` w/o `in=` (×23) |
+| v4 Project Mgmt | Claude | 1029 | 39,178 | 9,552 | ❌ | ❌ | ❌ | parse @201:20 (literal match pattern) |
+| v4 Project Mgmt | Codex | 877 | 32,376 | 8,703 | ✅ | ✅ | ✅ | — |
+| v4 Project Mgmt | Gemini | 294 | 16,517 | 4,397 | ❌ | ❌ | ❌ | parse @152:50 (tile call in props block) |
 
 ### Reading the table
 
-- **Build-green, single pass**: Claude 3/4 (v1–v3), Codex 1/3, Gemini 1/3.
-  Claude leads but is **not** flawless — v4 parse-fails.
-- **No vendor builds v4 in one pass.** The ~800–1500 LOC Project Management task
-  is beyond reliable single-pass authoring for every current model. Notably,
-  **Codex's v4 typechecks** and fails only on the `error`-tile codegen gap
-  ([#61](https://github.com/kage1020/Kumiki/issues/61)) — if that were fixed,
-  Codex's v4 would plausibly build, making it the strongest at v4.
+- **Build-green, single pass**: Codex 3/3 (v2–v4), Claude 3/4 (v1–v3), Gemini 1/3.
+- **Codex is the only vendor to build v4** (~880 LOC) in one pass — and it builds
+  *everything* it attempted. The earlier prediction held: the sole thing blocking
+  its v3/v4 was the `error`-tile codegen gap ([#61](https://github.com/kage1020/Kumiki/issues/61)),
+  now fixed, so both flipped to build-green on re-score.
+- **Claude leads on smaller tasks but parse-fails v4** — it used a literal `match`
+  pattern, which is *not* supported (now stated in spec §1.9.1 via
+  [#62](https://github.com/kage1020/Kumiki/issues/62)).
 - **Token efficiency** (v2, the one task all three build): Gemini 1,314 <
   Claude 1,421 < Codex 1,881 tokens.
 - **Degradation with scale**: Gemini builds v2 → typecheck-fails v3 → parse-fails
-  v4. Claude holds through v3 then parse-fails v4. Codex typechecks through v4.
+  v4. Claude holds through v3 then parse-fails v4. **Codex builds all the way
+  through v4** — the most robust at scale.
 
 ## Fairness note (why this is a re-take of the re-take)
 
@@ -65,13 +76,23 @@ session. Re-running Claude as **fresh isolated sub-agents under the same
 single-pass, no-check, spec-only protocol as Codex/Gemini** drops it to **3/4**
 (v4 parse-fails) — consistent with the vendors struggling at v4 scale.
 
-## Compiler gap surfaced by the benchmark → issue #61
+## Gaps surfaced by the benchmark → issues #61 / #62 (both fixed)
 
-Codex's v3 and v4 fail `build` on `Tile "error" not found`. The `error` tile
-(and `code`/`video`/`list`/`table`/`modal`/`drawer`/`tooltip`/`popover`/`toast`/
-`progress`) is documented in `docs/spec/stdlib.md §2.3` and accepted by `check`,
-but is missing from codegen's `BUILTIN_TILES` — accept-then-crash-at-build.
-Tracked in [#61](https://github.com/kage1020/Kumiki/issues/61).
+The re-take surfaced two real defects, now resolved:
+
+- **[#61](https://github.com/kage1020/Kumiki/issues/61) — documented tiles that
+  crashed at build.** Codex's v3/v4 failed `build` on `Tile "error" not found`.
+  The `error` tile (and `code`/`video`/`list`/`table`/`modal`/`drawer`/`tooltip`/
+  `popover`/`toast`/`progress`) was documented in `stdlib.md §2.3` and accepted by
+  `check`, but missing from codegen — accept-then-crash-at-build. **Fixed**: all
+  built-in tiles are now single-sourced and implemented, so Codex v3/v4 build.
+- **[#62](https://github.com/kage1020/Kumiki/issues/62) — under-specified rules
+  models reliably got wrong.** The three remaining failures each hit a rule the
+  spec stated only by example: a literal `match` pattern (Claude v4), `$1` in a
+  tile with no `in=` (Gemini v3), and a tile call inside the `{}` props block
+  (Gemini v4). **Fixed**: §1.6.5 / §1.7.1 / §1.9.1 now state each rule, with
+  counterexamples and an E0103 `in=` hint. These outputs still fail — correctly,
+  because the constructs are illegal by design.
 
 ## Notes
 

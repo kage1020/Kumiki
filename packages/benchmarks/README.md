@@ -41,6 +41,6 @@ Each `vN-*/` task gives a model only its `task-spec.md` + `docs/spec/` and asks 
 pnpm --filter @kumikijs/benchmarks eval learning-cost/v3-issue-tracker/results/Claude/output.kumiki
 ```
 
-Cross-vendor results (Claude / Codex / Gemini) and the full methodology — including how each model failed and why — are in **[learning-cost/summary.md](./learning-cost/summary.md)**. Compiler/spec gaps surfaced by the runs are tracked as issues (#61 unimplemented built-in tiles, #62 under-specified rules).
+Cross-vendor results (Claude / Codex / Gemini) and the full methodology — including how each model failed and why — are in **[learning-cost/summary.md](./learning-cost/summary.md)**. The runs surfaced two real defects, both since fixed (#61 unimplemented built-in tiles, #62 under-specified rules); the scores there are re-evaluated against the patched compiler.
 
 To refresh a vendor column: run the model on `vN-*/codex-prompt.txt` or `gemini-prompt.txt`, save its output to `results/<Vendor>/output.kumiki`, then re-run `eval` and update `results/eval.json`.

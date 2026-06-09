@@ -18,10 +18,10 @@
     "cl100k": 6417,
     "parse": true,
     "typecheck": true,
-    "build": false,
+    "build": true,
     "errorCount": 0,
     "errorCategories": {},
-    "firstError": { "stage": "build", "message": "Tile \"error\" not found" }
+    "firstError": null
   },
   {
     "path": "packages/benchmarks/learning-cost/v3-issue-tracker/results/Gemini/output.kumiki",
@@ -36,7 +36,7 @@
     "firstError": {
       "stage": "typecheck",
       "code": "E0103",
-      "message": "Reference to undefined name \"$1\"",
+      "message": "\"$1\" is undefined here — a tile can only use \"$1\" if it declares an \"in=\" argument (e.g. `tile X in=SomeType = …`)",
       "pos": { "line": 236, "col": 39 }
     }
   }

@@ -21,10 +21,10 @@
     "cl100k": 8703,
     "parse": true,
     "typecheck": true,
-    "build": false,
+    "build": true,
     "errorCount": 0,
     "errorCategories": {},
-    "firstError": { "stage": "build", "message": "Tile \"error\" not found" }
+    "firstError": null
   },
   {
     "path": "packages/benchmarks/learning-cost/v4-project-management/results/Gemini/output.kumiki",

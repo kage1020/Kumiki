@@ -1,0 +1,22 @@
+{
+  "name": "@kumikijs/benchmarks",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Token / LOC / edit-cost benchmarks comparing Kumiki against React, plus learning-cost evaluation.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "measure": "tsx size-comparison/scripts/measure.mjs",
+    "measure:scenarios": "tsx size-comparison/scripts/measure-scenarios.mjs",
+    "measure:ops": "tsx size-comparison/scripts/measure-ops.mjs",
+    "eval": "tsx learning-cost/eval.mjs",
+    "lint": "biome check ."
+  },
+  "devDependencies": {
+    "@kumikijs/cli": "workspace:*",
+    "@kumikijs/compiler": "workspace:*",
+    "gpt-tokenizer": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:"
+  }
+}

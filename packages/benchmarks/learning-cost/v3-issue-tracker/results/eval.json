@@ -1,0 +1,43 @@
+[
+  {
+    "path": "packages/benchmarks/learning-cost/v3-issue-tracker/results/Claude/output.kumiki",
+    "chars": 23915,
+    "loc": 629,
+    "cl100k": 5325,
+    "parse": true,
+    "typecheck": true,
+    "build": true,
+    "errorCount": 0,
+    "errorCategories": {},
+    "firstError": null
+  },
+  {
+    "path": "packages/benchmarks/learning-cost/v3-issue-tracker/results/Codex/output.kumiki",
+    "chars": 23210,
+    "loc": 674,
+    "cl100k": 6417,
+    "parse": true,
+    "typecheck": true,
+    "build": false,
+    "errorCount": 0,
+    "errorCategories": {},
+    "firstError": { "stage": "build", "message": "Tile \"error\" not found" }
+  },
+  {
+    "path": "packages/benchmarks/learning-cost/v3-issue-tracker/results/Gemini/output.kumiki",
+    "chars": 20270,
+    "loc": 440,
+    "cl100k": 4995,
+    "parse": true,
+    "typecheck": false,
+    "build": false,
+    "errorCount": 23,
+    "errorCategories": { "unknown-name": 23 },
+    "firstError": {
+      "stage": "typecheck",
+      "code": "E0103",
+      "message": "Reference to undefined name \"$1\"",
+      "pos": { "line": 236, "col": 39 }
+    }
+  }
+]

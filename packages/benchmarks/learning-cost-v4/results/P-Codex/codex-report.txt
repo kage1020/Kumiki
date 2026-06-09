@@ -1,7 +1,0 @@
-{
-  "condition": "P-Codex",
-  "self_confidence": "med",
-  "loc_estimate": 1308,
-  "notable_uncertainties": ["Did not run strand check per single-pass rule", "Some runtime-polymorphic helpers such as Time.to-ms follow examples but are not explicit in core docs"],
-  "docs_read": ["task-spec.md", "01-language.md", "02-stdlib.md", "03-routing.md", "04-style.md", "05-forms.md", "06-http-storage.md", "07-lifecycle-errors.md", "10-runtime.md", "examples/01-counter.strand", "examples/02-todomvc.strand", "examples/03-blog-spa.strand"]
-}

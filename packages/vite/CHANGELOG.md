@@ -1,5 +1,13 @@
 # @kumikijs/vite
 
+## 0.4.4
+
+### Patch Changes
+
+- Updated dependencies [3ee1a9a]
+  - @kumikijs/compiler@0.8.0
+  - @kumikijs/runtime@0.8.0
+
 ## 0.4.3
 
 ### Patch Changes

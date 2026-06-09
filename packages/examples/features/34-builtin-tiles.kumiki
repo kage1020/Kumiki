@@ -1,0 +1,72 @@
+# Feature: the remaining documented built-in tiles (stdlib §2.3) that codegen
+# previously accepted at `check` but crashed on at `build` (issue #61):
+# code / video / list / table / modal / drawer / tooltip / popover / toast /
+# progress / slider / switch / error. This example pins all of them as
+# check + build + smoke covered so the registry can't silently re-drift.
+
+slot name   : Text where nonempty = ""
+slot vol    : Int  = 50
+slot notify : Bool = true
+slot open   : Bool = false
+
+reducer openDialog  on=ui.click(OpenBtn)      do= open := true
+reducer closeDialog on=ui.click(CloseBtn)     do= open := false
+reducer toggle      on=ui.click(NotifySwitch) do= notify := not notify
+
+# Text / media
+tile Snippet = code("const answer = 42", lang="ts")
+tile Clip    = video(src="/demo.mp4", controls=true)
+
+# Forms: field-level validation message (shows "Required" while empty)
+tile NameField = column(
+                   label(text="Name") {for: "name"},
+                   input(bind=name, id="name", placeholder="required"),
+                   error(field=name))
+
+# Feedback + range inputs
+tile VolSlider    = slider(bind=vol, min=0, max=100, step=5)
+tile NotifySwitch = switch(value=notify, onClick=toggle)
+tile Loaded       = progress(value=vol, max=100)
+
+# Lists
+tile Items = list(
+               list-item(text("first")),
+               list-item(text("second")),
+               list-item(text("third"))) {ordered: true}
+
+# Tables
+tile Grid = table(
+              table-head(table-row(table-cell(text("A")), table-cell(text("B")))),
+              table-body(table-row(table-cell(text("1")), table-cell(text("2")))))
+
+# Overlays
+tile OpenBtn  = button(text="Open", onClick=openDialog)
+tile CloseBtn = button(text="Close", onClick=closeDialog)
+tile Dialog   = modal(heading("Greeting"), text("Hello from a modal."), CloseBtn,
+                  open=open, title="Greeting", onClose=closeDialog)
+tile SideMenu = drawer(text("menu"), open=open, side="left", onClose=closeDialog)
+tile Pop      = popover(text("details"), open=open, placement="bottom", onClose=closeDialog)
+tile Help     = tooltip(icon(name="info"), text="Help", placement="top")
+tile Saved    = toast(kind="success", text="Saved")
+
+tile App = column(
+             heading("Built-in tiles"),
+             Snippet,
+             Clip,
+             NameField,
+             VolSlider,
+             NotifySwitch,
+             Loaded,
+             Items,
+             Grid,
+             Help,
+             Saved,
+             OpenBtn,
+             when(open, Dialog()),
+             when(open, SideMenu()),
+             when(open, Pop())) {pad: "lg", gap: "md"}
+
+app BuiltinTiles
+    caps   = []
+    routes = {"/" -> App, "/404" -> App}
+    init   = []

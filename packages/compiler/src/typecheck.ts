@@ -15,6 +15,7 @@ import type {
   TypeDef,
   TypeExpr,
 } from "./ast.ts";
+import { BUILTIN_TILES } from "./builtins.ts";
 import { STANDARD_CAPABILITIES } from "./capabilities.ts";
 import { KNOWN_MEMBERS, KNOWN_METHODS } from "./codegen.ts";
 
@@ -24,57 +25,6 @@ export type KumikiError = {
   message: string;
   pos: Pos;
 };
-
-const BUILTIN_TILES = new Set([
-  "page",
-  "region",
-  "row",
-  "column",
-  "stack",
-  "overlay",
-  "grid",
-  "box",
-  "card",
-  "panel",
-  "divider",
-  "scroll",
-  "text",
-  "heading",
-  "link",
-  "code",
-  "markdown",
-  "image",
-  "icon",
-  "video",
-  "button",
-  "input",
-  "textarea",
-  "check",
-  "radio",
-  "select",
-  "slider",
-  "switch",
-  "form",
-  "label",
-  "fieldset",
-  "error",
-  "list",
-  "list-item",
-  "table",
-  "table-head",
-  "table-body",
-  "table-row",
-  "table-cell",
-  "modal",
-  "drawer",
-  "tooltip",
-  "popover",
-  "toast",
-  "spinner",
-  "progress",
-  "skeleton",
-  "route-outlet",
-]);
 
 const A11Y_CODES = new Set(["E0701", "E0702", "E0703"]);
 
@@ -428,6 +378,7 @@ function checkTileCall(
     "onInput",
     "onFocus",
     "onBlur",
+    "onClose",
   ]);
   for (const arg of t.args) {
     const v = arg.value;
@@ -698,6 +649,17 @@ function checkExpr(e: Expr, sym: SymbolTable, errors: KumikiError[], ctx: Ctx): 
       if (sym.fns.has(e.name)) return;
       // Could be a built-in like `route`
       if (e.name === "route" || e.name === "now" || e.name === "self") return;
+      // `$1` in a tile is bound only when the tile declares `in=`; reaching here
+      // means it didn't (in= adds `$1` to localBinds). Point at the real fix.
+      if (e.name === "$1" && ctx.kind === "tile") {
+        errors.push({
+          code: "E0103",
+          kind: "undef-ref",
+          message: `"$1" is undefined here — a tile can only use "$1" if it declares an "in=" argument (e.g. \`tile X in=SomeType = …\`)`,
+          pos: e.pos,
+        });
+        return;
+      }
       errors.push({
         code: "E0103",
         kind: "undef-ref",

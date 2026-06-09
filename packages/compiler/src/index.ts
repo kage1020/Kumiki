@@ -1,5 +1,6 @@
 // Public API of @kumikijs/compiler.
 export type * from "./ast.ts";
+export { BUILTIN_TILES, VALUE_ARG_BUILTINS } from "./builtins.ts";
 export {
   type CapabilityManifest,
   type ManifestResult,

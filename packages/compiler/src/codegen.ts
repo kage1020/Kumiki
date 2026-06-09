@@ -19,6 +19,7 @@ import type {
   TypeDef,
   TypeExpr,
 } from "./ast.ts";
+import { BUILTIN_TILES } from "./builtins.ts";
 
 export type CodegenOptions = {
   runtimeSpecifier: string;
@@ -83,10 +84,17 @@ export function codegen(program: Program, opts: CodegenOptions): string {
   lines.push("const _slots = {");
   for (const s of slots) {
     const refine = refinementJs(s.type, ctx);
+    const r = slotRefinement(s.type, ctx);
     const init = jsOfExpr(s.init, makeEvalCtx(ctx, new Set()));
-    lines.push(
-      `  ${JSON.stringify(s.name)}: { value: ${init}${refine ? `, refine: ${refine}` : ""} },`,
-    );
+    // `refineKind`/`refineArgs` let the `error` tile resolve the failed
+    // predicate's message at runtime (default text + `theme.errors` override).
+    const meta = [`value: ${init}`];
+    if (refine) meta.push(`refine: ${refine}`);
+    if (r) {
+      meta.push(`refineKind: ${JSON.stringify(r.pred)}`);
+      meta.push(`refineArgs: ${JSON.stringify(r.args)}`);
+    }
+    lines.push(`  ${JSON.stringify(s.name)}: { ${meta.join(", ")} },`);
   }
   lines.push("};");
   lines.push("");
@@ -1397,40 +1405,6 @@ function tileExprJs(t: TileExpr, gen: GenCtx, ctx: EvalCtx, enclosingTile?: stri
   }
 }
 
-const BUILTIN_TILES = new Set([
-  "page",
-  "row",
-  "column",
-  "card",
-  "box",
-  "panel",
-  "grid",
-  "stack",
-  "overlay",
-  "region",
-  "scroll",
-  "divider",
-  "fieldset",
-  "heading",
-  "text",
-  "button",
-  "form",
-  "input",
-  "textarea",
-  "label",
-  "check",
-  "spinner",
-  "select",
-  "radio",
-  "slider",
-  "switch",
-  "link",
-  "markdown",
-  "skeleton",
-  "image",
-  "icon",
-]);
-
 /**
  * For `bind=draft` or `bind=draft.title.deeper`, extract the root slot name,
  * the static path (string field names), and a JS expression to read the value.
@@ -1518,6 +1492,11 @@ function tileCallJs(
     case "scroll":
     case "divider":
     case "fieldset":
+    case "list-item":
+    case "table":
+    case "table-head":
+    case "table-body":
+    case "table-row":
     case "panel": {
       const children = collectChildren(t.args, gen, ctx, enclosingTile);
       return `({ kind: ${JSON.stringify(name)}, children: [${children}], props: ${propsObj} })`;
@@ -1637,8 +1616,12 @@ function tileCallJs(
     case "link": {
       const toArg = t.args.find((a) => a.name === "to");
       const to = toArg ? jsOfExpr(asExpr(toArg.value), ctx) : '""';
+      // Label is the `text=` argument (canonical, consistent with `button`); the
+      // `{text: …}` prop form is also accepted for back-compat (§1.7.1).
+      const textArg = t.args.find((a) => a.name === "text");
       const textProp = t.props.find((p) => p.name === "text");
-      const text = textProp ? jsOfExpr(textProp.value, ctx) : '""';
+      const textExpr = textArg ? asExpr(textArg.value) : textProp ? textProp.value : undefined;
+      const text = textExpr ? jsOfExpr(textExpr, ctx) : '""';
       return `({ kind: "link", text: _s.show(${text}), to: _s.show(${to}), props: ${propsObj} })`;
     }
     case "markdown": {
@@ -1657,6 +1640,115 @@ function tileCallJs(
       const nameJs = name ? jsOfExpr(asExpr(name.value), ctx) : '""';
       return `({ kind: "icon", name: _s.show(${nameJs}), props: ${propsObj} })`;
     }
+    case "code": {
+      const arg0 = t.args.find((a) => !a.name);
+      const text = arg0 ? jsOfExpr(asExpr(arg0.value), ctx) : '""';
+      const langArg = t.args.find((a) => a.name === "lang");
+      const lang = langArg ? `_s.show(${jsOfExpr(asExpr(langArg.value), ctx)})` : "undefined";
+      return `({ kind: "code", text: _s.show(${text}), lang: ${lang}, props: ${propsObj} })`;
+    }
+    case "video": {
+      const fields: string[] = [`kind: "video"`];
+      const src = t.args.find((a) => a.name === "src");
+      if (src) fields.push(`src: _s.show(${jsOfExpr(asExpr(src.value), ctx)})`);
+      const controls = t.args.find((a) => a.name === "controls");
+      if (controls) fields.push(`controls: !!(${jsOfExpr(asExpr(controls.value), ctx)})`);
+      const autoplay = t.args.find((a) => a.name === "autoplay");
+      if (autoplay) fields.push(`autoplay: !!(${jsOfExpr(asExpr(autoplay.value), ctx)})`);
+      fields.push(`props: ${propsObj}`);
+      return `({ ${fields.join(", ")} })`;
+    }
+    case "list": {
+      const children = collectChildren(t.args, gen, ctx, enclosingTile);
+      const ordered = t.args.find((a) => a.name === "ordered");
+      const ord = ordered ? `!!(${jsOfExpr(asExpr(ordered.value), ctx)})` : "false";
+      return `({ kind: "list", ordered: ${ord}, children: [${children}], props: ${propsObj} })`;
+    }
+    case "table-cell": {
+      const children = collectChildren(t.args, gen, ctx, enclosingTile);
+      const fields: string[] = [`kind: "table-cell"`, `children: [${children}]`];
+      const colspan = t.args.find((a) => a.name === "colspan");
+      if (colspan) fields.push(`colspan: ${jsOfExpr(asExpr(colspan.value), ctx)}`);
+      const rowspan = t.args.find((a) => a.name === "rowspan");
+      if (rowspan) fields.push(`rowspan: ${jsOfExpr(asExpr(rowspan.value), ctx)}`);
+      fields.push(`props: ${propsObj}`);
+      return `({ ${fields.join(", ")} })`;
+    }
+    case "modal":
+    case "drawer":
+    case "popover": {
+      const children = collectChildren(t.args, gen, ctx, enclosingTile);
+      const fields: string[] = [`kind: ${JSON.stringify(name)}`, `children: [${children}]`];
+      const open = t.args.find((a) => a.name === "open");
+      fields.push(`open: ${open ? `!!(${jsOfExpr(asExpr(open.value), ctx)})` : "true"}`);
+      for (const key of ["title", "side", "placement"]) {
+        const a = t.args.find((x) => x.name === key);
+        if (a) fields.push(`${key}: _s.show(${jsOfExpr(asExpr(a.value), ctx)})`);
+      }
+      fields.push(`props: ${propsObj}`);
+      return `({ ${fields.join(", ")} })`;
+    }
+    case "tooltip": {
+      const children = collectChildren(t.args, gen, ctx, enclosingTile);
+      const fields: string[] = [`kind: "tooltip"`, `children: [${children}]`];
+      const text = t.args.find((a) => a.name === "text");
+      if (text) fields.push(`text: _s.show(${jsOfExpr(asExpr(text.value), ctx)})`);
+      const placement = t.args.find((a) => a.name === "placement");
+      if (placement) fields.push(`placement: _s.show(${jsOfExpr(asExpr(placement.value), ctx)})`);
+      fields.push(`props: ${propsObj}`);
+      return `({ ${fields.join(", ")} })`;
+    }
+    case "toast": {
+      const fields: string[] = [`kind: "toast"`];
+      const level = t.args.find((a) => a.name === "kind");
+      if (level) fields.push(`level: _s.show(${jsOfExpr(asExpr(level.value), ctx)})`);
+      const text = t.args.find((a) => a.name === "text");
+      if (text) fields.push(`text: _s.show(${jsOfExpr(asExpr(text.value), ctx)})`);
+      fields.push(`props: ${propsObj}`);
+      return `({ ${fields.join(", ")} })`;
+    }
+    case "progress": {
+      const fields: string[] = [`kind: "progress"`];
+      const value = t.args.find((a) => a.name === "value");
+      if (value) fields.push(`value: ${jsOfExpr(asExpr(value.value), ctx)}`);
+      const max = t.args.find((a) => a.name === "max");
+      if (max) fields.push(`max: ${jsOfExpr(asExpr(max.value), ctx)}`);
+      fields.push(`props: ${propsObj}`);
+      return `({ ${fields.join(", ")} })`;
+    }
+    case "slider": {
+      const fields: string[] = [`kind: "slider"`];
+      const bindInfo = extractBindPath(t.args);
+      for (const arg of t.args) {
+        if (!arg.name || arg.name === "bind") continue;
+        const valJs = jsOfExpr(asExpr(arg.value), ctx);
+        if (arg.name === "min") fields.push(`min: ${valJs}`);
+        else if (arg.name === "max") fields.push(`max: ${valJs}`);
+        else if (arg.name === "step") fields.push(`step: ${valJs}`);
+      }
+      if (bindInfo) {
+        fields.push(`bind: ${JSON.stringify(bindInfo.root)}`);
+        if (bindInfo.path.length > 0) fields.push(`bindPath: ${JSON.stringify(bindInfo.path)}`);
+        fields.push(`value: ${bindInfo.readJsRaw}`);
+      }
+      fields.push(`props: ${propsObj}`);
+      return `({ ${fields.join(", ")} })`;
+    }
+    case "switch": {
+      const valArg = t.args.find((a) => a.name === "value");
+      const checked = valArg ? jsOfExpr(asExpr(valArg.value), ctx) : "false";
+      return `({ kind: "switch", checked: !!(${checked}), props: ${propsObj} })`;
+    }
+    case "error": {
+      const fieldArg = t.args.find((a) => a.name === "field");
+      const fieldName =
+        fieldArg && (fieldArg.value as Expr).kind === "Ref"
+          ? (fieldArg.value as Expr & { name: string }).name
+          : "";
+      return `({ kind: "error", field: ${JSON.stringify(fieldName)}, props: ${propsObj} })`;
+    }
+    case "route-outlet":
+      return `({ kind: "route-outlet", children: [], props: ${propsObj} })`;
   }
   throw new Error(`Unsupported builtin tile "${name}"`);
 }
@@ -1710,7 +1802,8 @@ function propsFor(
       a.name === "onClick" ||
       a.name === "onSubmit" ||
       a.name === "onChange" ||
-      a.name === "onInput"
+      a.name === "onInput" ||
+      a.name === "onClose"
     ) {
       if ((a.value as Expr).kind === "Ref") {
         const reducerName = (a.value as Expr & { name: string }).name;
@@ -1726,7 +1819,8 @@ function propsFor(
       p.name === "onClick" ||
       p.name === "onSubmit" ||
       p.name === "onChange" ||
-      p.name === "onInput"
+      p.name === "onInput" ||
+      p.name === "onClose"
     ) {
       if ((p.value as Expr).kind === "Ref") {
         const reducerName = (p.value as Expr as Expr & { name: string }).name;
@@ -1751,8 +1845,8 @@ function propsFor(
       );
     }
   }
-  // Implicit onClick for `check` when reducer subscribes via enclosing tile (e.g. TodoRow → toggle)
-  if (t.name === "check" && enclosingTile) {
+  // Implicit onClick for `check` / `switch` when reducer subscribes via enclosing tile
+  if ((t.name === "check" || t.name === "switch") && enclosingTile) {
     const r = ctx.gen.reducers.find(
       (rr) =>
         rr.on.kind === "UiEvent" && rr.on.ev === "click" && rr.on.selector.tile === enclosingTile,
@@ -1805,7 +1899,8 @@ function propsFor(
       p.name === "onClick" ||
       p.name === "onSubmit" ||
       p.name === "onChange" ||
-      p.name === "onInput"
+      p.name === "onInput" ||
+      p.name === "onClose"
     )
       continue;
     elProps.push(`${jsName(p.name)}: ${jsOfExpr(p.value, ctx)}`);
@@ -1925,6 +2020,20 @@ function applyRefine(desc: GenDescData, r: Refinement | undefined): GenDescData 
     default:
       return desc;
   }
+}
+
+/** Resolve a slot/type's refinement (through a TypeRef), for the `error` tile. */
+function slotRefinement(t: TypeExpr, gen: GenCtx): Refinement | undefined {
+  let target = t;
+  if (t.kind === "TypeRef") {
+    const def = gen.types.get(t.name);
+    if (!def) return undefined;
+    target = def.body;
+  }
+  if (target.kind === "TypeNominal" || target.kind === "TypeRefinement") {
+    return (target as { refinement?: Refinement }).refinement;
+  }
+  return undefined;
 }
 
 function refinementJs(t: TypeExpr, gen: GenCtx): string | undefined {

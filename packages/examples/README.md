@@ -30,6 +30,6 @@ From small to large. Shows how features combine in real apps.
 # Type check
 pnpm --filter @kumiki/cli exec tsx src/kumiki.ts check examples/apps/01-counter/app.kumiki
 
-# Build (outputs index.html / app.js / runtime.js)
+# Build (outputs index.html / app.js / runtime/ — only the runtime modules the app uses)
 pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki ./out
 ```

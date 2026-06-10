@@ -59,10 +59,10 @@ pnpm kumiki check packages/examples/apps/01-counter/app.kumiki
 
 ```sh
 pnpm kumiki build packages/examples/apps/01-counter/app.kumiki ./out
-# → Wrote out/index.html, app.js, runtime.js
+# → Wrote out/index.html, app.js, runtime/ (core, stdlib, tiles-layout, tiles-text, tiles-input)
 ```
 
-Open `out/index.html` in a browser and the counter works: "Count: 0" with buttons that increment, decrement, and reset. `app.js` is the generated pure logic; `runtime.js` is the DOM runtime (minified, ~15KB gzip).
+Open `out/index.html` in a browser and the counter works: "Count: 0" with buttons that increment, decrement, and reset. `app.js` is the generated pure logic; `runtime/` holds only the DOM-runtime modules this app actually uses (minified — the counter ships ~9KB gzip; an app that never routes or renders tables ships no router or table code).
 
 **Smoke** — confirm it actually runs, not just compiles. This mounts the app in a headless DOM and clicks through it:
 

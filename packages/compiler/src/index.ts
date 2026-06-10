@@ -1,6 +1,6 @@
 // Public API of @kumikijs/compiler.
 export type * from "./ast.ts";
-export { BUILTIN_TILES, VALUE_ARG_BUILTINS } from "./builtins.ts";
+export { BUILTIN_TILES, TILE_FAMILY, type TileFamily, VALUE_ARG_BUILTINS } from "./builtins.ts";
 export {
   type CapabilityManifest,
   type ManifestResult,
@@ -9,6 +9,7 @@ export {
 } from "./capabilities.ts";
 export {
   type CodegenOptions,
+  type CodegenResult,
   codegen,
   FIELD_ACCESS_SHORTCUTS,
   KNOWN_MEMBERS,

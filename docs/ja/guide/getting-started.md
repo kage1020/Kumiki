@@ -59,10 +59,10 @@ pnpm kumiki check packages/examples/apps/01-counter/app.kumiki
 
 ```sh
 pnpm kumiki build packages/examples/apps/01-counter/app.kumiki ./out
-# → Wrote out/index.html, app.js, runtime.js
+# → Wrote out/index.html, app.js, runtime/ (core, stdlib, tiles-layout, tiles-text, tiles-input)
 ```
 
-`out/index.html` をブラウザで開けばカウンターが動きます（「Count: 0」と、加算・減算・リセットのボタン）。`app.js` は生成された純粋なロジック、`runtime.js` は DOM ランタイム（minify 済み、gzip 約 15KB）です。
+`out/index.html` をブラウザで開けばカウンターが動きます（「Count: 0」と、加算・減算・リセットのボタン）。`app.js` は生成された純粋なロジック、`runtime/` はこのアプリが実際に使う DOM ランタイムモジュールだけを含みます（minify 済み。カウンターは gzip 約 9KB で、ルーティングやテーブルを使わないアプリにルーターやテーブルのコードは含まれません）。
 
 **smoke** — 「コンパイルが通る」だけでなく「実際に動く」ことを確認します。ヘッドレス DOM にマウントしてクリックまで通します:
 

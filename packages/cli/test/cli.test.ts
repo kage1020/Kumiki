@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -39,9 +39,31 @@ describe("kumiki build CLI", () => {
     expect(app).toContain('__kumikiApp._dispatch("inc"');
 
     const runtime = readFileSync(join(outDir, "runtime.js"), "utf8");
-    expect(runtime).toContain("function mount");
+    // The shipped runtime is the minified browser artifact: `mount` survives only
+    // in the export map, and the file is well under the ~90KB unminified size.
     expect(runtime).toMatch(/export\s*\{[^}]*mount[^}]*\}/);
+    expect(runtime.length).toBeLessThan(70_000);
     expect(runtime).not.toContain(": AppShape"); // type stripped
+  });
+
+  it("the built output mounts — app.js + minified runtime.js render into #root", {
+    timeout: 30000,
+  }, async () => {
+    execFileSync("npx", ["tsx", CLI_PATH, "build", COUNTER_PATH, outDir], {
+      stdio: "pipe",
+      shell: true,
+    });
+    const root = document.createElement("div");
+    root.id = "root";
+    document.body.appendChild(root);
+    try {
+      // app.js auto-mounts into #root and imports "./runtime.js" relatively, so
+      // this exercises the exact artifact pair `kumiki build` ships.
+      await import(pathToFileURL(join(outDir, "app.js")).href);
+      expect(root.textContent).toContain("Count: 0");
+    } finally {
+      root.remove();
+    }
   });
 });
 

@@ -44,7 +44,8 @@ function buildCmd(inputArg: string, outdirArg: string): void {
   const outdir = resolve(process.cwd(), outdirArg);
   const source = readFileSync(inputPath, "utf8");
   const result = compile(source, {
-    runtimeSpecifier: "./runtime.js",
+    runtimeSpecifier: "./runtime/core.js",
+    runtimeModulesDir: "./runtime",
     capabilities: capsFor(inputPath),
   });
   if (result.kind === "fail") {
@@ -55,9 +56,15 @@ function buildCmd(inputArg: string, outdirArg: string): void {
   }
   mkdirSync(outdir, { recursive: true });
   writeFileSync(resolve(outdir, "app.js"), result.js);
-  writeFileSync(resolve(outdir, "runtime.js"), buildRuntimeBundle());
+  // Per-app DCE (#71): ship only the runtime feature modules the compiled app
+  // imports (codegen reports them) — a counter-class app gets core + stdlib +
+  // its tile families, no router/table/overlay/effect code.
+  mkdirSync(resolve(outdir, "runtime"), { recursive: true });
+  for (const mod of result.runtimeModules) {
+    writeFileSync(resolve(outdir, "runtime", `${mod}.js`), readRuntimeModule(mod));
+  }
   writeFileSync(resolve(outdir, "index.html"), buildHtml());
-  console.log(`Wrote ${outdir}/index.html, app.js, runtime.js`);
+  console.log(`Wrote ${outdir}/index.html, app.js, runtime/ (${result.runtimeModules.join(", ")})`);
 }
 
 function listCmd(inputArg: string, layer?: string): void {
@@ -261,12 +268,16 @@ async function main(argv: string[]): Promise<void> {
   }
 }
 
-function buildRuntimeBundle(): string {
-  // The prebuilt minified runtime bundle is a browser-ready ESM module that
-  // already exports mount / _stdlib / builtinEffects. (The unminified ./bundle
-  // variant exists for the inlining path used by smoke/run/test.)
-  const runtimeBundlePath = require.resolve("@kumikijs/runtime/bundle.min");
-  return readFileSync(runtimeBundlePath, "utf8");
+/**
+ * Read one prebuilt (minified) runtime feature module. The modules are plain
+ * browser ESM whose cross-imports are relative (`./core.js`, `./stdlib.js`),
+ * so copying them side by side under `<outdir>/runtime/` keeps them resolvable.
+ * (The unminified `./bundle` monolith still serves the inlining path used by
+ * smoke/run/test.)
+ */
+function readRuntimeModule(name: string): string {
+  const modulePath = require.resolve(`@kumikijs/runtime/modules/${name}.js`);
+  return readFileSync(modulePath, "utf8");
 }
 
 function buildHtml(): string {

@@ -75,6 +75,79 @@ export const BUILTIN_TILES = new Set<string>([
 ]);
 
 /**
+ * Which runtime feature module (`@kumikijs/runtime/modules/tiles-<family>.js`)
+ * renders each built-in tile (#71). Codegen uses this to import only the
+ * families a compiled app touches; the mapping MUST match the runtime's
+ * `tiles-*.ts` module contents (a cross-package test pins the two together).
+ */
+export type TileFamily =
+  | "layout"
+  | "text"
+  | "input"
+  | "collection"
+  | "overlay"
+  | "media"
+  | "status";
+
+export const TILE_FAMILY: Record<string, TileFamily> = {
+  // tiles-layout
+  page: "layout",
+  region: "layout",
+  row: "layout",
+  column: "layout",
+  stack: "layout",
+  grid: "layout",
+  box: "layout",
+  card: "layout",
+  panel: "layout",
+  divider: "layout",
+  scroll: "layout",
+  fieldset: "layout",
+  "route-outlet": "layout",
+  // tiles-text
+  text: "text",
+  heading: "text",
+  link: "text",
+  code: "text",
+  markdown: "text",
+  label: "text",
+  icon: "text",
+  // tiles-input
+  button: "input",
+  input: "input",
+  textarea: "input",
+  check: "input",
+  radio: "input",
+  select: "input",
+  slider: "input",
+  switch: "input",
+  form: "input",
+  // tiles-collection
+  list: "collection",
+  "list-item": "collection",
+  table: "collection",
+  "table-head": "collection",
+  "table-body": "collection",
+  "table-row": "collection",
+  "table-cell": "collection",
+  // tiles-overlay
+  overlay: "overlay",
+  modal: "overlay",
+  drawer: "overlay",
+  tooltip: "overlay",
+  popover: "overlay",
+  // tiles-media
+  image: "media",
+  video: "media",
+  // tiles-status
+  toast: "status",
+  spinner: "status",
+  progress: "status",
+  skeleton: "status",
+  error: "status",
+};
+
+/**
  * Built-in tiles whose single positional argument is a *value* expression
  * (Text / Number / …) rather than a child tile — e.g. `heading("Hi")`,
  * `code("const x = 1", lang="ts")`. Everything else treats positional args as

@@ -230,9 +230,11 @@ describe("codegen", () => {
     expect(result.kind).toBe("ok");
     if (result.kind !== "ok") return;
     expect(result.js).toContain('caps.provider("http.get")');
-    expect(result.js).toContain("builtinEffects.httpFetch");
+    expect(result.js).toContain("httpFetch(");
+    // the handler is imported (modular: its feature module; monolith: the runtime entry)
+    expect(result.js).toMatch(/import \{[^}]*httpFetch[^}]*\}/);
     // provider is consulted before the builtin fallback
-    expect(result.js).toMatch(/caps\.provider\("http\.get"\)[\s\S]*builtinEffects\.httpFetch/);
+    expect(result.js).toMatch(/caps\.provider\("http\.get"\)[\s\S]*httpFetch\(/);
   });
 
   it("wraps per-instance state in a createApp() factory and exports it under exportApp", () => {
@@ -281,6 +283,7 @@ describe("codegen", () => {
     if (result.kind !== "ok") return;
     // request is mapped, THEN the provider is consulted with the mapped req
     expect(result.js).toMatch(/const req = [\s\S]*caps\.provider\("storage\.write"\)/);
-    expect(result.js).toContain("builtinEffects.storageWrite");
+    expect(result.js).toContain("storageWrite(");
+    expect(result.js).toMatch(/import \{[^}]*storageWrite[^}]*\}/);
   });
 });

@@ -62,7 +62,7 @@ pnpm kumiki build packages/examples/apps/01-counter/app.kumiki ./out
 # → Wrote out/index.html, app.js, runtime.js
 ```
 
-Open `out/index.html` in a browser and the counter works: "Count: 0" with buttons that increment, decrement, and reset. `app.js` is the generated pure logic; `runtime.js` is the DOM runtime.
+Open `out/index.html` in a browser and the counter works: "Count: 0" with buttons that increment, decrement, and reset. `app.js` is the generated pure logic; `runtime.js` is the DOM runtime (minified, ~15KB gzip).
 
 **Smoke** — confirm it actually runs, not just compiles. This mounts the app in a headless DOM and clicks through it:
 

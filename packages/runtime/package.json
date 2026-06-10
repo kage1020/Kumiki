@@ -23,12 +23,14 @@
   "engines": {
     "node": ">=20"
   },
+  "sideEffects": false,
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./src/index.ts"
     },
-    "./bundle": "./dist/index.js"
+    "./bundle": "./dist/index.js",
+    "./bundle.min": "./dist/bundle.min.js"
   },
   "files": [
     "dist"
@@ -41,7 +43,8 @@
         "types": "./dist/index.d.ts",
         "import": "./dist/index.js"
       },
-      "./bundle": "./dist/index.js"
+      "./bundle": "./dist/index.js",
+      "./bundle.min": "./dist/bundle.min.js"
     }
   },
   "scripts": {

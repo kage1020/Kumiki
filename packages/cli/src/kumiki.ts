@@ -262,9 +262,10 @@ async function main(argv: string[]): Promise<void> {
 }
 
 function buildRuntimeBundle(): string {
-  // The prebuilt runtime bundle is a browser-ready ESM module that already
-  // exports mount / _stdlib / builtinEffects.
-  const runtimeBundlePath = require.resolve("@kumikijs/runtime/bundle");
+  // The prebuilt minified runtime bundle is a browser-ready ESM module that
+  // already exports mount / _stdlib / builtinEffects. (The unminified ./bundle
+  // variant exists for the inlining path used by smoke/run/test.)
+  const runtimeBundlePath = require.resolve("@kumikijs/runtime/bundle.min");
   return readFileSync(runtimeBundlePath, "utf8");
 }
 

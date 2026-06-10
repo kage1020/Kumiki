@@ -62,7 +62,7 @@ pnpm kumiki build packages/examples/apps/01-counter/app.kumiki ./out
 # → Wrote out/index.html, app.js, runtime.js
 ```
 
-`out/index.html` をブラウザで開けばカウンターが動きます（「Count: 0」と、加算・減算・リセットのボタン）。`app.js` は生成された純粋なロジック、`runtime.js` は DOM ランタイムです。
+`out/index.html` をブラウザで開けばカウンターが動きます（「Count: 0」と、加算・減算・リセットのボタン）。`app.js` は生成された純粋なロジック、`runtime.js` は DOM ランタイム（minify 済み、gzip 約 15KB）です。
 
 **smoke** — 「コンパイルが通る」だけでなく「実際に動く」ことを確認します。ヘッドレス DOM にマウントしてクリックまで通します:
 

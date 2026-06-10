@@ -1,5 +1,5 @@
-// Real-browser verification tier. Runs the SAME scenario format as the jsdom
-// `runScenario`, but in Chromium via Playwright, so it catches what jsdom can't:
+// Real-browser verification tier. Runs the SAME scenario format as the headless-DOM
+// `runScenario`, but in Chromium via Playwright, so it catches what a headless DOM can't:
 // CSS layout / visibility, real focus management, and real rendering. State is
 // still the oracle — read from `window.__kumikiApp.live` in the page.
 
@@ -28,7 +28,7 @@ export type Expect = {
   hidden?: string[];
   /**
    * Browser-only: CSS selectors that must carry a running keyframe animation
-   * (`getComputedStyle().animationName !== "none"`). jsdom can't observe this —
+   * (`getComputedStyle().animationName !== "none"`). A headless DOM can't observe this —
    * it's the verification tier for the v0.2 `motion` layer.
    */
   animating?: string[];

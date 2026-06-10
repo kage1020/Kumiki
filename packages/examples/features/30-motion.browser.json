@@ -1,7 +1,7 @@
 {
   "steps": [
     {
-      "label": "the spinner carries a running keyframe animation (jsdom cannot observe this)",
+      "label": "the spinner carries a running keyframe animation (a headless DOM cannot observe this)",
       "expect": { "noErrors": true, "animating": [".kumiki-motion-Spin"] }
     },
     {

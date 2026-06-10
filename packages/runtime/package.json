@@ -51,7 +51,7 @@
     "lint": "biome check src test"
   },
   "devDependencies": {
-    "jsdom": "catalog:",
+    "happy-dom": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

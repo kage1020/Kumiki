@@ -1,11 +1,12 @@
 // `kumiki smoke` — runtime verification. Compiles a .kumiki file, mounts it in a
-// headless DOM (jsdom), exercises its UI, and reports failures that check/build
+// headless DOM (happy-dom), exercises its UI, and reports failures that check/build
 // cannot catch: runtime throws, empty renders, and unhandled rejections.
 
 import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { compile } from "@kumikijs/compiler";
 import { nodeRuntimeBundleReader } from "@kumikijs/compiler/node";
 import {
@@ -17,47 +18,14 @@ import {
   smoke,
   type TestResult,
 } from "@kumikijs/runtime";
-import { JSDOM } from "jsdom";
 
 let domReady = false;
 function ensureDom(): void {
   if (domReady) return;
-  const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://localhost/" });
-  const g = globalThis as unknown as Record<string, unknown>;
-  const w = dom.window as unknown as Record<string, unknown>;
-  // Overwrite (not skip-if-defined): Node 22 ships globals like `Event` /
-  // `CustomEvent` / `navigator` from its own realm. jsdom's elements only accept
-  // events constructed from jsdom's realm, so these MUST come from the window or
-  // dispatchEvent rejects them ("parameter 1 is not of type 'Event'").
-  for (const key of [
-    "window",
-    "document",
-    "navigator",
-    "location",
-    "history",
-    "localStorage",
-    "sessionStorage",
-    "HTMLElement",
-    "HTMLInputElement",
-    "HTMLSelectElement",
-    "HTMLTextAreaElement",
-    "Element",
-    "Node",
-    "Event",
-    "MouseEvent",
-    "CustomEvent",
-    "KeyboardEvent",
-    "CSS",
-    "getComputedStyle",
-  ]) {
-    if (w[key] === undefined) continue;
-    try {
-      g[key] = w[key];
-    } catch {
-      // Some Node globals (e.g. `navigator`) are getter-only; redefine them.
-      Object.defineProperty(g, key, { value: w[key], configurable: true, writable: true });
-    }
-  }
+  // Registers window/document/Event/… onto globalThis, overwriting Node's own
+  // realm globals (Node 22 ships `Event` / `navigator` etc., and elements only
+  // accept events constructed from the DOM realm).
+  GlobalRegistrator.register({ url: "http://localhost/" });
   domReady = true;
 }
 

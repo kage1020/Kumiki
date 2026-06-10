@@ -54,13 +54,13 @@
     "kumiki": "tsx src/kumiki.ts"
   },
   "dependencies": {
+    "@happy-dom/global-registrator": "catalog:",
     "@kumikijs/compiler": "workspace:*",
-    "@kumikijs/runtime": "workspace:*",
-    "jsdom": "catalog:"
+    "@kumikijs/runtime": "workspace:*"
   },
   "devDependencies": {
-    "@types/jsdom": "^28.0.3",
     "@types/node": "catalog:",
+    "happy-dom": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"

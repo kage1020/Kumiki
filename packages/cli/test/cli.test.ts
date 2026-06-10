@@ -115,7 +115,7 @@ describe("kumiki test (in-language test runner)", () => {
 });
 
 // M4b: `kumiki fix --auto-patch <test-name>`. These exercise the real CLI wiring
-// (subprocess) so the in-process jsdom of the test runner stays isolated.
+// (subprocess) so the in-process DOM of the test runner stays isolated.
 describe("kumiki fix --auto-patch (fix from a failing test)", () => {
   let dir: string;
 

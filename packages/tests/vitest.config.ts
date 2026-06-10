@@ -6,7 +6,7 @@ export default defineConfig({
     fs: { strict: false },
   },
   test: {
-    environment: "jsdom",
+    environment: "happy-dom",
     globals: true,
     include: ["**/*.test.ts"],
   },

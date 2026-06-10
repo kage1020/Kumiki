@@ -238,9 +238,9 @@ expect(Object.keys(todos)).toHaveLength(1)
 
 ### smoke（層 2）
 
-`kumiki smoke <file>` は、コンパイル済みアプリを headless DOM（jsdom）に mount し、初期描画後にすべての操作可能要素へイベントを発火させ、各ステップでランタイム例外・コンソールエラー・未処理 rejection・空描画を監視する。「型は通るが、ランタイムに存在しないメソッドを呼んで操作時に落ちる」「描画されない」といった、従来は人がブラウザで確認していたクラスのバグを自動で検出する。汎用であり、アプリ固有の知識を持たない。
+`kumiki smoke <file>` は、コンパイル済みアプリを headless DOM（happy-dom）に mount し、初期描画後にすべての操作可能要素へイベントを発火させ、各ステップでランタイム例外・コンソールエラー・未処理 rejection・空描画を監視する。「型は通るが、ランタイムに存在しないメソッドを呼んで操作時に落ちる」「描画されない」といった、従来は人がブラウザで確認していたクラスのバグを自動で検出する。汎用であり、アプリ固有の知識を持たない。
 
-ブラウザでの実描画（CSS レイアウト・実フォーカス等）は jsdom では再現しきれない。そのための**実ブラウザ tier** が `@kumiki/e2e`（Chromium / Playwright）であり、jsdom と**同じシナリオ形式**で動く。状態 oracle は同じく `window.__kumikiApp.live`、表示テキストは `innerText`（可視のみ）。加えてブラウザ限定アサーションを持つ:
+ブラウザでの実描画（CSS レイアウト・実フォーカス等）は headless DOM では再現しきれない。そのための**実ブラウザ tier** が `@kumiki/e2e`（Chromium / Playwright）であり、headless DOM tier と**同じシナリオ形式**で動く。状態 oracle は同じく `window.__kumikiApp.live`、表示テキストは `innerText`（可視のみ）。加えてブラウザ限定アサーションを持つ:
 
 - `focused`: 指定セレクタが実際にフォーカスされていること（再レンダリング時のフォーカス奪取バグを検出）
 - `visible` / `hidden`: 計算済みスタイル上で本当に見えている／いないこと（`display:none` 等）
@@ -254,7 +254,7 @@ expect(Object.keys(todos)).toHaveLength(1)
 example コーパス（`packages/tests`）は「壊れた example は決してマージされない」という常設の保証である。全 example が*コンパイルする*ことだけのアサートでは不十分だ：lowering で落ちた値引数はクリーンにコンパイルされマウントもするが、空だが存在するノードを描画する——「コンパイルは通るが実際は壊れている」状態で、層 1 にも層 2 の「空でない／throw しない」基準にも見えない（`03-union-and-match` の見出しバグが `_s.show(undefined)` に lower されて緑で出荷されたのはまさにこれ）。よってコーパスガードは dropped-expression クラスについて**ランタイム真正性**もアサートする：
 
 - **静的 codegen スキャン。** すべての値保持 display tile（`heading` / `text` / `button` / `label` / `link` / `markdown` / `image` / `icon` / `input`・`textarea` の value）は値を `show(...)` で lower する。これらいずれかの位置で落ちた式は厳密なトークン `show(undefined)` として現れる。Kumiki ソースに `undefined` リテラルは無いため、このトークンは dropped expression からしか生じ得ない——偏在する良性 `undefined`（reducer の読み戻しや selector 無し reducer）とは別物のゼロ誤検出センチネルである。いずれかの example の生成 JS にこれが含まれればコーパスは失敗する。
-- **描画 DOM スキャン。** 各 example を jsdom にマウントし、リテラル `"undefined"` であるテキストノードを描画しないことをアサートする。センチネルが拾わない経路で DOM に届く生の `undefined` を捕捉する。
+- **描画 DOM スキャン。** 各 example を headless DOM（happy-dom）にマウントし、リテラル `"undefined"` であるテキストノードを描画しないことをアサートする。センチネルが拾わない経路で DOM に届く生の `undefined` を捕捉する。
 
 これらはブラウザバイナリ無しで既定 CI で走り、再混入した dropped-expression バグは緑で出荷されずビルドを失敗させる。
 

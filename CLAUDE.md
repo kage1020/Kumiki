@@ -38,7 +38,7 @@ Driving the Kumiki CLI from the repo root (runs the TS entry via tsx, no build n
 ```sh
 pnpm kumiki check packages/examples/apps/01-counter/app.kumiki
 pnpm kumiki build packages/examples/apps/01-counter/app.kumiki ./out
-pnpm kumiki smoke <file>            # mount + interact in jsdom (catches "compiles but renders nothing")
+pnpm kumiki smoke <file>            # mount + interact in happy-dom (catches "compiles but renders nothing")
 pnpm kumiki run <file> <scenario.json>
 ```
 
@@ -67,8 +67,8 @@ Full CLI verbs: `build / list / view / refs / check / smoke / run / test / fix` 
 
 **3-tier verification** — `check`/`build` only guarantee syntax, types, and codegen. Whether an app actually mounts and survives interaction is a separate guarantee:
 1. **check / build** — lexer, parser, typechecker, codegen.
-2. **smoke** (`kumiki smoke`, runtime in jsdom) — catches "compiles but renders nothing / throws on interaction".
-3. **e2e** (`@kumikijs/e2e`, Chromium) — CSS layout, real focus, rendering bugs jsdom can't see.
+2. **smoke** (`kumiki smoke`, runtime in happy-dom) — catches "compiles but renders nothing / throws on interaction".
+3. **e2e** (`@kumikijs/e2e`, Chromium) — CSS layout, real focus, rendering bugs a headless DOM can't see.
 
 ## Operating model (read before making changes)
 

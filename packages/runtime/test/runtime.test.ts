@@ -1342,7 +1342,7 @@ describe("unhandled effect-error contract (#37)", () => {
   it("a storage backend that throws yields err — surfaced when unhandled (AC3)", async () => {
     // Simulate an unavailable localStorage (opaque-origin sandbox / private mode).
     const result = await builtinEffects.storageRead({ key: "x" });
-    void result; // storage is available in jsdom; assert the contract shape below.
+    void result; // storage is available in happy-dom; assert the contract shape below.
     const throwing = {
       getItem: () => {
         throw new Error("SecurityError");
@@ -1405,7 +1405,7 @@ describe("memory router mode (#36)", () => {
   it("initialises at the virtual path, not location.pathname (AC1)", () => {
     const app = makeRoutedApp();
     // A non-root initial path proves the route comes from the virtual location,
-    // independent of jsdom's ambient location (which is "/").
+    // independent of the test DOM's ambient location (which is "/").
     const { dispose } = mount(app, root, { router: "memory", initialPath: "/items/99" });
     expect(root.textContent).toBe("item 99");
     expect((app.live?.route as { pattern: string }).pattern).toBe("/items/:id");

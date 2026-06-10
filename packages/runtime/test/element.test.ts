@@ -247,8 +247,8 @@ describe("defineKumikiElement (outbound web-component seam)", () => {
     const el = document.createElement(tag);
     host.appendChild(el);
     const container = el.shadowRoot?.firstElementChild as HTMLElement;
-    // jsdom normalizes the hex color to rgb().
-    expect(container.style.background).toBe("rgb(16, 16, 16)");
+    // happy-dom preserves the authored hex (jsdom used to normalize it to rgb()).
+    expect(container.style.background).toBe("#101010");
     expect(el.shadowRoot?.getElementById("kumiki-theme-base")).toBeTruthy();
     // isolation: the page <body> was not themed
     expect(document.body.style.background).toBe(bodyBefore);

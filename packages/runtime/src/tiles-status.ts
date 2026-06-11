@@ -2,7 +2,7 @@
 // inline toast tile, and the validation `error` tile.
 
 import type { AppShape, TileRenderers } from "./core.ts";
-import { currentTheme } from "./core.ts";
+import { currentTheme, ensureAnimationStyles } from "./core.ts";
 
 /**
  * Resolve the current validation message for a slot, for the `error` tile.
@@ -58,10 +58,23 @@ function defaultFieldError(pred: string, args: (number | string)[]): string {
 }
 
 export const statusTiles: TileRenderers = {
-  spinner() {
+  spinner(node) {
+    // The rotating ring + its keyframes live in the shared animation
+    // stylesheet, so the spinner works in any style root (document or shadow)
+    // and honors prefers-reduced-motion.
+    ensureAnimationStyles();
     const span = document.createElement("span");
     span.dataset.kumikiTile = "spinner";
-    span.textContent = "…";
+    span.setAttribute("role", "status");
+    span.setAttribute("aria-label", "Loading");
+    const size = node.props?.size;
+    const tokens: Record<string, string> = {
+      sm: "0.75rem",
+      md: "1rem",
+      lg: "1.5rem",
+      xl: "2rem",
+    };
+    if (typeof size === "string" && tokens[size]) span.style.fontSize = tokens[size];
     return span;
   },
   skeleton(node) {

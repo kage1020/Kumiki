@@ -47,14 +47,16 @@ export default defineConfig({
                 { text: "Getting Started", link: "/guide/getting-started" },
                 { text: "Your First App", link: "/guide/your-first-app" },
                 { text: "Thinking in Kumiki", link: "/guide/thinking-in-kumiki" },
+                { text: "Design Philosophy", link: "/guide/design-philosophy" },
                 { text: "Recipes", link: "/guide/recipes" },
+                { text: "Benchmarks", link: "/guide/benchmarks" },
                 { text: "Playground", link: "/guide/playground" },
               ],
             },
           ],
           "/spec/": [
             {
-              text: "Spec (normative)",
+              text: "Spec",
               items: [
                 { text: "Overview", link: "/spec/" },
                 { text: "Language Core", link: "/spec/language" },
@@ -92,14 +94,16 @@ export default defineConfig({
                 { text: "はじめに", link: "/ja/guide/getting-started" },
                 { text: "最初のアプリ", link: "/ja/guide/your-first-app" },
                 { text: "Kumiki の考え方", link: "/ja/guide/thinking-in-kumiki" },
+                { text: "設計思想", link: "/ja/guide/design-philosophy" },
                 { text: "レシピ", link: "/ja/guide/recipes" },
+                { text: "ベンチマーク", link: "/ja/guide/benchmarks" },
                 { text: "Playground", link: "/ja/guide/playground" },
               ],
             },
           ],
           "/ja/spec/": [
             {
-              text: "仕様 (normative)",
+              text: "仕様",
               items: [
                 { text: "概要", link: "/ja/spec/" },
                 { text: "言語コア", link: "/ja/spec/language" },

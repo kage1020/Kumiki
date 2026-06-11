@@ -1,10 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" role="img" aria-label="Kumiki">
-  <title>Kumiki</title>
-  <rect x="20.7" y="52.7" width="32.6" height="26.6" rx="2" fill="#cfd0e0"/>
-  <rect x="54.7" y="52.7" width="24.6" height="26.6" rx="2" fill="#7b61ff"/>
-  <rect x="20.7" y="34.7" width="22.6" height="16.6" rx="2" fill="#7b61ff" opacity=".85"/>
-  <rect x="44.7" y="34.7" width="20.6" height="16.6" rx="2" fill="#13d6c4"/>
-  <rect x="66.7" y="34.7" width="12.6" height="16.6" rx="2" fill="#7b61ff"/>
-  <rect x="20.7" y="20.7" width="28.6" height="12.6" rx="2" fill="#13d6c4"/>
-  <rect x="50.7" y="20.7" width="28.6" height="12.6" rx="2" fill="#13d6c4" opacity=".8"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100" role="img" aria-label="Kumiki"><rect x="10" y="10" width="34" height="12" rx="2" fill="#13d6c4"/><rect x="48" y="10" width="42" height="12" rx="2" fill="#13d6c4" opacity=".8"/><rect x="10" y="26" width="24" height="24" rx="2" fill="#7b61ff" opacity=".85"/><rect x="38" y="26" width="30" height="24" rx="2" fill="#13d6c4"/><rect x="72" y="26" width="18" height="24" rx="2" fill="#7b61ff"/><rect x="10" y="54" width="48" height="36" rx="2" fill="#cfd0e0"/><rect x="62" y="54" width="28" height="36" rx="2" fill="#7b61ff"/></svg>

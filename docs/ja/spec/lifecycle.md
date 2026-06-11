@@ -198,7 +198,7 @@ tile UserView = match user with
 
 ### 7.4.1 match 式
 
-```ebnf
+```
 match-expr ::= 'match' expr 'with' match-arm+
 match-arm  ::= '|' pattern '->' expr
 pattern    ::= identifier                              ; variant 名
@@ -328,5 +328,5 @@ slot password : Text          volatile  = ""    ; episode log にも書かれな
 
 ## 7.11 次
 
-- テスト書き方 → [Testing](./testing.md)
-- AI 編集 API → [AI Editing](./ai-edit.md)
+- テスト書き方 → [テスト](./testing.md)
+- AI 編集 API → [AI 編集](./ai-edit.md)

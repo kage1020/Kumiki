@@ -1,8 +1,8 @@
 # はじめに
 
-Kumiki は実験的な「AI ファースト」の Web フレームワークです。アプリを小さな定義の組み合わせ（JSX・Hooks・依存配列・隠れた状態なし）として記述し、ツールチェインが素のブラウザアプリへコンパイルします。このページでは、ゼロから動く例までを数分で辿ります。
+Kumiki は実験的な「AI ファースト」の Web フレームワークです。アプリを小さな定義の組み合わせとして記述し、ツールチェインが素のブラウザアプリへコンパイルします。このページでは、ゼロから動く例までを数分で辿ります。
 
-> 言語そのものが初めてなら、考え方は [Thinking in Kumiki](./thinking-in-kumiki.md)、実例は [examples](https://github.com/kage1020/Kumiki/tree/main/packages/examples) を参照。1 行ずつ自分で組み立てたいなら [Your First App](./your-first-app.md) へ。
+> 言語そのものが初めてなら、考え方は [Kumiki の考え方](./thinking-in-kumiki.md)、実例は [examples](https://github.com/kage1020/Kumiki/tree/main/packages/examples) を参照。1 行ずつ自分で組み立てたいなら [最初のアプリ](./your-first-app.md) へ。
 
 ## インストールせずに試す
 
@@ -28,7 +28,7 @@ app Counter
     init   = []
 ```
 
-これがメンタルモデルの全体です。`-` / `reset` まで含む完成版は [packages/examples/apps/01-counter/app.kumiki](https://github.com/kage1020/Kumiki/blob/main/packages/examples/apps/01-counter/app.kumiki)、7 レイヤの解説は [Thinking in Kumiki](./thinking-in-kumiki.md) にあります。
+これがメンタルモデルの全体です。`-` / `reset` まで含む完成版は [packages/examples/apps/01-counter/app.kumiki](https://github.com/kage1020/Kumiki/blob/main/packages/examples/apps/01-counter/app.kumiki)、7 レイヤの解説は [Kumiki の考え方](./thinking-in-kumiki.md) にあります。
 
 ## ローカル環境を用意する
 
@@ -81,7 +81,7 @@ check のエラーはコードと位置付きで出ます:
 E0103 undef-ref at 3:39: Reference to undefined name "total"
 ```
 
-コード（ここでは `E0103`）が種類を表します。意味は [エラーカタログ](../spec/errors.md) を参照。多くはタイプミスか定義漏れで、よくある直し方は [Thinking in Kumiki](./thinking-in-kumiki.md) と [recipes](./recipes.md) でカバーしています。
+コード（ここでは `E0103`）が種類を表します。意味は [エラーカタログ](../spec/errors.md) を参照。多くはタイプミスか定義漏れで、よくある直し方は [Kumiki の考え方](./thinking-in-kumiki.md) と [レシピ](./recipes.md) でカバーしています。
 
 コマンド自体が失敗する場合:
 
@@ -94,7 +94,7 @@ E0103 undef-ref at 3:39: Reference to undefined name "total"
 
 ## 次へ
 
-- [Your First App](./your-first-app.md) — Counter を 1 レイヤずつ一から書く。
-- [Thinking in Kumiki](./thinking-in-kumiki.md) — 7 レイヤと React との違い。
+- [最初のアプリ](./your-first-app.md) — Counter を 1 レイヤずつ一から書く。
+- [Kumiki の考え方](./thinking-in-kumiki.md) — 7 レイヤと React との違い。
 - [Examples](https://github.com/kage1020/Kumiki/tree/main/packages/examples) — 機能別の最小例と完成アプリ。
 - [Playground](./playground.md) — ブラウザで引き続き実験する。

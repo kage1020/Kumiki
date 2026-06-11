@@ -320,6 +320,8 @@ Kumiki's built-in tiles. They are **semantic tags** and are not literal translat
 | `progress` | progress bar | `value`, `max` |
 | `skeleton` | skeleton | `kind` (text/box/circle) |
 
+`spinner` renders an animated loading indicator (an accessible element with `role="status"`; the animation is disabled under `prefers-reduced-motion`). `size` takes one of the tokens `sm` / `md` / `lg` / `xl`; without it the spinner scales with the surrounding text.
+
 ### 2.3.9 Control Elements
 
 | Element | Role |

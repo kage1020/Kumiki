@@ -65,7 +65,7 @@ theme DefaultTheme = {
 
 ### 4.2.1 構文
 
-```ebnf
+```
 theme-def ::= 'theme' identifier '=' '{' theme-section (',' theme-section)* '}'
 theme-section ::= identifier ':' '{' theme-entry (',' theme-entry)* '}'
 theme-entry ::= identifier ':' (string | '{' theme-entry (',' theme-entry)* '}')
@@ -418,5 +418,5 @@ app TodoApp
 
 ## 4.12 次
 
-- フォームのスタイル → [Forms](./forms.md)
-- アクセシビリティ → [Lifecycle](./lifecycle.md)
+- フォームのスタイル → [フォーム](./forms.md)
+- アクセシビリティ → [ライフサイクル](./lifecycle.md)

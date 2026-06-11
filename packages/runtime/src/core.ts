@@ -965,7 +965,7 @@ function applyResponsive(_el: HTMLElement, raw: unknown, set: (v: unknown) => vo
   }
 }
 
-function ensureAnimationStyles(): void {
+export function ensureAnimationStyles(): void {
   // Keyed by presence in the active style root, so each root (document head or a
   // shadow root) gets its own copy of the v0.1 animation keyframes.
   if (findStyleNode("kumiki-animations")) return;
@@ -973,6 +973,7 @@ function ensureAnimationStyles(): void {
 @keyframes kumiki-fade { from { opacity: 0 } to { opacity: 1 } }
 @keyframes kumiki-slide-up { from { transform: translateY(8px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
 @keyframes kumiki-slide-down { from { transform: translateY(-8px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+@keyframes kumiki-spin { to { transform: rotate(360deg) } }
 .kumiki-anim { animation-fill-mode: both; animation-timing-function: ease; animation-duration: 300ms; }
 .kumiki-anim-fade { animation-name: kumiki-fade; }
 .kumiki-anim-slide-up { animation-name: kumiki-slide-up; }
@@ -980,6 +981,14 @@ function ensureAnimationStyles(): void {
 .kumiki-anim-fast { animation-duration: 150ms; }
 .kumiki-anim-normal { animation-duration: 300ms; }
 .kumiki-anim-slow { animation-duration: 600ms; }
+[data-kumiki-tile="spinner"] {
+  display: inline-block; box-sizing: border-box;
+  width: 1.25em; height: 1.25em; vertical-align: -0.25em;
+  border: 0.15em solid currentColor; border-right-color: transparent;
+  border-radius: 50%; opacity: 0.8;
+  animation: kumiki-spin 750ms linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { [data-kumiki-tile="spinner"] { animation: none } }
 `;
   const style = document.createElement("style");
   style.id = "kumiki-animations";

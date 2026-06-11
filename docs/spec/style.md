@@ -65,7 +65,7 @@ theme DefaultTheme = {
 
 ### 4.2.1 Syntax
 
-```ebnf
+```
 theme-def ::= 'theme' identifier '=' '{' theme-section (',' theme-section)* '}'
 theme-section ::= identifier ':' '{' theme-entry (',' theme-entry)* '}'
 theme-entry ::= identifier ':' (string | '{' theme-entry (',' theme-entry)* '}')

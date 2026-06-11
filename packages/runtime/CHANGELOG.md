@@ -1,5 +1,50 @@
 # @kumikijs/runtime
 
+## 0.9.0
+
+### Minor Changes
+
+- c40b121: Ship a minified runtime to built apps. `@kumikijs/runtime` now emits two
+  artifacts: `./bundle` (unminified — still what codegen inlines for
+  smoke/run/test and the playground, where readable traces matter and the
+  inliner relies on stable top-level names) and the new `./bundle.min`
+  (minified ESM). `kumiki build` writes `bundle.min` as the app's
+  `runtime.js`, cutting it from 90KB/24.8KB gzip to 50KB/15.2KB gzip. The
+  package also declares `sideEffects: false`, so bundlers consuming
+  `@kumikijs/runtime` through `@kumikijs/vite` can tree-shake unused exports.
+  A new CLI test mounts the exact built artifact pair in a headless DOM to
+  guarantee runtime parity.
+- 7e589bc: Per-app dead-code elimination for `kumiki build` (#71). The runtime is now
+  composed of granular feature modules — `core` (mount/dispatch/theme/render
+  seam), `stdlib`, `testkit` (the reducer/property/tile test harness),
+  `router`, `effects-{storage,http,toast}`, and seven `tiles-*` renderer
+  families — published as `@kumikijs/runtime/modules/*` (minified ESM).
+  Codegen tracks which built-in tiles, effects, and routing features an app
+  uses and, in the new `runtimeModulesDir` mode, imports only those modules,
+  mounting through the new `mountCore` (the classic `mount`, merged
+  `_stdlib`, `builtinEffects`, and the `./bundle` / `./bundle.min` artifacts
+  are unchanged). `kumiki build` ships `runtime/` with exactly that pruned
+  set instead of a monolithic `runtime.js`: the counter example drops from
+  50KB/15.2KB gzip to ~27KB/~9KB gzip and carries no router, table/overlay
+  tile, effect-handler, or test-harness code. The router ships only when the
+  app can actually navigate (nav caps, `navigate*` emits, `link` /
+  `route-outlet`, redirects, or routes beyond the `"/"` + `"/404"`
+  boilerplate) — a static single-route app never reads the URL, so a deep
+  link to an unknown path renders the root tile rather than the 404 tile.
+
+### Patch Changes
+
+- c4833bd: `spinner` renders an animated, accessible loading ring instead of a static "…" placeholder.
+
+  The previous renderer set `textContent = "…"`, so `Loading` states (e.g. the
+  `stdlib §2.3.8` feedback tile used by the HTTP showcase) never showed an actual
+  spinner. The tile now renders a rotating `currentColor` ring with
+  `role="status"` / `aria-label="Loading"`; the `@keyframes kumiki-spin` rule
+  lives in the shared animation stylesheet, so it works in any style root
+  (document or shadow) and is disabled under `prefers-reduced-motion`. The `size`
+  prop accepts the `sm` / `md` / `lg` / `xl` tokens (spec now states this);
+  without it the ring scales with the surrounding text.
+
 ## 0.8.0
 
 ### Minor Changes

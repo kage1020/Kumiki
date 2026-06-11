@@ -30,6 +30,6 @@
 # 型検査
 pnpm --filter @kumiki/cli exec tsx src/kumiki.ts check examples/apps/01-counter/app.kumiki
 
-# ビルド（index.html / app.js / runtime.js を出力）
+# ビルド（index.html / app.js / runtime/ を出力 — アプリが使うランタイムモジュールのみ）
 pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build examples/apps/01-counter/app.kumiki ./out
 ```

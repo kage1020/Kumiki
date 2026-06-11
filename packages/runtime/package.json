@@ -30,7 +30,8 @@
       "default": "./src/index.ts"
     },
     "./bundle": "./dist/index.js",
-    "./bundle.min": "./dist/bundle.min.js"
+    "./bundle.min": "./dist/bundle.min.js",
+    "./modules/*": "./dist/modules/*"
   },
   "files": [
     "dist"
@@ -44,7 +45,8 @@
         "import": "./dist/index.js"
       },
       "./bundle": "./dist/index.js",
-      "./bundle.min": "./dist/bundle.min.js"
+      "./bundle.min": "./dist/bundle.min.js",
+      "./modules/*": "./dist/modules/*"
     }
   },
   "scripts": {

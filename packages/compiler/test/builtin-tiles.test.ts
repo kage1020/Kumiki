@@ -55,7 +55,7 @@ describe("builtin tile registry (issue #61)", () => {
       // here) and drive codegen directly — it must not throw for any registered
       // built-in tile.
       const prog = parse(lex(src));
-      const js = codegen(prog, { runtimeSpecifier: "./runtime.js" });
+      const { js } = codegen(prog, { runtimeSpecifier: "./runtime.js" });
       expect(js.length).toBeGreaterThan(0);
       expect(js).not.toContain("not found");
     });

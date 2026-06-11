@@ -1,45 +1,24 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from "vue";
-import { compile, lex, parse, check, parseCapabilityManifest } from "@kumikijs/compiler";
-// The prebuilt runtime bundle, inlined as a string so generated apps are
-// fully self-contained and runnable inside the preview iframe.
-import runtimeBundle from "@kumikijs/runtime/bundle?raw";
+import { check, lex, parse } from "@kumikijs/compiler";
+import { createKumikiHighlighter, type Highlight, overlayPad } from "./highlight";
+import { buildSrcdoc, capabilities, compileToJs, examples } from "./preview";
+import { type ModelContext, type PlaygroundApi, playgroundToolHost } from "./webmcp";
 
 type Diag = { code: string; kind: string; message: string; line: number; col: number };
 
-// Load every feature example at build time so the playground ships with a
-// browsable catalog. Sources live in packages/examples (repo root is ../../..).
-const exampleModules = import.meta.glob("../../../packages/examples/features/*.kumiki", {
-  query: "?raw",
-  import: "default",
-  eager: true,
-}) as Record<string, string>;
-
-const examples = Object.entries(exampleModules)
-  .map(([path, source]) => ({ name: path.split("/").pop() ?? path, source }))
-  .sort((a, b) => a.name.localeCompare(b.name));
-
-// The examples directory ships a `kumiki.caps.json` registering project-specific
-// capabilities (e.g. telemetry.track for 27-custom-capability). The CLI resolves
-// it from disk; here we load it at build time and pass the registered names to
-// check()/compile() so those examples typecheck instead of failing E0302.
-const capsModules = import.meta.glob(
-  "../../../packages/examples/features/kumiki.caps.json",
-  { query: "?raw", import: "default", eager: true },
-) as Record<string, string>;
-
-const capsRaw = Object.values(capsModules)[0];
-const capsParsed = capsRaw ? parseCapabilityManifest(JSON.parse(capsRaw)) : null;
-const capabilities: string[] = capsParsed?.ok ? capsParsed.manifest.capabilities : [];
-
+const defaultExample = examples.find((e) => e.name.startsWith("01"));
 const DEFAULT_SOURCE =
-  examples.find((e) => e.name.startsWith("01"))?.source ??
+  defaultExample?.source ??
   'slot count : Int = 0\n\nreducer inc on=ui.click(IncBtn) do= count := count + 1\n\ntile IncBtn = button(text="+1", onClick=inc)\ntile App = column(heading("Count: " + count.show), IncBtn)\n\napp Playground\n    caps   = []\n    routes = {"/" -> App, "/404" -> App}\n    init   = []\n';
 
 const source = ref(DEFAULT_SOURCE);
 const diagnostics = shallowRef<Diag[]>([]);
 const srcdoc = ref("");
-const selected = ref("");
+// The select mirrors what the editor holds: it starts on the example the
+// editor is seeded with, and falls back to the placeholder as soon as the
+// source is edited away from the selected example.
+const selected = ref(defaultExample?.name ?? "");
 
 function diagnose(src: string): Diag[] {
   try {
@@ -72,12 +51,7 @@ function buildPreview(src: string): void {
     srcdoc.value = "";
     return;
   }
-  const result = compile(src, {
-    runtimeSpecifier: "",
-    bundle: true,
-    readRuntimeBundle: () => runtimeBundle,
-    capabilities,
-  });
+  const result = compileToJs(src);
   if (result.kind === "fail") {
     diagnostics.value = result.errors.map((e) => ({
       code: e.code,
@@ -89,58 +63,16 @@ function buildPreview(src: string): void {
     srcdoc.value = "";
     return;
   }
-  // The preview iframe is a sandboxed srcdoc (opaque origin, no real path, no
-  // network). Configure the embedding seams before the auto-mounting module runs:
-  //  - memory router (#36) so routing examples (18/23) initialise at "/" and
-  //    navigate instead of falling to /404;
-  //  - a deterministic http.get provider (#38) so the HTTP showcase (19) serves
-  //    its /api/quote offline and demonstrates the SUCCESS path;
-  //  - a telemetry.track provider so the custom-capability showcase (27) — which
-  //    has no built-in and would otherwise always hit its `.err` branch ("no
-  //    telemetry provider") — demonstrates the SUCCESS path;
-  //  - an in-memory localStorage shim, installed only when the sandbox's opaque
-  //    origin makes the real one throw, so the storage showcase (20) persists
-  //    within the session and shows "saved" instead of always "storage
-  //    unavailable". The runtime's own storage built-in (Option-wrapping, JSON)
-  //    runs unchanged on top of it. All seams use the runtime's documented
-  //    embedding points — no fetch patching, no sandbox weakening.
-  const preamble = `globalThis.__kumikiMount = { router: "memory" };
-try { void localStorage.length; } catch (_e) {
-  const _store = Object.create(null);
-  Object.defineProperty(globalThis, "localStorage", {
-    configurable: true,
-    value: {
-      getItem: (k) => (k in _store ? _store[k] : null),
-      setItem: (k, v) => { _store[k] = String(v); },
-      removeItem: (k) => { delete _store[k]; },
-      clear: () => { for (const k in _store) delete _store[k]; },
-    },
-  });
-}
-globalThis.__kumikiProviders = {
-  "http.get": (input) => {
-    const url = (input && input.url) || "";
-    if (url.indexOf("/api/quote") !== -1) {
-      return { kind: "ok", value: { text: "Make it work, make it right, make it fast.", author: "Kent Beck" } };
-    }
-    return { kind: "err", value: { message: "no demo backend for " + url } };
-  },
-  "telemetry.track": (input) => {
-    console.log("[telemetry]", input);
-    return { kind: "ok", value: null };
-  },
-};`;
-  srcdoc.value = `<!doctype html><html><head><meta charset="utf-8">
-<style>body{font-family:system-ui,sans-serif;margin:0;padding:16px}</style></head>
-<body><div id="root"></div>
-<script>${preamble}<\/script>
-<script type="module">${result.js}<\/script></body></html>`;
+  srcdoc.value = buildSrcdoc(result.js);
 }
 
 let timer: ReturnType<typeof setTimeout> | undefined;
 watch(
   source,
   (src) => {
+    if (selected.value && examples.find((e) => e.name === selected.value)?.source !== src) {
+      selected.value = "";
+    }
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => buildPreview(src), 250);
   },
@@ -161,107 +93,58 @@ watch(selected, (name) => {
 
 const ok = computed(() => diagnostics.value.length === 0 && srcdoc.value.length > 0);
 
-// --- WebMCP: expose the playground as tools for in-browser AI agents ---
-let abort: AbortController | undefined;
-function registerWebMcpTools(): void {
-  const mc = (navigator as unknown as { modelContext?: WebMcp }).modelContext;
-  if (!mc?.registerTool) return;
-  abort = new AbortController();
-  const opts = { signal: abort.signal };
+// --- Syntax highlight: a Shiki-rendered backdrop sits behind a transparent
+// textarea (same font metrics, scroll-synced). Until the highlighter loads —
+// or if it fails — the textarea keeps its normal text color.
+const highlight = shallowRef<Highlight | null>(null);
+const backdropEl = ref<HTMLElement | null>(null);
+const highlighted = computed(() =>
+  highlight.value ? highlight.value(overlayPad(source.value)) : "",
+);
 
-  mc.registerTool(
-    {
-      name: "kumiki_compile",
-      description:
-        "Compile the given Kumiki source. Returns ok plus generated JS size, or a list of diagnostics (codes per spec/errors.md).",
-      annotations: { readOnlyHint: true },
-      inputSchema: {
-        type: "object",
-        properties: { source: { type: "string", description: "Kumiki source text" } },
-        required: ["source"],
-      },
-      execute: (input: Record<string, unknown>) => {
-        const src = String(input["source"] ?? "");
-        const diags = diagnose(src);
-        if (diags.length > 0) return { ok: false, diagnostics: diags };
-        const r = compile(src, {
-          runtimeSpecifier: "",
-          bundle: true,
-          readRuntimeBundle: () => runtimeBundle,
-          capabilities,
-        });
-        return r.kind === "ok"
-          ? { ok: true, jsBytes: r.js.length }
-          : { ok: false, diagnostics: r.errors };
-      },
-    },
-    opts,
-  );
-
-  mc.registerTool(
-    {
-      name: "kumiki_list_examples",
-      description: "List the feature examples available in the playground.",
-      annotations: { readOnlyHint: true },
-      inputSchema: { type: "object", properties: {} },
-      execute: () => examples.map((e) => e.name),
-    },
-    opts,
-  );
-
-  mc.registerTool(
-    {
-      name: "kumiki_load_example",
-      description: "Load a named feature example into the playground editor and preview it.",
-      inputSchema: {
-        type: "object",
-        properties: { name: { type: "string", description: "Example file name, e.g. 07-list.kumiki" } },
-        required: ["name"],
-      },
-      execute: (input: Record<string, unknown>) => {
-        const name = String(input["name"] ?? "");
-        return loadExample(name) ? `loaded ${name}` : `not found: ${name}`;
-      },
-    },
-    opts,
-  );
-
-  mc.registerTool(
-    {
-      name: "kumiki_set_source",
-      description: "Replace the playground editor's source with the given Kumiki code and preview it.",
-      inputSchema: {
-        type: "object",
-        properties: { source: { type: "string" } },
-        required: ["source"],
-      },
-      execute: (input: Record<string, unknown>) => {
-        const src = String(input["source"] ?? "");
-        source.value = src;
-        buildPreview(src);
-        return diagnostics.value.length === 0 ? "ok" : JSON.stringify(diagnostics.value);
-      },
-    },
-    opts,
-  );
+function syncScroll(event: Event): void {
+  const ta = event.target as HTMLTextAreaElement;
+  const backdrop = backdropEl.value;
+  if (!backdrop) return;
+  backdrop.scrollTop = ta.scrollTop;
+  backdrop.scrollLeft = ta.scrollLeft;
 }
+
+// --- WebMCP: expose the playground as tools for in-browser AI agents ---
+// Registration goes through the page-global host (see webmcp.ts): tools are
+// registered at most once per page load and delegated to the currently
+// mounted instance, so SPA revisits of this page can't hit the
+// "Duplicate tool name" InvalidStateError.
+const webMcpApi: PlaygroundApi = {
+  compileSource(src) {
+    const diags = diagnose(src);
+    if (diags.length > 0) return { ok: false, diagnostics: diags };
+    const r = compileToJs(src);
+    return r.kind === "ok"
+      ? { ok: true, jsBytes: r.js.length }
+      : { ok: false, diagnostics: r.errors };
+  },
+  listExamples: () => examples.map((e) => e.name),
+  loadExample,
+  setSource(src) {
+    source.value = src;
+    buildPreview(src);
+    return diagnostics.value.length === 0 ? "ok" : JSON.stringify(diagnostics.value);
+  },
+};
 
 onMounted(() => {
   buildPreview(source.value);
-  registerWebMcpTools();
+  const mc = (navigator as unknown as { modelContext?: ModelContext }).modelContext;
+  playgroundToolHost.bind(mc, webMcpApi);
+  createKumikiHighlighter().then(
+    (h) => {
+      highlight.value = h;
+    },
+    (e) => console.warn("[playground] syntax highlight unavailable:", e),
+  );
 });
-onBeforeUnmount(() => abort?.abort());
-
-interface WebMcpTool {
-  name: string;
-  description: string;
-  inputSchema?: object;
-  annotations?: { readOnlyHint?: boolean };
-  execute: (input: Record<string, unknown>) => unknown;
-}
-interface WebMcp {
-  registerTool(tool: WebMcpTool, options?: { signal?: AbortSignal }): void;
-}
+onBeforeUnmount(() => playgroundToolHost.release(webMcpApi));
 </script>
 
 <template>
@@ -276,12 +159,16 @@ interface WebMcp {
       </span>
     </div>
     <div class="sp-grid">
-      <textarea
-        v-model="source"
-        class="sp-editor"
-        spellcheck="false"
-        aria-label="Kumiki source"
-      ></textarea>
+      <div class="sp-editor" :class="{ 'sp-lit': highlighted }">
+        <div ref="backdropEl" class="sp-backdrop" aria-hidden="true" v-html="highlighted"></div>
+        <textarea
+          v-model="source"
+          class="sp-input"
+          spellcheck="false"
+          aria-label="Kumiki source"
+          @scroll="syncScroll"
+        ></textarea>
+      </div>
       <div class="sp-preview">
         <iframe v-if="ok" :srcdoc="srcdoc" title="preview" sandbox="allow-scripts"></iframe>
         <ul v-else-if="diagnostics.length" class="sp-diags">
@@ -306,10 +193,31 @@ interface WebMcp {
 .sp-status.err { color: var(--vp-c-red-1); }
 .sp-grid { display: grid; grid-template-columns: 1fr 1fr; min-height: 360px; }
 .sp-editor {
-  width: 100%; border: 0; resize: vertical; padding: 12px;
-  font-family: var(--vp-font-family-mono); font-size: 13px; line-height: 1.5;
-  background: var(--vp-c-bg); color: var(--vp-c-text-1); border-right: 1px solid var(--vp-c-divider);
+  position: relative; display: grid;
+  background: var(--vp-c-bg); border-right: 1px solid var(--vp-c-divider);
 }
+/* Backdrop and textarea must share identical text metrics so the highlighted
+   text sits exactly under the (transparent) editor text. */
+.sp-input, .sp-backdrop {
+  margin: 0; padding: 12px; box-sizing: border-box;
+  font-family: var(--vp-font-family-mono); font-size: 13px; line-height: 1.5;
+  white-space: pre; overflow-wrap: normal; tab-size: 4;
+}
+.sp-input {
+  position: relative; z-index: 1; display: block;
+  width: 100%; height: 100%; min-height: 360px; border: 0; resize: vertical;
+  background: transparent; color: var(--vp-c-text-1); caret-color: var(--vp-c-text-1);
+  overflow: auto;
+}
+.sp-lit .sp-input { color: transparent; }
+.sp-backdrop { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.sp-backdrop :deep(pre.shiki) {
+  margin: 0; padding: 0; background: transparent !important;
+  font: inherit; line-height: inherit;
+}
+.sp-backdrop :deep(code) { display: block; font: inherit; line-height: inherit; }
+.sp-backdrop :deep(span) { color: var(--shiki-light); }
+.dark .sp-backdrop :deep(span) { color: var(--shiki-dark); }
 .sp-preview { background: #fff; overflow: auto; }
 .sp-preview iframe { width: 100%; height: 100%; min-height: 360px; border: 0; }
 .sp-diags { margin: 0; padding: 12px 12px 12px 28px; color: var(--vp-c-red-1); }

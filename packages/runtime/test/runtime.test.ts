@@ -281,6 +281,69 @@ function makeOverlayApp(): AppShape {
   return app;
 }
 
+// A root that renders one spinner tile — the status-tile contract (spec
+// stdlib §2.3.8: an animated loading indicator, props: size).
+function makeSpinnerApp(props: Record<string, unknown> = {}): AppShape {
+  const app: AppShape = {
+    slots: {},
+    caps: [],
+    effects: {},
+    init: [],
+    reducers: [],
+    root: () => ({ kind: "spinner", props }),
+  };
+  return app;
+}
+
+describe("spinner builtin", () => {
+  let root: HTMLElement;
+  beforeEach(() => {
+    root = document.createElement("div");
+    document.body.appendChild(root);
+    document.getElementById("kumiki-animations")?.remove();
+  });
+  afterEach(() => {
+    root.remove();
+  });
+
+  // AC1: an accessible animated indicator, not the "…" text placeholder
+  it("renders an accessible ring element, not placeholder text", () => {
+    mount(makeSpinnerApp(), root);
+    const el = root.querySelector('[data-kumiki-tile="spinner"]') as HTMLElement;
+    expect(el).toBeTruthy();
+    expect(el.textContent).toBe("");
+    expect(el.getAttribute("role")).toBe("status");
+    expect(el.getAttribute("aria-label")).toBe("Loading");
+  });
+
+  // AC2: the spin keyframes + spinner rule are injected into the style root,
+  // with a reduced-motion opt-out
+  it("injects kumiki-spin keyframes, the spinner rule, and reduced-motion handling", () => {
+    mount(makeSpinnerApp(), root);
+    const css = document.getElementById("kumiki-animations")?.textContent ?? "";
+    expect(css).toContain("@keyframes kumiki-spin");
+    expect(css).toContain('[data-kumiki-tile="spinner"]');
+    expect(css).toMatch(/prefers-reduced-motion[^}]*\{[^}]*spinner/s);
+  });
+
+  // AC3: the size prop scales the ring — sm/md/lg/xl tokens; unknown ignored
+  it("maps the size prop tokens", () => {
+    mount(makeSpinnerApp({ size: "lg" }), root);
+    const lg = root.querySelector('[data-kumiki-tile="spinner"]') as HTMLElement;
+    expect(lg.style.fontSize).toBe("1.5rem");
+
+    root.replaceChildren();
+    mount(makeSpinnerApp({ size: "sm" }), root);
+    const sm = root.querySelector('[data-kumiki-tile="spinner"]') as HTMLElement;
+    expect(sm.style.fontSize).toBe("0.75rem");
+
+    root.replaceChildren();
+    mount(makeSpinnerApp(), root);
+    const def = root.querySelector('[data-kumiki-tile="spinner"]') as HTMLElement;
+    expect(def.style.fontSize).toBe("");
+  });
+});
+
 describe("overlay builtin", () => {
   let root: HTMLElement;
   beforeEach(() => {
@@ -1342,7 +1405,7 @@ describe("unhandled effect-error contract (#37)", () => {
   it("a storage backend that throws yields err — surfaced when unhandled (AC3)", async () => {
     // Simulate an unavailable localStorage (opaque-origin sandbox / private mode).
     const result = await builtinEffects.storageRead({ key: "x" });
-    void result; // storage is available in jsdom; assert the contract shape below.
+    void result; // storage is available in happy-dom; assert the contract shape below.
     const throwing = {
       getItem: () => {
         throw new Error("SecurityError");
@@ -1405,7 +1468,7 @@ describe("memory router mode (#36)", () => {
   it("initialises at the virtual path, not location.pathname (AC1)", () => {
     const app = makeRoutedApp();
     // A non-root initial path proves the route comes from the virtual location,
-    // independent of jsdom's ambient location (which is "/").
+    // independent of the test DOM's ambient location (which is "/").
     const { dispose } = mount(app, root, { router: "memory", initialPath: "/items/99" });
     expect(root.textContent).toBe("item 99");
     expect((app.live?.route as { pattern: string }).pattern).toBe("/items/:id");

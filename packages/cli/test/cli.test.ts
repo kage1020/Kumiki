@@ -2,14 +2,16 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const COUNTER_PATH = resolve(here, "../../examples/apps/01-counter/app.kumiki");
+const ROUTING_PATH = resolve(here, "../../examples/features/18-routing.kumiki");
+const STORAGE_PATH = resolve(here, "../../examples/features/20-effect-storage.kumiki");
 const CLI_PATH = resolve(here, "../src/kumiki.ts");
 
-describe("kumiki build CLI", () => {
+describe("kumiki build CLI (per-app DCE, #71)", () => {
   let outDir: string;
 
   beforeEach(() => {
@@ -20,28 +22,102 @@ describe("kumiki build CLI", () => {
     rmSync(outDir, { recursive: true, force: true });
   });
 
-  it("produces index.html, app.js, runtime.js from the counter example", { timeout: 30000 }, () => {
-    execFileSync("npx", ["tsx", CLI_PATH, "build", COUNTER_PATH, outDir], {
+  function build(input: string): void {
+    execFileSync("npx", ["tsx", CLI_PATH, "build", input, outDir], {
       stdio: "pipe",
       shell: true,
     });
+  }
+
+  it("counter ships index.html, app.js, and ONLY its runtime modules", { timeout: 30000 }, () => {
+    build(COUNTER_PATH);
     expect(existsSync(join(outDir, "index.html"))).toBe(true);
     expect(existsSync(join(outDir, "app.js"))).toBe(true);
-    expect(existsSync(join(outDir, "runtime.js"))).toBe(true);
+    // The monolithic runtime.js is gone — replaced by the pruned module set.
+    expect(existsSync(join(outDir, "runtime.js"))).toBe(false);
+    const expected = ["core.js", "stdlib.js", "tiles-layout.js", "tiles-text.js", "tiles-input.js"];
+    for (const f of expected) {
+      expect(existsSync(join(outDir, "runtime", f)), `runtime/${f} missing`).toBe(true);
+    }
+    // No router / collection / overlay / effect-handler code for a counter (#71 AC).
+    for (const f of [
+      "router.js",
+      "testkit.js",
+      "effects-storage.js",
+      "effects-http.js",
+      "effects-toast.js",
+      "tiles-collection.js",
+      "tiles-overlay.js",
+      "tiles-media.js",
+      "tiles-status.js",
+    ]) {
+      expect(existsSync(join(outDir, "runtime", f)), `runtime/${f} should not ship`).toBe(false);
+    }
 
     const html = readFileSync(join(outDir, "index.html"), "utf8");
     expect(html).toContain('<div id="root"></div>');
     expect(html).toContain('<script type="module" src="/app.js"></script>');
 
     const app = readFileSync(join(outDir, "app.js"), "utf8");
-    expect(app).toMatch(/import \{ mount[^}]*\} from "\.\/runtime\.js"/);
+    expect(app).toContain('import { mountCore } from "./runtime/core.js"');
     expect(app).toContain('tile: "IncBtn"');
     expect(app).toContain('__kumikiApp._dispatch("inc"');
 
-    const runtime = readFileSync(join(outDir, "runtime.js"), "utf8");
-    expect(runtime).toContain("function mount");
-    expect(runtime).toMatch(/export\s*\{[^}]*mount[^}]*\}/);
-    expect(runtime).not.toContain(": AppShape"); // type stripped
+    // Size acceptance (#71): the counter runtime payload is well below the
+    // full minified bundle (~50KB raw / 15.2KB gzip shipped before this).
+    const total = expected
+      .map((f) => readFileSync(join(outDir, "runtime", f)).length)
+      .reduce((a, b) => a + b, 0);
+    expect(total).toBeLessThan(35_000);
+    const core = readFileSync(join(outDir, "runtime", "core.js"), "utf8");
+    expect(core).not.toContain(": AppShape"); // minified, types stripped
+  });
+
+  it("the built counter mounts — app.js + runtime modules render into #root", {
+    timeout: 30000,
+  }, async () => {
+    build(COUNTER_PATH);
+    const root = document.createElement("div");
+    root.id = "root";
+    document.body.appendChild(root);
+    try {
+      // app.js auto-mounts into #root and imports "./runtime/*.js" relatively,
+      // so this exercises the exact artifact set `kumiki build` ships.
+      await import(pathToFileURL(join(outDir, "app.js")).href);
+      expect(root.textContent).toContain("Count: 0");
+    } finally {
+      root.remove();
+    }
+  });
+
+  it("a routing app ships router.js and the built artifact navigates", {
+    timeout: 30000,
+  }, async () => {
+    build(ROUTING_PATH);
+    expect(existsSync(join(outDir, "runtime", "router.js"))).toBe(true);
+    const root = document.createElement("div");
+    root.id = "root";
+    document.body.appendChild(root);
+    // The history router reads the ambient location; force the memory router so
+    // the test is independent of the happy-dom URL.
+    (globalThis as { __kumikiMount?: unknown }).__kumikiMount = { router: "memory" };
+    try {
+      await import(pathToFileURL(join(outDir, "app.js")).href);
+      expect(root.textContent).toContain("Home");
+      (root.querySelector('[data-kumiki-tile="link"]') as HTMLAnchorElement).click();
+      expect(root.textContent).toContain("Item 42");
+    } finally {
+      delete (globalThis as { __kumikiMount?: unknown }).__kumikiMount;
+      root.remove();
+    }
+  });
+
+  it("a storage app ships effects-storage.js (and no http module)", { timeout: 30000 }, () => {
+    build(STORAGE_PATH);
+    expect(existsSync(join(outDir, "runtime", "effects-storage.js"))).toBe(true);
+    expect(existsSync(join(outDir, "runtime", "effects-http.js"))).toBe(false);
+    const app = readFileSync(join(outDir, "app.js"), "utf8");
+    expect(app).toContain('from "./runtime/effects-storage.js"');
   });
 });
 
@@ -115,7 +191,7 @@ describe("kumiki test (in-language test runner)", () => {
 });
 
 // M4b: `kumiki fix --auto-patch <test-name>`. These exercise the real CLI wiring
-// (subprocess) so the in-process jsdom of the test runner stays isolated.
+// (subprocess) so the in-process DOM of the test runner stays isolated.
 describe("kumiki fix --auto-patch (fix from a failing test)", () => {
   let dir: string;
 

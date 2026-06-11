@@ -38,15 +38,28 @@
   }
 }
 
-@media (min-width: 960px) {
-  .VPHero .image-container {
-    height: 400px;
-  }
-  .VPHero .VPImage.image-src {
-    max-width: 400px;
-  }
-  .VPHero .image-bg {
-    width: 400px;
-    height: 400px;
+/* Home-page Kumiki vs React comparison: two code columns that collapse to one
+   on narrow screens. The inner column heading sits flush above its block. */
+.home-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 24px;
+  align-items: start;
+}
+/* Grid items default to min-width:auto, so a long unbreakable code line would
+   widen the column past the container instead of scrolling inside the block. */
+.home-compare-col {
+  min-width: 0;
+}
+.home-compare-col > p {
+  margin: 16px 0 0;
+  font-weight: 600;
+}
+.home-compare-col div[class*="language-"] {
+  margin-top: 8px;
+}
+@media (max-width: 768px) {
+  .home-compare {
+    grid-template-columns: 1fr;
   }
 }

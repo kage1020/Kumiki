@@ -10,7 +10,7 @@ All are written within the Kumiki language (no external test framework required)
 
 ## 8.1 The Test Definition Layer
 
-```ebnf
+```
 test-def ::= 'test' identifier '=' test-expr
 test-expr ::= reducer-test | tile-test | episode-test | property-test
 ```
@@ -36,7 +36,7 @@ test addTodo-basic =
 
 ### 8.2.1 Syntax
 
-```ebnf
+```
 reducer-test ::= 'reducer-test' identifier
                  'given'  '=' '{' 'slots' ':' record-lit ',' 'event' ':' event-lit '}'
                  'expect' '=' '{' 'slots' ':' record-lit ',' 'effects' ':' effect-list '}'
@@ -72,7 +72,7 @@ test toggle-is-involution =
 
 ### 8.3.1 Syntax
 
-```ebnf
+```
 property-test ::= 'property-test'
                   'for-all'    '=' record-lit       ; variables to generate
                   'given'      '=' record-lit
@@ -246,9 +246,9 @@ Separate from the `test` definitions above (in-language tests), the toolchain pr
 
 ### smoke (layer 2)
 
-`kumiki smoke <file>` mounts a compiled app to a headless DOM (jsdom), fires events at all operable elements after the initial render, and at each step monitors for runtime exceptions, console errors, unhandled rejections, and empty rendering. It automatically detects the class of bugs previously verified by a human in the browser, such as "the type passes, but it calls a method that doesn't exist in the runtime and crashes on operation" or "it doesn't render." It is general-purpose and has no app-specific knowledge.
+`kumiki smoke <file>` mounts a compiled app to a headless DOM (happy-dom), fires events at all operable elements after the initial render, and at each step monitors for runtime exceptions, console errors, unhandled rejections, and empty rendering. It automatically detects the class of bugs previously verified by a human in the browser, such as "the type passes, but it calls a method that doesn't exist in the runtime and crashes on operation" or "it doesn't render." It is general-purpose and has no app-specific knowledge.
 
-Real rendering in a browser (CSS layout, real focus, etc.) cannot be fully reproduced by jsdom. The **real-browser tier** for that is `@kumiki/e2e` (Chromium / Playwright), which runs in the **same scenario format** as jsdom. The state oracle is likewise `window.__kumikiApp.live`, and displayed text is `innerText` (visible only). In addition, it has browser-only assertions:
+Real rendering in a browser (CSS layout, real focus, etc.) cannot be fully reproduced by a headless DOM. The **real-browser tier** for that is `@kumiki/e2e` (Chromium / Playwright), which runs in the **same scenario format** as the headless-DOM tier. The state oracle is likewise `window.__kumikiApp.live`, and displayed text is `innerText` (visible only). In addition, it has browser-only assertions:
 
 - `focused`: that the specified selector is actually focused (detects focus-stealing bugs on re-render)
 - `visible` / `hidden`: that it is really visible/invisible per computed style (`display:none`, etc.)
@@ -262,7 +262,7 @@ Because it is heavy (browser binaries), it is not included in the default CI tes
 The example corpus (`packages/tests`) is the standing guarantee that **"a broken example must never merge."** Asserting only that every example *compiles* is not enough: a value argument that is dropped during lowering compiles cleanly and even mounts, yet renders an empty-but-present node — it is "compiles but is actually broken," invisible to both layer 1 and the layer-2 "not empty / no throw" bar (this is exactly how the `03-union-and-match` heading bug, lowered to `_s.show(undefined)`, shipped green). The corpus guard therefore also asserts **runtime truth** for the dropped-expression class:
 
 - **Static codegen scan.** Every value-bearing display tile (`heading` / `text` / `button` / `label` / `link` / `markdown` / `image` / `icon` / `input`+`textarea` value) lowers its value through `show(...)`. A dropped expression in any of those positions surfaces as the exact token `show(undefined)`. Because Kumiki source has no `undefined` literal, that token can only originate from a dropped expression — a zero-false-positive sentinel (distinct from the pervasive, benign `undefined` in reducer read-back and selector-less reducers). The corpus fails if any example's generated JS contains it.
-- **Rendered-DOM scan.** Every example is mounted in jsdom and asserted to render no text node that is literally `"undefined"`, catching a raw `undefined` that reaches the DOM by a path the sentinel does not cover.
+- **Rendered-DOM scan.** Every example is mounted in a headless DOM (happy-dom) and asserted to render no text node that is literally `"undefined"`, catching a raw `undefined` that reaches the DOM by a path the sentinel does not cover.
 
 These run in default CI (no browser binaries), so a re-introduced dropped-expression bug fails the build rather than shipping green.
 

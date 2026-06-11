@@ -47,7 +47,7 @@ function signature(el: Element, index: number): string {
 
 /**
  * Mount `app` into `root`, drive its UI, and report runtime failures.
- * Runs in any DOM environment (jsdom for CI, a real browser for the playground).
+ * Runs in any DOM environment (happy-dom for CI, a real browser for the playground).
  */
 export async function smoke(
   app: AppShape,

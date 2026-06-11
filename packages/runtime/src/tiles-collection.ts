@@ -1,0 +1,55 @@
+// Collection tile renderers (#71): list and table families.
+
+import { applyContainerProps, type TileCtx, type TileNode, type TileRenderers } from "./core.ts";
+
+type Node<K extends TileNode["kind"]> = TileNode & { kind: K };
+
+function appendChildren(el: HTMLElement, children: TileNode[], ctx: TileCtx): void {
+  for (const child of children) {
+    if (child != null) el.appendChild(ctx.render(child));
+  }
+}
+
+function renderTablePart(
+  node: Node<"table" | "table-head" | "table-body" | "table-row">,
+  ctx: TileCtx,
+): HTMLElement {
+  const tag = {
+    table: "table",
+    "table-head": "thead",
+    "table-body": "tbody",
+    "table-row": "tr",
+  }[node.kind] as string;
+  const el = document.createElement(tag);
+  el.dataset.kumikiTile = node.kind;
+  appendChildren(el, node.children, ctx);
+  return el;
+}
+
+export const collectionTiles: TileRenderers = {
+  list(node, ctx) {
+    const list = document.createElement(node.ordered ? "ol" : "ul");
+    list.dataset.kumikiTile = "list";
+    applyContainerProps(list, node.props);
+    appendChildren(list, node.children, ctx);
+    return list;
+  },
+  "list-item"(node, ctx) {
+    const li = document.createElement("li");
+    li.dataset.kumikiTile = "list-item";
+    appendChildren(li, node.children, ctx);
+    return li;
+  },
+  table: renderTablePart,
+  "table-head": renderTablePart,
+  "table-body": renderTablePart,
+  "table-row": renderTablePart,
+  "table-cell"(node, ctx) {
+    const td = document.createElement("td");
+    td.dataset.kumikiTile = "table-cell";
+    if (node.colspan) td.colSpan = node.colspan;
+    if (node.rowspan) td.rowSpan = node.rowspan;
+    appendChildren(td, node.children, ctx);
+    return td;
+  },
+};

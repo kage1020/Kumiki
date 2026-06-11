@@ -19,7 +19,7 @@ import type {
   TypeDef,
   TypeExpr,
 } from "./ast.ts";
-import { BUILTIN_TILES } from "./builtins.ts";
+import { BUILTIN_TILES, TILE_FAMILY, type TileFamily } from "./builtins.ts";
 
 export type CodegenOptions = {
   runtimeSpecifier: string;
@@ -31,9 +31,30 @@ export type CodegenOptions = {
    * than run as a standalone page bundle.
    */
   exportApp?: boolean;
+  /**
+   * Per-app DCE (#71): when set (e.g. `"./runtime"`), import the granular
+   * runtime feature modules from this directory — `<dir>/core.js`,
+   * `<dir>/tiles-<family>.js`, … — instead of the single `runtimeSpecifier`
+   * module, and mount via `mountCore` with only the modules the app uses.
+   * `runtimeModules` on the result lists which files the output imports.
+   * Incompatible with `bundle: true` (the inlining path needs the one-import
+   * monolith shape).
+   */
+  runtimeModulesDir?: string;
 };
 
-export function codegen(program: Program, opts: CodegenOptions): string {
+export type CodegenResult = {
+  js: string;
+  /**
+   * The granular runtime modules (file basenames under `runtimeModulesDir`,
+   * without extension) the generated code imports — what `kumiki build` must
+   * ship next to the app. Computed in both modes; only meaningful for the
+   * modular one.
+   */
+  runtimeModules: string[];
+};
+
+export function codegen(program: Program, opts: CodegenOptions): CodegenResult {
   const types = new Map(
     program.defs.filter((d): d is TypeDef => d.kind === "TypeDef").map((d) => [d.name, d]),
   );
@@ -53,13 +74,11 @@ export function codegen(program: Program, opts: CodegenOptions): string {
   const app = apps[0];
   if (!app) throw new Error("No app definition found");
 
-  const ctx: GenCtx = { slots, fns, tiles, reducers, effects, types };
+  const ctx: GenCtx = { slots, fns, tiles, reducers, effects, types, usedTiles: new Set() };
 
+  // The import header is emitted AFTER the body below — generating the body
+  // fills `ctx.usedTiles`, which (with caps/emits) decides the modular imports.
   const lines: string[] = [];
-  lines.push(`import { mount, _stdlib, builtinEffects } from "${opts.runtimeSpecifier}";`);
-  lines.push("");
-  lines.push("const _s = _stdlib;");
-  lines.push("");
 
   // Everything that closes over slot state lives inside `createApp()` so each
   // call produces an independent instance (its own `live` + closures). Multiple
@@ -189,11 +208,60 @@ export function codegen(program: Program, opts: CodegenOptions): string {
   }
   lines.push("");
 
+  // ----- runtime usage analysis (#71) — the body above is fully generated, so
+  // `ctx.usedTiles` is complete. -----
+  const usage = analyzeRuntimeUsage(app, reducers, effects, ctx.usedTiles, opts, tests.length > 0);
+
+  const header: string[] = [];
+  if (opts.runtimeModulesDir) {
+    const dir = opts.runtimeModulesDir.replace(/\/+$/, "");
+    header.push(`import { mountCore } from "${dir}/core.js";`);
+    header.push(`import { _stdlibCore } from "${dir}/stdlib.js";`);
+    if (usage.testkit) header.push(`import { _stdlibTest } from "${dir}/testkit.js";`);
+    if (usage.router) header.push(`import { routing } from "${dir}/router.js";`);
+    if (usage.storage.length > 0)
+      header.push(`import { ${usage.storage.join(", ")} } from "${dir}/effects-storage.js";`);
+    if (usage.http) header.push(`import { httpFetch } from "${dir}/effects-http.js";`);
+    if (usage.toast) header.push(`import { installToast } from "${dir}/effects-toast.js";`);
+    for (const f of usage.families) {
+      header.push(`import { ${tileFamilyVar(f)} } from "${dir}/tiles-${f}.js";`);
+    }
+    header.push("");
+    header.push(
+      usage.testkit ? "const _s = { ..._stdlibCore, ..._stdlibTest };" : "const _s = _stdlibCore;",
+    );
+    header.push(
+      `const _tiles = { ${usage.families.map((f) => `...${tileFamilyVar(f)}`).join(", ")} };`,
+    );
+    header.push("");
+  } else {
+    // Monolith mode: ONE import line — `inlineRuntime` (bundle: true) strips
+    // exactly this line and resolves the names against the inlined bundle's
+    // top-level bindings, so everything must ride on a single statement.
+    const names = ["mount", "_stdlib", ...usage.storage, ...(usage.http ? ["httpFetch"] : [])];
+    header.push(`import { ${names.join(", ")} } from "${opts.runtimeSpecifier}";`);
+    header.push("");
+    header.push("const _s = _stdlib;");
+    header.push("");
+  }
+
   if (opts.exportApp) {
     // Module mode: the importer (Vite plugin / embedding host) owns mounting.
     // `createApp` lets a host spin up multiple independent instances.
     lines.push("export default App;");
     lines.push("export { createApp };");
+  } else if (opts.runtimeModulesDir) {
+    // Auto-mount through the granular core: pass exactly the tile renderers /
+    // routing / builtin-effect installers this app imports. Host overrides
+    // (`__kumikiProviders` / `__kumikiMount`) work as in monolith mode.
+    const mountOpts = [
+      "tiles: _tiles",
+      ...(usage.router ? ["routing"] : []),
+      ...(usage.toast ? ["builtins: [installToast]"] : []),
+      "providers: globalThis.__kumikiProviders",
+      "...globalThis.__kumikiMount",
+    ];
+    lines.push(`mountCore(App, document.getElementById("root"), { ${mountOpts.join(", ")} });`);
   } else {
     // Auto-mount. A host embedding the bundle can register custom-capability
     // providers by assigning `globalThis.__kumikiProviders`, and pass any other
@@ -205,7 +273,90 @@ export function codegen(program: Program, opts: CodegenOptions): string {
     );
   }
 
-  return lines.join("\n");
+  return { js: [...header, ...lines].join("\n"), runtimeModules: usage.modules };
+}
+
+/** The generated identifier holding one tile family's renderer map. */
+function tileFamilyVar(f: TileFamily): string {
+  return `${f}Tiles`;
+}
+
+type RuntimeUsage = {
+  /** Tile family modules the app renders, in stable order. */
+  families: TileFamily[];
+  /** True when the app actually routes — see the rules below. */
+  router: boolean;
+  /** The storage effect handlers referenced by generated invokes. */
+  storage: ("storageRead" | "storageWrite")[];
+  http: boolean;
+  toast: boolean;
+  testkit: boolean;
+  /** Runtime module file basenames the generated imports reference. */
+  modules: string[];
+};
+
+const TILE_FAMILY_ORDER: TileFamily[] = [
+  "layout",
+  "text",
+  "input",
+  "collection",
+  "overlay",
+  "media",
+  "status",
+];
+
+/**
+ * Decide which runtime feature modules a compiled app needs (#71).
+ *
+ * The router is included only when the app can actually navigate: nav.* caps,
+ * `navigate*` emits, a `link` / `route-outlet` tile, a redirect route, or any
+ * route pattern beyond the `"/"` + `"/404"` boilerplate every app declares.
+ * A counter-class app (static single route, no navigation) therefore renders
+ * its `"/"` tile without any router code; the URL is never read, so a deep
+ * link to an unknown path shows the root tile instead of the 404 tile — an
+ * accepted trade-off recorded in the #71 acceptance.
+ */
+function analyzeRuntimeUsage(
+  app: AppDef,
+  reducers: ReducerDef[],
+  effects: EffectDef[],
+  usedTiles: Set<string>,
+  opts: CodegenOptions,
+  hasTests: boolean,
+): RuntimeUsage {
+  const emits = new Set<string>();
+  for (const r of reducers) for (const e of collectEmits(r.do)) emits.add(e);
+  for (const e of app.init) if (e.kind === "Call") emits.add(e.callee);
+
+  const families = TILE_FAMILY_ORDER.filter((f) =>
+    [...usedTiles].some((t) => TILE_FAMILY[t] === f),
+  );
+  const router =
+    app.caps.some((c) => c.startsWith("nav.")) ||
+    emits.has("navigate") ||
+    emits.has("navigate-replace") ||
+    emits.has("navigate-back") ||
+    usedTiles.has("link") ||
+    usedTiles.has("route-outlet") ||
+    app.routes.some((r) => r.tile.startsWith(">>") || (r.path !== "/" && r.path !== "/404"));
+  const storage: ("storageRead" | "storageWrite")[] = [];
+  if (effects.some((e) => e.cap === "storage.read")) storage.push("storageRead");
+  if (effects.some((e) => e.cap === "storage.write")) storage.push("storageWrite");
+  const http = effects.some((e) => e.cap.startsWith("http."));
+  const toast = app.caps.includes("notification.show") || emits.has("toast");
+  const testkit = !!opts.includeTests && hasTests;
+
+  const modules = [
+    "core",
+    "stdlib",
+    ...(testkit ? ["testkit"] : []),
+    ...(router ? ["router"] : []),
+    ...(storage.length > 0 ? ["effects-storage"] : []),
+    ...(http ? ["effects-http"] : []),
+    ...(toast ? ["effects-toast"] : []),
+    ...families.map((f) => `tiles-${f}`),
+  ];
+  return { families, router, storage, http, toast, testkit, modules };
 }
 
 // ----- test layer -----
@@ -527,6 +678,8 @@ type GenCtx = {
   reducers: ReducerDef[];
   effects: EffectDef[];
   types: Map<string, TypeDef>;
+  /** Built-in tile kinds the generated code emits (filled during generation, #71). */
+  usedTiles: Set<string>;
 };
 
 type EvalCtx = {
@@ -562,17 +715,20 @@ function genFn(fn: FnDef, gen: GenCtx): string {
  * provider is required).
  */
 function builtinEffectCall(eff: EffectDef, reqVar: string): string | null {
+  // Bare names (not `builtinEffects.*`) so the modular build can import each
+  // handler from its feature module; the assembled runtime entry exports the
+  // same names top-level for the monolith/inlining path (#71).
   if (eff.cap === "storage.read") {
-    return `builtinEffects.storageRead(${eff.mapRequest ? `{ key: ${reqVar}.key }` : reqVar})`;
+    return `storageRead(${eff.mapRequest ? `{ key: ${reqVar}.key }` : reqVar})`;
   }
   if (eff.cap === "storage.write") {
-    return `builtinEffects.storageWrite(${
+    return `storageWrite(${
       eff.mapRequest ? `{ key: ${reqVar}.key, value: ${reqVar}.value }` : reqVar
     })`;
   }
   if (eff.cap.startsWith("http.")) {
     const method = eff.cap.slice("http.".length).toUpperCase();
-    return `builtinEffects.httpFetch(${JSON.stringify(method)}, ${reqVar}, "")`;
+    return `httpFetch(${JSON.stringify(method)}, ${reqVar}, "")`;
   }
   return null;
 }
@@ -1398,6 +1554,9 @@ function tileExprJs(t: TileExpr, gen: GenCtx, ctx: EvalCtx, enclosingTile?: stri
           return `if (_v === ${JSON.stringify(arm.pattern.value)}) { return ${tileExprJs(arm.body, gen, ctx, enclosingTile)}; }`;
         })
         .join(" else ");
+      // The no-match fallback renders an empty `text` tile, so the text family
+      // must ship whenever a tile-match exists (#71).
+      gen.usedTiles.add("text");
       return `((_v) => { ${arms} else { return { kind: "text", text: "" }; } })(${sc})`;
     }
     case "TileCall":
@@ -1478,6 +1637,7 @@ function tileCallJs(
   }
 
   // Builtin tiles
+  gen.usedTiles.add(name);
   const propsObj = propsFor(t, ctx, enclosingTile);
   switch (name) {
     case "page":

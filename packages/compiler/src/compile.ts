@@ -4,7 +4,17 @@ import { lex } from "./lexer.ts";
 import { parse } from "./parser.ts";
 import { check, type KumikiError } from "./typecheck.ts";
 
-export type CompileOk = { kind: "ok"; js: string; program: Program };
+export type CompileOk = {
+  kind: "ok";
+  js: string;
+  program: Program;
+  /**
+   * The granular runtime modules (file basenames, no extension) the generated
+   * code imports when compiled with `runtimeModulesDir` (#71) — `kumiki build`
+   * ships exactly these from `@kumikijs/runtime/modules/`.
+   */
+  runtimeModules: string[];
+};
 export type CompileFail = { kind: "fail"; errors: KumikiError[] };
 export type CompileResult = CompileOk | CompileFail;
 
@@ -32,13 +42,18 @@ export function inlineRuntime(generatedJs: string, runtimeBundleJs: string): str
 }
 
 export function compile(source: string, opts: ExtendedCodegenOptions): CompileResult {
+  if (opts.bundle && opts.runtimeModulesDir) {
+    // The inlining path strips the generated module's single import line; the
+    // modular header has many, so the two modes cannot combine.
+    throw new Error("compile(): `bundle: true` and `runtimeModulesDir` are mutually exclusive.");
+  }
   const tokens = lex(source);
   const program = parse(tokens);
   const errors = check(program, { capabilities: opts.capabilities ?? [] });
   if (errors.length > 0) return { kind: "fail", errors };
 
   const generated = codegen(program, opts);
-  let js = `${RUNTIME_HELPERS}\n${generated}`;
+  let js = `${RUNTIME_HELPERS}\n${generated.js}`;
 
   if (opts.bundle) {
     if (!opts.readRuntimeBundle) {
@@ -49,5 +64,5 @@ export function compile(source: string, opts: ExtendedCodegenOptions): CompileRe
     js = inlineRuntime(js, opts.readRuntimeBundle());
   }
 
-  return { kind: "ok", js, program };
+  return { kind: "ok", js, program, runtimeModules: generated.runtimeModules };
 }

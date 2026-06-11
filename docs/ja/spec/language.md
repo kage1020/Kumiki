@@ -8,9 +8,9 @@ Kumiki プログラムは **7 種類の定義の集合**である。物理的な
 (layer, name, body, content-hash)
 ```
 
-テキスト表現は graph からの projection であり、必要なときに `kumiki view` で取り出せる（→ [AI Editing](./ai-edit.md)）。
+テキスト表現は graph からの projection であり、必要なときに `kumiki view` で取り出せる（→ [AI 編集](./ai-edit.md)）。
 
-```ebnf
+```
 program     ::= definition*
 definition  ::= type-def | slot-def | effect-def | reducer-def | tile-def | fn-def | app-def
 ```
@@ -35,7 +35,7 @@ definition  ::= type-def | slot-def | effect-def | reducer-def | tile-def | fn-d
 
 ## 1.2 字句
 
-```ebnf
+```
 identifier  ::= [a-zA-Z][a-zA-Z0-9_-]*           ; 最大 32 文字
 qname       ::= identifier ('.' identifier)*     ; ドット区切り完全名
 literal     ::= number | string | bool | unit
@@ -91,7 +91,7 @@ fresh  self  now  null
 
 ### 1.3.1 構文
 
-```ebnf
+```
 type-def    ::= 'type' identifier ('(' type-param (',' type-param)* ')')? '=' type-expr
 type-param  ::= identifier
 type-expr   ::= primitive
@@ -162,7 +162,7 @@ type LoadResult(T) = Idle | Loading | Loaded(T) | Failed(HttpError)
 
 ### 1.4.1 構文
 
-```ebnf
+```
 slot-def    ::= 'slot' identifier ':' type-expr modifier* ('=' init-expr)?
 modifier    ::= 'transient' | 'volatile'
 init-expr   ::= literal | record-literal | collection-literal | builtin-call
@@ -198,7 +198,7 @@ slot toast       : Option(Toast)       transient  = None
 
 ### 1.5.1 構文
 
-```ebnf
+```
 effect-def  ::= 'effect' identifier
                 'cap' '=' capability-name
                 'in'  '=' type-expr
@@ -247,7 +247,7 @@ effect persist   cap=storage.write
 
 ### 1.6.1 構文
 
-```ebnf
+```
 reducer-def ::= 'reducer' identifier
                 'on' '=' event-pattern
                 'do' '=' do-block
@@ -406,7 +406,7 @@ reducer editTitle
 
 ### 1.7.1 構文
 
-```ebnf
+```
 tile-def     ::= 'tile' identifier
                  ('in' '=' type-expr)?
                  ('sub-routes' '=' route-map)?
@@ -497,7 +497,7 @@ tile App      = page(
 
 ### 1.8.2 構文
 
-```ebnf
+```
 fn-def      ::= 'fn' identifier
                 '(' (fn-param (',' fn-param)*)? ')'
                 ('->' type-expr)?               ; 戻り値型（省略時は推論）
@@ -579,7 +579,7 @@ items.filter(isActiveOnly)
 
 reducer の `do=` 右辺、tile の中、fn の本体で使う共通式。
 
-```ebnf
+```
 expr        ::= literal
               | qname                          ; slot, let-binding, fn-arg, builtin 参照
               | expr '.' identifier            ; field access
@@ -643,7 +643,7 @@ items.fold(0, $1 + $2.price)               ; ($1: acc, $2: elem)
 - 参照は **名前で書き**、CRDT graph 保存時に content-hash に解決
 - リネーム = 新名で別 hash を作り参照を更新する CRDT op
 
-→ [AI Editing](./ai-edit.md)
+→ [AI 編集](./ai-edit.md)
 
 ---
 
@@ -662,7 +662,7 @@ hash(def) = blake3(
 
 ## 1.12 アプリエントリ (`app`)
 
-```ebnf
+```
 app-def    ::= 'app' identifier
                'caps'   '=' '[' (capability-name (',' capability-name)*)? ']'
                'routes' '=' route-map
@@ -679,7 +679,7 @@ route-entry ::= string '->' identifier        ; tile 名へ
 emit-list  ::= effect-call (',' effect-call)*
 ```
 
-→ [Routing](./routing.md), [HTTP / Storage](./http.md)
+→ [ルーティング](./routing.md), [HTTP / Storage](./http.md)
 
 ```kumiki
 app TodoApp
@@ -742,4 +742,4 @@ app Counter
     init   = []
 ```
 
-→ [Standard Library](./stdlib.md), [Routing](./routing.md), [packages/examples/apps/01-counter/app.kumiki](https://github.com/kage1020/Kumiki/blob/main/packages/examples/apps/01-counter/app.kumiki)
+→ [標準ライブラリ](./stdlib.md), [ルーティング](./routing.md), [packages/examples/apps/01-counter/app.kumiki](https://github.com/kage1020/Kumiki/blob/main/packages/examples/apps/01-counter/app.kumiki)

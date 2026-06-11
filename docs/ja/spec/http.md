@@ -449,5 +449,5 @@ slot password : Text = ""
 
 ## 6.12 次
 
-- 永続化のライフサイクル → [Lifecycle](./lifecycle.md)
-- replay でのモック → [Testing](./testing.md)
+- 永続化のライフサイクル → [ライフサイクル](./lifecycle.md)
+- replay でのモック → [テスト](./testing.md)

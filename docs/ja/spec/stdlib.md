@@ -320,6 +320,8 @@ Kumiki の組み込みタイル。**意味タグ**であり HTML タグの直訳
 | `progress` | プログレスバー | `value`, `max` |
 | `skeleton` | スケルトン | `kind` (text/box/circle) |
 
+`spinner` はアニメーションするローディングインジケータをレンダーする（`role="status"` を持つアクセシブルな要素。アニメーションは `prefers-reduced-motion` 下で無効化される）。`size` はトークン `sm` / `md` / `lg` / `xl` のいずれかを取り、指定がなければ周囲のテキストサイズに追従する。
+
 ### 2.3.9 制御要素
 
 | 要素 | 役割 |

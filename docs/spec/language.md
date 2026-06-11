@@ -10,7 +10,7 @@ A Kumiki program is a **set of 7 kinds of definitions**. There are no physical f
 
 The textual representation is a projection from the graph and can be retrieved with `kumiki view` when needed (→ [AI Editing](./ai-edit.md)).
 
-```ebnf
+```
 program     ::= definition*
 definition  ::= type-def | slot-def | effect-def | reducer-def | tile-def | fn-def | app-def
 ```
@@ -35,7 +35,7 @@ These seven are the **logic/data/UI core** — what an author must learn to expr
 
 ## 1.2 Lexical
 
-```ebnf
+```
 identifier  ::= [a-zA-Z][a-zA-Z0-9_-]*           ; max 32 characters
 qname       ::= identifier ('.' identifier)*     ; dot-separated fully qualified name
 literal     ::= number | string | bool | unit
@@ -91,7 +91,7 @@ fresh  self  now  null
 
 ### 1.3.1 Syntax
 
-```ebnf
+```
 type-def    ::= 'type' identifier ('(' type-param (',' type-param)* ')')? '=' type-expr
 type-param  ::= identifier
 type-expr   ::= primitive
@@ -162,7 +162,7 @@ Structurally identical types have the same content-hash. Only `nominal` produces
 
 ### 1.4.1 Syntax
 
-```ebnf
+```
 slot-def    ::= 'slot' identifier ':' type-expr modifier* ('=' init-expr)?
 modifier    ::= 'transient' | 'volatile'
 init-expr   ::= literal | record-literal | collection-literal | builtin-call
@@ -198,7 +198,7 @@ slot toast       : Option(Toast)       transient  = None
 
 ### 1.5.1 Syntax
 
-```ebnf
+```
 effect-def  ::= 'effect' identifier
                 'cap' '=' capability-name
                 'in'  '=' type-expr
@@ -247,7 +247,7 @@ effect persist   cap=storage.write
 
 ### 1.6.1 Syntax
 
-```ebnf
+```
 reducer-def ::= 'reducer' identifier
                 'on' '=' event-pattern
                 'do' '=' do-block
@@ -408,7 +408,7 @@ reducer editTitle
 
 ### 1.7.1 Syntax
 
-```ebnf
+```
 tile-def     ::= 'tile' identifier
                  ('in' '=' type-expr)?
                  ('sub-routes' '=' route-map)?
@@ -509,7 +509,7 @@ To reuse pure auxiliary computations under a name. Callable from tile / reducer 
 
 ### 1.8.2 Syntax
 
-```ebnf
+```
 fn-def      ::= 'fn' identifier
                 '(' (fn-param (',' fn-param)*)? ')'
                 ('->' type-expr)?               ; return type (inferred if omitted)
@@ -591,7 +591,7 @@ items.filter(isActiveOnly)
 
 The common expressions used in the right-hand side of a reducer's `do=`, inside a tile, and in the body of a fn.
 
-```ebnf
+```
 expr        ::= literal
               | qname                          ; slot, let-binding, fn-arg, builtin reference
               | expr '.' identifier            ; field access
@@ -687,7 +687,7 @@ hash(def) = blake3(
 
 ## 1.12 Application Entry (`app`)
 
-```ebnf
+```
 app-def    ::= 'app' identifier
                'caps'   '=' '[' (capability-name (',' capability-name)*)? ']'
                'routes' '=' route-map

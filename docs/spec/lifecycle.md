@@ -198,7 +198,7 @@ There is no dedicated `<Suspense>` mechanism (to avoid the React problem of "it'
 
 ### 7.4.1 The match Expression
 
-```ebnf
+```
 match-expr ::= 'match' expr 'with' match-arm+
 match-arm  ::= '|' pattern '->' expr
 pattern    ::= identifier                              ; variant name

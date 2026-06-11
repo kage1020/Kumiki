@@ -342,7 +342,7 @@ kumiki lock agent-1 'slot.todos*,reducer.todo-*'
 | 用途 | 並列開発・回帰検査 | デバッグ・replay test |
 | 単位 | CRDT op | reducer 実行 + effect 結果 |
 
-→ episode log は [Runtime](./runtime.md)。
+→ episode log は [ランタイム](./runtime.md)。
 
 ## 9.10 ファイルシステムとの互換層
 
@@ -389,5 +389,5 @@ project.kumiki/
 
 ## 9.12 次
 
-- ランタイム実装の詳細 → [Runtime](./runtime.md)
+- ランタイム実装の詳細 → [ランタイム](./runtime.md)
 - 完全例 → [examples/](https://github.com/kage1020/Kumiki/tree/main/packages/examples)

@@ -177,7 +177,7 @@ reducer guardEdit
         else ()
 ```
 
-`confirm` は標準 effect（→ [Standard Library](./stdlib.md)）で、回答を別 reducer に届ける。詳細は [Lifecycle](./lifecycle.md)。
+`confirm` は標準 effect（→ [標準ライブラリ](./stdlib.md)）で、回答を別 reducer に届ける。詳細は [ライフサイクル](./lifecycle.md)。
 
 ---
 
@@ -364,6 +364,6 @@ app SecureApp
 
 ## 3.13 次
 
-- フォームの submit ハンドラ → [Forms](./forms.md)
+- フォームの submit ハンドラ → [フォーム](./forms.md)
 - HTTP fetch → [HTTP / Storage](./http.md)
-- エラーページ / suspense → [Lifecycle](./lifecycle.md)
+- エラーページ / suspense → [ライフサイクル](./lifecycle.md)

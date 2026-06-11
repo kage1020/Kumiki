@@ -10,7 +10,7 @@ All are written within the Kumiki language (no external test framework required)
 
 ## 8.1 The Test Definition Layer
 
-```ebnf
+```
 test-def ::= 'test' identifier '=' test-expr
 test-expr ::= reducer-test | tile-test | episode-test | property-test
 ```
@@ -36,7 +36,7 @@ test addTodo-basic =
 
 ### 8.2.1 Syntax
 
-```ebnf
+```
 reducer-test ::= 'reducer-test' identifier
                  'given'  '=' '{' 'slots' ':' record-lit ',' 'event' ':' event-lit '}'
                  'expect' '=' '{' 'slots' ':' record-lit ',' 'effects' ':' effect-list '}'
@@ -72,7 +72,7 @@ test toggle-is-involution =
 
 ### 8.3.1 Syntax
 
-```ebnf
+```
 property-test ::= 'property-test'
                   'for-all'    '=' record-lit       ; variables to generate
                   'given'      '=' record-lit

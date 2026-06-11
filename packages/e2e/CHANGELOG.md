@@ -1,5 +1,12 @@
 # @kumikijs/e2e
 
+## 0.1.9
+
+### Patch Changes
+
+- Updated dependencies [3ee1a9a]
+  - @kumikijs/compiler@0.8.0
+
 ## 0.1.8
 
 ### Patch Changes

@@ -51,4 +51,4 @@ pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build counter.kumiki ./out
 - 入力欄と双方向結合 → `bind`（[packages/examples/features/13-text-input-bind.kumiki](https://github.com/kage1020/Kumiki/blob/main/packages/examples/features/13-text-input-bind.kumiki)）
 - 一覧を描く → `for ... in`（[packages/examples/features/07-list.kumiki](https://github.com/kage1020/Kumiki/blob/main/packages/examples/features/07-list.kumiki)）
 
-考え方の全体像は [Thinking in Kumiki](./thinking-in-kumiki.md) へ。
+考え方の全体像は [Kumiki の考え方](./thinking-in-kumiki.md) へ。

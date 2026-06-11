@@ -1,6 +1,6 @@
 # Getting Started
 
-Kumiki is an experimental, AI-first web framework. You describe an app as small, interlocking definitions — no JSX, Hooks, dependency arrays, or hidden state — and the toolchain compiles it to a plain browser app. This page takes you from zero to a running example in a few minutes.
+Kumiki is an experimental, AI-first web framework. You describe an app as small, interlocking definitions and the toolchain compiles it to a plain browser app. This page takes you from zero to a running example in a few minutes.
 
 > Brand new to the language itself? [Thinking in Kumiki](./thinking-in-kumiki.md) explains the model, and the [examples](https://github.com/kage1020/Kumiki/tree/main/packages/examples) show real apps. To build one line by line, jump to [Your First App](./your-first-app.md).
 

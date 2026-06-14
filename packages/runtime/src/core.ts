@@ -323,6 +323,23 @@ export type AppShape = {
   themeName?: string | null;
   /** v0.2 M5: reusable scoped animations by name (closed-grammar keyframes + timing). */
   motions?: Record<string, unknown>;
+  /** §4.10: document-level metadata applied to <head> at mount. */
+  meta?: {
+    title?: string;
+    description?: string;
+    ogImage?: string;
+    favicon?: string;
+  };
+  /**
+   * §10.4.6: default sink for the `analytics.send` capability. Installed only
+   * when no host provider for `analytics.send` is registered, so the inbound
+   * ecosystem seam (real analytics SDK) still wins. `appId` (if set) is merged
+   * into every event payload.
+   */
+  analytics?: {
+    provider: "console" | "noop";
+    appId?: string;
+  };
   root?: () => TileNode;
   live?: Record<string, unknown>;
   _rerender?: () => void;
@@ -399,7 +416,14 @@ export function mountCore(
     : null;
   let routerUnsub: (() => void) | undefined;
 
-  const caps = makeCapabilityRegistry(app.caps, options.providers);
+  // Apply document-level metadata (§4.10) once at mount. Skipped silently in
+  // non-DOM hosts (tests using a mock `target` without a real document).
+  applyAppMeta(app);
+  // Merge the default `analytics.send` provider from `app.analytics` (§10.4.6).
+  // Host-supplied providers (options.providers) take precedence — this only
+  // fills the gap when the app declares an analytics sink directly.
+  const providers = withAnalyticsDefault(app, options.providers);
+  const caps = makeCapabilityRegistry(app.caps, providers);
   const dispatcher = makeEffectDispatcher(app, caps, (effect, outcome, value, key) => {
     handleEffectResult(effect, outcome, value, key);
   });
@@ -733,6 +757,79 @@ function makeCapabilityRegistry(
     has: (c) => ok.has(c),
     provider: (c) => providers?.[c],
   };
+}
+
+/**
+ * Reflect `app.meta` into the host document at mount (§4.10). Each field is
+ * applied independently so a partial declaration only touches the heads it
+ * names; the favicon is upserted via a `<link rel="icon">` element, the meta
+ * tags via name/property keys. Runs against the live `document` — guarded for
+ * non-DOM hosts (tests without a global document) so importing this module
+ * stays side-effect-free.
+ */
+function applyAppMeta(app: AppShape): void {
+  const meta = app.meta;
+  if (!meta) return;
+  if (typeof document === "undefined") return;
+  if (meta.title !== undefined) document.title = meta.title;
+  if (meta.description !== undefined) upsertMetaTag("name", "description", meta.description);
+  if (meta.ogImage !== undefined) upsertMetaTag("property", "og:image", meta.ogImage);
+  if (meta.favicon !== undefined) upsertFavicon(meta.favicon);
+}
+
+function upsertMetaTag(attr: "name" | "property", key: string, content: string): void {
+  const head = document.head;
+  if (!head) return;
+  let el = head.querySelector(`meta[${attr}="${key}"]`) as HTMLMetaElement | null;
+  if (!el) {
+    el = document.createElement("meta");
+    el.setAttribute(attr, key);
+    head.appendChild(el);
+  }
+  el.setAttribute("content", content);
+}
+
+function upsertFavicon(href: string): void {
+  const head = document.head;
+  if (!head) return;
+  let el = head.querySelector('link[rel="icon"]') as HTMLLinkElement | null;
+  if (!el) {
+    el = document.createElement("link");
+    el.setAttribute("rel", "icon");
+    head.appendChild(el);
+  }
+  el.setAttribute("href", href);
+}
+
+/**
+ * Build the provider map for the capability registry, defaulting
+ * `analytics.send` to the implementation chosen by `app.analytics` when the
+ * host did not register one (the spec's "hook injected at app startup",
+ * §10.4.6). When `appId` is configured it is merged into every payload so
+ * downstream sinks can route by app without each caller threading the id.
+ */
+function withAnalyticsDefault(
+  app: AppShape,
+  hostProviders?: Record<string, CapabilityProvider>,
+): Record<string, CapabilityProvider> | undefined {
+  const cfg = app.analytics;
+  if (!cfg) return hostProviders;
+  if (hostProviders?.["analytics.send"]) return hostProviders;
+  const tag = (input: unknown): unknown => {
+    if (cfg.appId === undefined) return input;
+    if (input && typeof input === "object" && !Array.isArray(input)) {
+      return { ...(input as Record<string, unknown>), appId: cfg.appId };
+    }
+    return { appId: cfg.appId, payload: input };
+  };
+  const provider: CapabilityProvider =
+    cfg.provider === "console"
+      ? (input) => {
+          console.log("[kumiki:analytics]", tag(input));
+          return { kind: "ok", value: null };
+        }
+      : () => ({ kind: "ok", value: null });
+  return { ...(hostProviders ?? {}), "analytics.send": provider };
 }
 
 type Dispatcher = {

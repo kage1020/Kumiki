@@ -152,6 +152,31 @@ export type AppIndexedDbConfig = {
   pos: Pos;
 };
 
+// app.meta — document-level metadata reflected into <head> at mount.
+// All fields are static string literals (no slot refs): the head is set once
+// at startup and the AI should be able to read these values without running
+// the app. Keys are the spec's closed set (style.md §4): title, description,
+// og-image, favicon. Unknown keys are rejected by the parser.
+export type AppMetaConfig = {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+  favicon?: string;
+  pos: Pos;
+};
+
+// app.analytics — opts the app into a default `analytics.send` provider so an
+// app can emit measurement events without a host registering one (runtime.md
+// §10.4.6). `provider: "console"` logs each event; `"noop"` silently absorbs
+// them — useful in tests / preview environments where you want the capability
+// declared but no actual sink. A host-supplied provider for `analytics.send`
+// still takes precedence over this default (the inbound ecosystem seam).
+export type AppAnalyticsConfig = {
+  provider: "console" | "noop";
+  appId?: string;
+  pos: Pos;
+};
+
 export type AppDef = {
   kind: "AppDef";
   name: string;
@@ -161,6 +186,8 @@ export type AppDef = {
   theme?: string;
   http?: AppHttpConfig;
   indexedDb?: AppIndexedDbConfig;
+  meta?: AppMetaConfig;
+  analytics?: AppAnalyticsConfig;
   pos: Pos;
 };
 

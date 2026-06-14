@@ -1,8 +1,10 @@
 import type {
+  AppAnalyticsConfig,
   AppDef,
   AppHttpConfig,
   AppIndexedDbConfig,
   AppIndexedDbStore,
+  AppMetaConfig,
   BinOp,
   Def,
   EffectDef,
@@ -1524,6 +1526,8 @@ class Parser {
     let theme: string | undefined;
     let http: AppHttpConfig | undefined;
     let indexedDb: AppIndexedDbConfig | undefined;
+    let meta: AppMetaConfig | undefined;
+    let analytics: AppAnalyticsConfig | undefined;
 
     while (!this.isAppEnd()) {
       const ident = this.eat("ident");
@@ -1535,10 +1539,9 @@ class Parser {
       else if (k === "theme") theme = this.eat("ident").value;
       else if (k === "http") http = this.parseAppHttp(ident.pos);
       else if (k === "indexed-db") indexedDb = this.parseAppIndexedDb(ident.pos);
-      else if (k === "meta" || k === "analytics") {
-        // skip the value (Phase 2: parse record literal but ignore — see #80)
-        this.parseExpr();
-      } else {
+      else if (k === "meta") meta = this.parseAppMeta(ident.pos);
+      else if (k === "analytics") analytics = this.parseAppAnalytics(ident.pos);
+      else {
         throw new ParseError(`Unknown app field "${k}"`, ident.pos);
       }
     }
@@ -1547,7 +1550,73 @@ class Parser {
     if (theme) def.theme = theme;
     if (http) def.http = http;
     if (indexedDb) def.indexedDb = indexedDb;
+    if (meta) def.meta = meta;
+    if (analytics) def.analytics = analytics;
     return def;
+  }
+
+  // app.meta = { title?, description?, og-image?, favicon? } — spec style.md §4.10.
+  private parseAppMeta(pos: Pos): AppMetaConfig {
+    const rec = this.parseExpr();
+    if (rec.kind !== "RecordLit") {
+      throw new ParseError(`app.meta must be a record literal`, pos);
+    }
+    const cfg: AppMetaConfig = { pos };
+    for (const f of rec.fields) {
+      const v = f.value;
+      if (v.kind !== "Str") {
+        throw new ParseError(`app.meta.${f.name} must be a string literal`, v.pos);
+      }
+      switch (f.name) {
+        case "title":
+          cfg.title = v.value;
+          break;
+        case "description":
+          cfg.description = v.value;
+          break;
+        case "og-image":
+          cfg.ogImage = v.value;
+          break;
+        case "favicon":
+          cfg.favicon = v.value;
+          break;
+        default:
+          throw new ParseError(`Unknown app.meta field "${f.name}"`, v.pos);
+      }
+    }
+    return cfg;
+  }
+
+  // app.analytics = { provider: "console" | "noop", app-id? } — spec runtime.md §10.4.6.
+  private parseAppAnalytics(pos: Pos): AppAnalyticsConfig {
+    const rec = this.parseExpr();
+    if (rec.kind !== "RecordLit") {
+      throw new ParseError(`app.analytics must be a record literal`, pos);
+    }
+    let provider: "console" | "noop" | undefined;
+    let appId: string | undefined;
+    for (const f of rec.fields) {
+      const v = f.value;
+      if (f.name === "provider") {
+        if (v.kind !== "Str" || (v.value !== "console" && v.value !== "noop")) {
+          throw new ParseError(`app.analytics.provider must be "console" or "noop"`, v.pos);
+        }
+        provider = v.value;
+      } else if (f.name === "app-id") {
+        if (v.kind !== "Str") {
+          throw new ParseError(`app.analytics.app-id must be a string literal`, v.pos);
+        }
+        appId = v.value;
+      } else {
+        throw new ParseError(`Unknown app.analytics field "${f.name}"`, v.pos);
+      }
+    }
+    if (provider === undefined) {
+      throw new ParseError(`app.analytics requires a "provider" field`, pos);
+    }
+    const cfg: AppAnalyticsConfig = { provider, pos };
+    if (appId !== undefined) cfg.appId = appId;
+    return cfg;
   }
 
   // app.indexed-db = { name, version, stores: [{ name, key, indexes? }] } — spec http.md §6.7.4.

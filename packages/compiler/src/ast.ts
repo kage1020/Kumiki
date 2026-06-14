@@ -139,6 +139,19 @@ export type AppHttpConfig = {
   pos: Pos;
 };
 
+export type AppIndexedDbStore = {
+  name: string;
+  key: string;
+  indexes?: string[];
+};
+
+export type AppIndexedDbConfig = {
+  name: string;
+  version: number;
+  stores: AppIndexedDbStore[];
+  pos: Pos;
+};
+
 export type AppDef = {
   kind: "AppDef";
   name: string;
@@ -147,6 +160,7 @@ export type AppDef = {
   init: Expr[];
   theme?: string;
   http?: AppHttpConfig;
+  indexedDb?: AppIndexedDbConfig;
   pos: Pos;
 };
 

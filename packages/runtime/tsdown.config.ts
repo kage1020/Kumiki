@@ -40,6 +40,7 @@ export default defineConfig([
       testkit: "src/testkit.ts",
       router: "src/router.ts",
       "effects-storage": "src/effects-storage.ts",
+      "effects-indexed": "src/effects-indexed.ts",
       "effects-http": "src/effects-http.ts",
       "effects-toast": "src/effects-toast.ts",
       "tiles-layout": "src/tiles-layout.ts",

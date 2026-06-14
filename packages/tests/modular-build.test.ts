@@ -46,6 +46,7 @@ const AVAILABLE_MODULES = new Set([
   "testkit",
   "router",
   "effects-storage",
+  "effects-indexed",
   "effects-http",
   "effects-toast",
   ...Object.keys(RUNTIME_FAMILIES).map((f) => `tiles-${f}`),

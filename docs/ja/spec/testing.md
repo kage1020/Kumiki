@@ -240,14 +240,14 @@ expect(Object.keys(todos)).toHaveLength(1)
 
 `kumiki smoke <file>` は、コンパイル済みアプリを headless DOM（happy-dom）に mount し、初期描画後にすべての操作可能要素へイベントを発火させ、各ステップでランタイム例外・コンソールエラー・未処理 rejection・空描画を監視する。「型は通るが、ランタイムに存在しないメソッドを呼んで操作時に落ちる」「描画されない」といった、従来は人がブラウザで確認していたクラスのバグを自動で検出する。汎用であり、アプリ固有の知識を持たない。
 
-ブラウザでの実描画（CSS レイアウト・実フォーカス等）は headless DOM では再現しきれない。そのための**実ブラウザ tier** が `@kumiki/e2e`（Chromium / Playwright）であり、headless DOM tier と**同じシナリオ形式**で動く。状態 oracle は同じく `window.__kumikiApp.live`、表示テキストは `innerText`（可視のみ）。加えてブラウザ限定アサーションを持つ:
+ブラウザでの実描画（CSS レイアウト・実フォーカス等）は headless DOM では再現しきれない。そのための**実ブラウザ tier** が `@kumikijs/e2e`（Chromium / Playwright）であり、headless DOM tier と**同じシナリオ形式**で動く。状態 oracle は同じく `window.__kumikiApp.live`、表示テキストは `innerText`（可視のみ）。加えてブラウザ限定アサーションを持つ:
 
 - `focused`: 指定セレクタが実際にフォーカスされていること（再レンダリング時のフォーカス奪取バグを検出）
 - `visible` / `hidden`: 計算済みスタイル上で本当に見えている／いないこと（`display:none` 等）
 
 重い（ブラウザバイナリ）ため既定の CI テストには含めず、フォーカス・レイアウト・実描画の確認や最終検証で使う opt-in 層。結果の**正しさ**は smoke では判定できず、層 3 のアサーションが担う。
 
-`@kumiki/mcp` は同等の `kumiki_smoke` を提供し、AI エージェントが編集後に自己検証できる。
+`@kumikijs/mcp` は同等の `kumiki_smoke` を提供し、AI エージェントが編集後に自己検証できる。
 
 ### example コーパスガード：コンパイルでなくランタイム真正性
 

@@ -41,8 +41,8 @@ app Counter
 ## 5. Check and Run
 
 ```sh
-pnpm --filter @kumiki/cli exec tsx src/kumiki.ts check counter.kumiki
-pnpm --filter @kumiki/cli exec tsx src/kumiki.ts build counter.kumiki ./out
+kumiki check counter.kumiki
+kumiki build counter.kumiki ./out
 ```
 
 ## Going Further

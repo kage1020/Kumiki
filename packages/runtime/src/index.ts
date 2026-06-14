@@ -11,7 +11,7 @@ import { type AppShape, type MountOptions, mountCore, type TileRenderers } from 
 import { installConfirm } from "./effects-confirm.ts";
 import { httpFetch } from "./effects-http.ts";
 import { indexedDelete, indexedQuery, indexedRead, indexedWrite } from "./effects-indexed.ts";
-import { storageRead, storageWrite } from "./effects-storage.ts";
+import { sessionRead, sessionWrite, storageRead, storageWrite } from "./effects-storage.ts";
 import { installToast } from "./effects-toast.ts";
 import { routing } from "./router.ts";
 import { _stdlibCore } from "./stdlib.ts";
@@ -69,7 +69,12 @@ export {
   indexedRead,
   indexedWrite,
 } from "./effects-indexed.ts";
-export { storageRead, storageWrite } from "./effects-storage.ts";
+export {
+  sessionRead,
+  sessionWrite,
+  storageRead,
+  storageWrite,
+} from "./effects-storage.ts";
 export { installToast } from "./effects-toast.ts";
 export {
   type AttributeSlotBinding,
@@ -148,6 +153,8 @@ export const _stdlib = { ..._stdlibCore, ..._stdlibTest };
 export const builtinEffects = {
   storageRead,
   storageWrite,
+  sessionRead,
+  sessionWrite,
   httpFetch,
   indexedRead,
   indexedWrite,

@@ -321,8 +321,9 @@ type RuntimeUsage = {
   families: TileFamily[];
   /** True when the app actually routes — see the rules below. */
   router: boolean;
-  /** The storage effect handlers referenced by generated invokes. */
-  storage: ("storageRead" | "storageWrite")[];
+  /** The storage effect handlers referenced by generated invokes
+   * (localStorage + sessionStorage share the `effects-storage` module). */
+  storage: ("storageRead" | "storageWrite" | "sessionRead" | "sessionWrite")[];
   /** The IndexedDB effect handlers referenced by generated invokes. */
   indexed: IndexedHandler[];
   http: boolean;
@@ -377,9 +378,11 @@ function analyzeRuntimeUsage(
     usedTiles.has("link") ||
     usedTiles.has("route-outlet") ||
     app.routes.some((r) => r.tile.startsWith(">>") || (r.path !== "/" && r.path !== "/404"));
-  const storage: ("storageRead" | "storageWrite")[] = [];
+  const storage: ("storageRead" | "storageWrite" | "sessionRead" | "sessionWrite")[] = [];
   if (effects.some((e) => e.cap === "storage.read")) storage.push("storageRead");
   if (effects.some((e) => e.cap === "storage.write")) storage.push("storageWrite");
+  if (effects.some((e) => e.cap === "session.read")) storage.push("sessionRead");
+  if (effects.some((e) => e.cap === "session.write")) storage.push("sessionWrite");
   const indexed: IndexedHandler[] = [];
   // `indexed.read` is dispatched at runtime by input shape (point vs range
   // query), so cap → one handler is enough. Spec §6.7.4.
@@ -815,6 +818,14 @@ function builtinEffectCall(eff: EffectDef, reqVar: string): string | null {
   }
   if (eff.cap === "storage.write") {
     return `storageWrite(${
+      eff.mapRequest ? `{ key: ${reqVar}.key, value: ${reqVar}.value }` : reqVar
+    })`;
+  }
+  if (eff.cap === "session.read") {
+    return `sessionRead(${eff.mapRequest ? `{ key: ${reqVar}.key }` : reqVar})`;
+  }
+  if (eff.cap === "session.write") {
+    return `sessionWrite(${
       eff.mapRequest ? `{ key: ${reqVar}.key, value: ${reqVar}.value }` : reqVar
     })`;
   }

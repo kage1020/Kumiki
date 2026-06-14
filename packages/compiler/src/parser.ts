@@ -1,5 +1,6 @@
 import type {
   AppDef,
+  AppHttpConfig,
   BinOp,
   Def,
   EffectDef,
@@ -1519,6 +1520,7 @@ class Parser {
     let routes: { path: string; tile: string }[] = [];
     let init: Expr[] = [];
     let theme: string | undefined;
+    let http: AppHttpConfig | undefined;
 
     while (!this.isAppEnd()) {
       const ident = this.eat("ident");
@@ -1528,8 +1530,9 @@ class Parser {
       else if (k === "routes") routes = this.parseRouteMap();
       else if (k === "init") init = this.parseInitList();
       else if (k === "theme") theme = this.eat("ident").value;
-      else if (k === "meta" || k === "http" || k === "indexed-db" || k === "analytics") {
-        // skip the value (Phase 2: parse record literal but ignore)
+      else if (k === "http") http = this.parseAppHttp(ident.pos);
+      else if (k === "meta" || k === "indexed-db" || k === "analytics") {
+        // skip the value (Phase 2: parse record literal but ignore — see #79, #80)
         this.parseExpr();
       } else {
         throw new ParseError(`Unknown app field "${k}"`, ident.pos);
@@ -1538,7 +1541,54 @@ class Parser {
 
     const def: AppDef = { kind: "AppDef", name, caps, routes, init, pos: start.pos };
     if (theme) def.theme = theme;
+    if (http) def.http = http;
     return def;
+  }
+
+  // app.http = { base-url, headers, on-401, on-403, on-5xx, timeout, credentials } — spec http.md §6.3.
+  // headers is kept as Expr so the codegen can wrap it in a closure (slot
+  // references must re-evaluate on every request, not freeze at mount).
+  private parseAppHttp(pos: Pos): AppHttpConfig {
+    const rec = this.parseExpr();
+    if (rec.kind !== "RecordLit") {
+      throw new ParseError(`app.http must be a record literal`, pos);
+    }
+    const cfg: AppHttpConfig = { pos };
+    for (const f of rec.fields) {
+      switch (f.name) {
+        case "base-url":
+          cfg.baseUrl = f.value;
+          break;
+        case "headers":
+          cfg.headers = f.value;
+          break;
+        case "on-401":
+          cfg.on401 = this.appHttpReducerRef(f.name, f.value);
+          break;
+        case "on-403":
+          cfg.on403 = this.appHttpReducerRef(f.name, f.value);
+          break;
+        case "on-5xx":
+          cfg.on5xx = this.appHttpReducerRef(f.name, f.value);
+          break;
+        case "timeout":
+          cfg.timeout = f.value;
+          break;
+        case "credentials":
+          cfg.credentials = f.value;
+          break;
+        default:
+          throw new ParseError(`Unknown app.http field "${f.name}"`, pos);
+      }
+    }
+    return cfg;
+  }
+
+  private appHttpReducerRef(field: string, value: Expr): string {
+    if (value.kind !== "Ref") {
+      throw new ParseError(`app.http.${field} must be a reducer name (bare identifier)`, value.pos);
+    }
+    return value.name;
   }
 
   private isAppEnd(): boolean {

@@ -125,6 +125,20 @@ export type EffectDef = {
   pos: Pos;
 };
 
+export type AppHttpConfig = {
+  // `headers` stays as an Expr because it may reference live slot state
+  // (e.g. session tokens) and must be re-evaluated on every request, not frozen
+  // at mount.
+  baseUrl?: Expr;
+  headers?: Expr;
+  on401?: string;
+  on403?: string;
+  on5xx?: string;
+  timeout?: Expr;
+  credentials?: Expr;
+  pos: Pos;
+};
+
 export type AppDef = {
   kind: "AppDef";
   name: string;
@@ -132,6 +146,7 @@ export type AppDef = {
   routes: { path: string; tile: string }[];
   init: Expr[];
   theme?: string;
+  http?: AppHttpConfig;
   pos: Pos;
 };
 

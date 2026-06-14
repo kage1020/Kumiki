@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Kumiki
   text: A web framework of AI, by AI, for AI
-  tagline: Definitions interlock like Japanese joinery (kumiki) so AI can write, edit, and reassemble an app in parallel. Experimental.
+  tagline: Definitions interlock like Japanese joinery (kumiki) so AI can write, edit, and reassemble an app in parallel.
   image:
     light: /kumiki-mark-animated.svg
     dark: /kumiki-mark-animated-dark.svg
@@ -30,7 +30,7 @@ features:
     link: /guide/benchmarks
     linkText: See the benchmarks
   - title: Answers everything with working examples
-    details: Comprehensive per-feature minimal examples and apps ordered by size. Questions and bugs are answered by adding an example and a test.
+    details: Per-feature minimal examples and apps ordered by size. Questions and bugs are answered by adding an example and a test.
 ---
 
 ## Same UI, different philosophy

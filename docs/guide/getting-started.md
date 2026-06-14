@@ -1,6 +1,6 @@
 # Getting Started
 
-Kumiki is an experimental, AI-first web framework. You describe an app as small, interlocking definitions and the toolchain compiles it to a plain browser app. This page takes you from zero to a running example in a few minutes.
+Kumiki is an AI-first web framework. You describe an app as small, interlocking definitions and the toolchain compiles it to a plain browser app. This page takes you from zero to a running example in a few minutes.
 
 > Brand new to the language itself? [Thinking in Kumiki](./thinking-in-kumiki.md) explains the model, and the [examples](https://github.com/kage1020/Kumiki/tree/main/packages/examples) show real apps. To build one line by line, jump to [Your First App](./your-first-app.md).
 
@@ -32,7 +32,15 @@ That is the whole mental model. The full example (with `-` and `reset`) is [pack
 
 ## Set up locally
 
-You need **Node.js 22+** and **pnpm**. Kumiki is not published to npm yet, so you run it from a clone of the repository:
+You need **Node.js 22+**. The CLI is published as `@kumikijs/cli`:
+
+```sh
+npm i -g @kumikijs/cli
+# or run without installing
+npx @kumikijs/cli --help
+```
+
+If you want to explore the source — examples, benchmarks, and the playground — clone the repository instead and use the workspace `kumiki` script:
 
 ```sh
 git clone https://github.com/kage1020/Kumiki.git
@@ -46,7 +54,7 @@ pnpm test           # optional: confirm every package turns green
 
 ## Run your first example
 
-The repo ships a `kumiki` script that runs the CLI from the repo root, so paths are relative to where you are:
+The repo ships a `kumiki` script that runs the CLI from the repo root, so paths are relative to where you are (the globally installed `kumiki` command works the same way):
 
 **Check** — parse and type-check a `.kumiki` file:
 
@@ -85,12 +93,12 @@ The code (here `E0103`) names the category — look it up in the [error catalog]
 
 If a command itself errors out:
 
-- `Cannot find package '@kumiki/compiler'` or `tsx: command not found` → you skipped `pnpm install`; run it.
+- `Cannot find package '@kumikijs/compiler'` or `tsx: command not found` → you skipped `pnpm install`; run it.
 - A path-not-found on the `.kumiki` file → check the path is relative to the repo root (that is where `pnpm kumiki` runs).
 
 ## Editor / AI integration (MCP)
 
-`@kumiki/mcp` exposes check, build, edit, and spec-search as MCP tools, so an AI agent can drive Kumiki end to end. For an example client configuration, see [packages/mcp/README.md](https://github.com/kage1020/Kumiki/blob/main/packages/mcp/README.md).
+`@kumikijs/mcp` exposes check, build, edit, and spec-search as MCP tools, so an AI agent can drive Kumiki end to end. For an example client configuration, see [packages/mcp/README.md](https://github.com/kage1020/Kumiki/blob/main/packages/mcp/README.md).
 
 ## Next
 

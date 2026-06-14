@@ -248,14 +248,14 @@ Separate from the `test` definitions above (in-language tests), the toolchain pr
 
 `kumiki smoke <file>` mounts a compiled app to a headless DOM (happy-dom), fires events at all operable elements after the initial render, and at each step monitors for runtime exceptions, console errors, unhandled rejections, and empty rendering. It automatically detects the class of bugs previously verified by a human in the browser, such as "the type passes, but it calls a method that doesn't exist in the runtime and crashes on operation" or "it doesn't render." It is general-purpose and has no app-specific knowledge.
 
-Real rendering in a browser (CSS layout, real focus, etc.) cannot be fully reproduced by a headless DOM. The **real-browser tier** for that is `@kumiki/e2e` (Chromium / Playwright), which runs in the **same scenario format** as the headless-DOM tier. The state oracle is likewise `window.__kumikiApp.live`, and displayed text is `innerText` (visible only). In addition, it has browser-only assertions:
+Real rendering in a browser (CSS layout, real focus, etc.) cannot be fully reproduced by a headless DOM. The **real-browser tier** for that is `@kumikijs/e2e` (Chromium / Playwright), which runs in the **same scenario format** as the headless-DOM tier. The state oracle is likewise `window.__kumikiApp.live`, and displayed text is `innerText` (visible only). In addition, it has browser-only assertions:
 
 - `focused`: that the specified selector is actually focused (detects focus-stealing bugs on re-render)
 - `visible` / `hidden`: that it is really visible/invisible per computed style (`display:none`, etc.)
 
 Because it is heavy (browser binaries), it is not included in the default CI tests; it is an opt-in layer used for verifying focus, layout, and real rendering, and for final verification. The **correctness** of results cannot be judged by smoke; the layer-3 assertions handle that.
 
-`@kumiki/mcp` provides an equivalent `kumiki_smoke`, allowing an AI agent to self-verify after editing.
+`@kumikijs/mcp` provides an equivalent `kumiki_smoke`, allowing an AI agent to self-verify after editing.
 
 ### Example-corpus guard: runtime truth, not just compilation
 

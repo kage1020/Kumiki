@@ -2,6 +2,10 @@
 
 Why is Kumiki shaped the way it is? This page condenses the design rationale — the premises behind the language. For *how* the 7 layers work in practice, read [Thinking in Kumiki](./thinking-in-kumiki.md); this page is about *why* they exist at all.
 
+## Origins
+
+The premise is simple: **if you design from scratch for AI to *write* the code, human-centered idioms like Hooks and JSX become liabilities**. Kumiki began as a test of that premise.
+
 ## Why not React
 
 React is a human-centered optimum: Hooks, Context, and JSX are idioms refined over nearly twenty years to feel natural to people. As the writer of code shifts to AI, the same machinery becomes friction:

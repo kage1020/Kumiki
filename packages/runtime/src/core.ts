@@ -434,6 +434,10 @@ export function mountCore(
   // `stop-timer(N)`. Anonymous timers have no handle exposed to the app.
   const namedTimers = new Map<string, ReturnType<typeof setInterval>>();
   const anonTimers: ReturnType<typeof setInterval>[] = [];
+  // Names of user-defined tiles currently mounted, from the previous render's
+  // tree walk. The diff with the new render's set drives the
+  // `tile.mount(X) / tile.unmount(X)` lifecycle reducers (§7.1.6).
+  let prevMountedTiles = new Set<string>();
   const render = (): void => {
     // Late effect results (e.g. an in-flight fetch that resolves after the app
     // was disposed) must not touch the DOM — `currentRoot` has already been
@@ -465,16 +469,33 @@ export function mountCore(
 
     maybeReapplyTheme(app);
     let dom: HTMLElement;
+    let renderedTree: TileNode | null = null;
     try {
-      const tree = pickRootTile(app);
-      dom = tileCtx.render(tree);
+      renderedTree = pickRootTile(app);
+      dom = tileCtx.render(renderedTree);
     } catch (e) {
       // A render panic NOT caught by a per-tile `error-boundary` (e.g. one under
-      // the root) lands here: render a top-level panic fallback instead of
-      // letting the exception escape and leaving the DOM stale. Logged via
-      // console.error so the smoke / scenario tiers still flag it (#24).
+      // the root) lands here: surface it to a per-route `route.error(<pattern>)`
+      // reducer if one matches (§7.5.2) so the app can replace the broken page;
+      // otherwise render a top-level panic fallback so the exception does not
+      // escape and leave the DOM stale. Logged via console.error so the smoke /
+      // scenario tiers still flag it (#24).
       reportPanic("render", e);
-      dom = renderPanicFallback(e);
+      if (!fireRouteError(e)) {
+        dom = renderPanicFallback(e);
+      } else {
+        // route.error handlers ran — they may have navigated. Re-render once
+        // (without retrying the broken tile) and use whatever the next pick
+        // produces. If the re-render still throws, fall back to the panic UI.
+        try {
+          renderedTree = pickRootTile(app);
+          dom = tileCtx.render(renderedTree);
+        } catch (e2) {
+          reportPanic("render", e2);
+          renderedTree = null;
+          dom = renderPanicFallback(e2);
+        }
+      }
     }
     if (currentRoot) target.replaceChild(dom, currentRoot);
     else target.appendChild(dom);
@@ -501,7 +522,51 @@ export function mountCore(
         }
       }
     }
+
+    // tile.mount(X) / tile.unmount(X): walk the tree, diff against the previous
+    // render's set, fire the lifecycle reducer for each newly-present / newly-
+    // absent user tile (§7.1.6). The set is updated BEFORE the reducer fires so
+    // a re-render kicked off by the reducer sees the post-mount snapshot — that
+    // is what prevents mount events from re-firing every reducer cycle.
+    const nowMounted = renderedTree ? collectMountedTiles(renderedTree) : new Set<string>();
+    if (nowMounted.size > 0 || prevMountedTiles.size > 0) {
+      const toMount: string[] = [];
+      const toUnmount: string[] = [];
+      for (const n of nowMounted) if (!prevMountedTiles.has(n)) toMount.push(n);
+      for (const n of prevMountedTiles) if (!nowMounted.has(n)) toUnmount.push(n);
+      prevMountedTiles = nowMounted;
+      for (const n of toMount) fireLifecycle(`tile.mount(${JSON.stringify(n)})`);
+      for (const n of toUnmount) fireLifecycle(`tile.unmount(${JSON.stringify(n)})`);
+    }
   };
+
+  function fireLifecycle(name: string): void {
+    for (const r of app.reducers) {
+      if (r.event.kind === "lifecycle" && r.event.name === name) applyReducer(r, {});
+    }
+  }
+
+  function fireRouteError(e: unknown): boolean {
+    if (!app.routes || app.routes.length === 0) return false;
+    const cur = slotValues.route as ParsedRoute | undefined;
+    const pattern = cur?.pattern;
+    if (!pattern) return false;
+    const eventName = `route.error(${JSON.stringify(pattern)})`;
+    const handlers = app.reducers.filter(
+      (r) => r.event.kind === "lifecycle" && r.event.name === eventName,
+    );
+    if (handlers.length === 0) return false;
+    const info = { ...panicInfo(e), pattern };
+    for (const h of handlers) {
+      try {
+        applyReducer(h, { $event: info, $route: cur });
+      } catch {
+        // a panic inside route.error itself is logged via the inner applyReducer
+        // path; we just keep iterating other handlers.
+      }
+    }
+    return true;
+  }
 
   function pickRootTile(app: AppShape): TileNode {
     if (app.routes && app.routes.length > 0) {
@@ -711,6 +776,14 @@ export function mountCore(
       applyReducer(r, {});
     }
   }
+  // Wire host-level lifecycle events (lifecycle.md §7.1.2–7.1.4): beforeunload
+  // → app.stop, visibilitychange → app.visible / app.hidden, online / offline
+  // → app.online / app.offline. Listeners are registered against the host
+  // window once we know a reducer subscribes to the corresponding event; on
+  // dispose they are removed (the dispose path tracks them via
+  // `lifecycleUnsubs` so multiple Kumiki mounts on the same page stay
+  // isolated). Guarded for non-DOM hosts (importing this module from Node).
+  const lifecycleUnsubs = installLifecycleListeners(app, applyReducer);
   // Start timer reducers — each fires its reducer every intervalMs. A named
   // timer is registered so `stop-timer(name)` can clear it; anonymous timers
   // only stop on dispose.
@@ -742,10 +815,60 @@ export function mountCore(
       for (const h of namedTimers.values()) clearInterval(h);
       namedTimers.clear();
       routerUnsub?.();
+      for (const unsub of lifecycleUnsubs) unsub();
       target.replaceChildren();
       dispatcher.dispose();
     },
   };
+}
+
+/**
+ * Register host-level lifecycle listeners (lifecycle.md §7.1.2–7.1.4):
+ * beforeunload (app.stop), visibilitychange (app.visible / app.hidden), and
+ * the network online / offline events. Listeners are installed only for the
+ * events the app actually subscribes to — a routeless / lifecycle-less app
+ * pays nothing. Returns the unsub callbacks the mount's dispose path drains.
+ *
+ * `disposed`-guarded indirectly: every listener routes through `applyReducer`,
+ * which short-circuits when the mount has been torn down.
+ */
+function installLifecycleListeners(
+  app: AppShape,
+  applyReducer: (r: ReducerSpec, payload: Record<string, unknown>) => void,
+): Array<() => void> {
+  if (typeof window === "undefined") return [];
+  const has = (name: string): boolean =>
+    app.reducers.some((r) => r.event.kind === "lifecycle" && r.event.name === name);
+  const fire = (name: string): void => {
+    for (const r of app.reducers) {
+      if (r.event.kind === "lifecycle" && r.event.name === name) applyReducer(r, {});
+    }
+  };
+  const unsubs: Array<() => void> = [];
+  if (has("app.stop")) {
+    const onUnload = (): void => fire("app.stop");
+    window.addEventListener("beforeunload", onUnload);
+    unsubs.push(() => window.removeEventListener("beforeunload", onUnload));
+  }
+  if (has("app.visible") || has("app.hidden")) {
+    const onVis = (): void => {
+      // `document` is available alongside `window` in every DOM host.
+      fire(document.visibilityState === "visible" ? "app.visible" : "app.hidden");
+    };
+    document.addEventListener("visibilitychange", onVis);
+    unsubs.push(() => document.removeEventListener("visibilitychange", onVis));
+  }
+  if (has("app.online")) {
+    const onOnline = (): void => fire("app.online");
+    window.addEventListener("online", onOnline);
+    unsubs.push(() => window.removeEventListener("online", onOnline));
+  }
+  if (has("app.offline")) {
+    const onOffline = (): void => fire("app.offline");
+    window.addEventListener("offline", onOffline);
+    unsubs.push(() => window.removeEventListener("offline", onOffline));
+  }
+  return unsubs;
 }
 
 function makeCapabilityRegistry(
@@ -1012,6 +1135,28 @@ function reportPanic(where: string, e: unknown): void {
  * is the app's own choice: wire an `.err` reducer to handle (or deliberately
  * ignore) the error.
  */
+/**
+ * Walk a rendered TileNode tree and collect the names of every user-defined
+ * tile boundary in it (lifecycle.md §7.1.6). Codegen marks each user-tile call
+ * site by attaching `_tile: "Name"` to the produced node's props via `_named`,
+ * so this walk is the inverse of that marker. Builtin tiles (button, page, …)
+ * carry no marker — `tile.mount` only fires for *user-defined* tiles, matching
+ * the spec example `tile.mount(SettingsPage)`.
+ */
+function collectMountedTiles(root: TileNode): Set<string> {
+  const out = new Set<string>();
+  const visit = (n: TileNode | null | undefined): void => {
+    if (!n || typeof n !== "object") return;
+    const props = (n as { props?: Record<string, unknown> }).props;
+    const tileName = props?._tile;
+    if (typeof tileName === "string") out.add(tileName);
+    const children = (n as { children?: TileNode[] }).children;
+    if (Array.isArray(children)) for (const c of children) visit(c);
+  };
+  visit(root);
+  return out;
+}
+
 /** Pull `status` off an HttpError-shaped err value; returns null otherwise. */
 function readStatus(value: unknown): number | null {
   if (!value || typeof value !== "object") return null;

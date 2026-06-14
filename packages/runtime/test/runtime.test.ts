@@ -1420,6 +1420,27 @@ describe("unhandled effect-error contract (#37)", () => {
       Object.defineProperty(globalThis, "localStorage", { value: orig, configurable: true });
     }
   });
+
+  it("session backend follows the same unavailable-→-err contract as storage (#84, #37)", async () => {
+    const throwing = {
+      getItem: () => {
+        throw new Error("SecurityError");
+      },
+      setItem: () => {
+        throw new Error("SecurityError");
+      },
+    } as unknown as Storage;
+    const orig = globalThis.sessionStorage;
+    Object.defineProperty(globalThis, "sessionStorage", { value: throwing, configurable: true });
+    try {
+      const r = await builtinEffects.sessionRead({ key: "x" });
+      expect(r.kind).toBe("err");
+      const w = await builtinEffects.sessionWrite({ key: "x", value: 1 });
+      expect(w.kind).toBe("err");
+    } finally {
+      Object.defineProperty(globalThis, "sessionStorage", { value: orig, configurable: true });
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

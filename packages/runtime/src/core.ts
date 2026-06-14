@@ -172,6 +172,14 @@ export type EffectSpec = {
     | { kind: "debounce"; ms: number }
     | { kind: "throttle"; ms: number }
     | { kind: "once" };
+  /**
+   * Retry policy (#83, spec http.md §6.5). Only 5xx / connection errors are
+   * retried; 4xx is treated as a final failure. The dispatcher reads this on
+   * each `launch` cycle — invoke itself stays single-shot.
+   */
+  retry?:
+    | { kind: "linear"; n: number; ms: number }
+    | { kind: "exponential"; n: number; ms: number; factor: number };
   invoke: (input: unknown, caps: CapabilityRegistry) => Promise<EffectResult>;
 };
 
@@ -744,7 +752,7 @@ function makeEffectDispatcher(
       return;
     }
     try {
-      const res = await eff.invoke(input, caps);
+      const res = await runWithRetry(eff, input, caps);
       onResult(eff.name, res.kind, res.value, input);
     } catch (e) {
       onResult(eff.name, "err", { message: String(e) }, input);
@@ -906,6 +914,36 @@ function readStatus(value: unknown): number | null {
   if (!value || typeof value !== "object") return null;
   const s = (value as { status?: unknown }).status;
   return typeof s === "number" ? s : null;
+}
+
+/**
+ * Run an effect with its retry policy (#83). Spec http.md §6.5: only 5xx
+ * responses and connection errors (status 0) retry — 4xx and ok results are
+ * final. `n` in the policy is the **maximum total attempts**, matching the
+ * docs' "Up to N times" wording.
+ */
+async function runWithRetry(
+  eff: EffectSpec,
+  input: unknown,
+  caps: CapabilityRegistry,
+): Promise<EffectResult> {
+  const policy = eff.retry;
+  if (!policy) return eff.invoke(input, caps);
+  let last: EffectResult = await eff.invoke(input, caps);
+  for (let attempt = 1; attempt < policy.n; attempt++) {
+    if (last.kind !== "err") return last;
+    const status = readStatus(last.value);
+    const retriable = status === null || status === 0 || status >= 500;
+    if (!retriable) return last;
+    const delay = policy.kind === "linear" ? policy.ms : policy.ms * policy.factor ** (attempt - 1);
+    await sleep(delay);
+    last = await eff.invoke(input, caps);
+  }
+  return last;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
 }
 
 function reportUnhandledEffectError(effect: string, value: unknown): void {

@@ -8,6 +8,7 @@
 // (dist/modules/*) and ships only what the compiled app uses.
 
 import { type AppShape, type MountOptions, mountCore, type TileRenderers } from "./core.ts";
+import { installConfirm } from "./effects-confirm.ts";
 import { httpFetch } from "./effects-http.ts";
 import { indexedDelete, indexedQuery, indexedRead, indexedWrite } from "./effects-indexed.ts";
 import { storageRead, storageWrite } from "./effects-storage.ts";
@@ -57,6 +58,7 @@ export {
   type TileRenderer,
   type TileRenderers,
 } from "./core.ts";
+export { installConfirm } from "./effects-confirm.ts";
 export { httpFetch } from "./effects-http.ts";
 export {
   type IndexedDbCfg,
@@ -130,7 +132,7 @@ export function mount(
     ...options,
     tiles: options.tiles ? { ...allTiles, ...options.tiles } : allTiles,
     routing: options.routing ?? routing,
-    builtins: [installToast, ...(options.builtins ?? [])],
+    builtins: [installToast, installConfirm, ...(options.builtins ?? [])],
   });
 }
 

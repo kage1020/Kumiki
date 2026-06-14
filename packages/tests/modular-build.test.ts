@@ -49,6 +49,7 @@ const AVAILABLE_MODULES = new Set([
   "effects-indexed",
   "effects-http",
   "effects-toast",
+  "effects-confirm",
   ...Object.keys(RUNTIME_FAMILIES).map((f) => `tiles-${f}`),
 ]);
 

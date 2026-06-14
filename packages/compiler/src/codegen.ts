@@ -242,6 +242,7 @@ export function codegen(program: Program, opts: CodegenOptions): CodegenResult {
       header.push(`import { ${usage.indexed.join(", ")} } from "${dir}/effects-indexed.js";`);
     if (usage.http) header.push(`import { httpFetch } from "${dir}/effects-http.js";`);
     if (usage.toast) header.push(`import { installToast } from "${dir}/effects-toast.js";`);
+    if (usage.confirm) header.push(`import { installConfirm } from "${dir}/effects-confirm.js";`);
     for (const f of usage.families) {
       header.push(`import { ${tileFamilyVar(f)} } from "${dir}/tiles-${f}.js";`);
     }
@@ -282,7 +283,14 @@ export function codegen(program: Program, opts: CodegenOptions): CodegenResult {
     const mountOpts = [
       "tiles: _tiles",
       ...(usage.router ? ["routing"] : []),
-      ...(usage.toast ? ["builtins: [installToast]"] : []),
+      ...(usage.toast || usage.confirm
+        ? [
+            `builtins: [${[
+              ...(usage.toast ? ["installToast"] : []),
+              ...(usage.confirm ? ["installConfirm"] : []),
+            ].join(", ")}]`,
+          ]
+        : []),
       "providers: globalThis.__kumikiProviders",
       "...globalThis.__kumikiMount",
     ];
@@ -319,6 +327,7 @@ type RuntimeUsage = {
   indexed: IndexedHandler[];
   http: boolean;
   toast: boolean;
+  confirm: boolean;
   testkit: boolean;
   /** Runtime module file basenames the generated imports reference. */
   modules: string[];
@@ -379,6 +388,9 @@ function analyzeRuntimeUsage(
   if (effects.some((e) => e.cap === "indexed.delete")) indexed.push("indexedDelete");
   const http = effects.some((e) => e.cap.startsWith("http."));
   const toast = app.caps.includes("notification.show") || emits.has("toast");
+  // confirm is gated on actual usage (not the cap alone): a `notification.show`
+  // app that only emits toast shouldn't ship the modal renderer.
+  const confirm = emits.has("confirm");
   const testkit = !!opts.includeTests && hasTests;
 
   const modules = [
@@ -390,9 +402,10 @@ function analyzeRuntimeUsage(
     ...(indexed.length > 0 ? ["effects-indexed"] : []),
     ...(http ? ["effects-http"] : []),
     ...(toast ? ["effects-toast"] : []),
+    ...(confirm ? ["effects-confirm"] : []),
     ...families.map((f) => `tiles-${f}`),
   ];
-  return { families, router, storage, indexed, http, toast, testkit, modules };
+  return { families, router, storage, indexed, http, toast, confirm, testkit, modules };
 }
 
 // ----- test layer -----
@@ -978,6 +991,14 @@ function genStatement(s: Statement, ctx: EvalCtx): string {
     return `const ${jsName(s.name)} = ${rhs};`;
   }
   if (s.kind === "Emit") {
+    // `confirm` (lifecycle §7.6) carries `onYes`/`onNo` reducer references —
+    // bare identifiers naming a top-level reducer. Encode those fields as
+    // string literals so the runtime can dispatch by name; everything else
+    // (title/message and any non-Ref values) takes the normal expression path.
+    if (s.effect === "confirm") {
+      const args = s.args.map((a) => jsOfConfirmArg(a, ctx)).join(", ");
+      return `_emits.push({ effect: "confirm", args: [${args}] });`;
+    }
     const args = s.args.map((a) => jsOfExpr(a, ctx)).join(", ");
     return `_emits.push({ effect: ${JSON.stringify(s.effect)}, args: [${args}] });`;
   }
@@ -1023,6 +1044,28 @@ function lvalueRootName(lv: Lvalue): string {
 }
 
 // ----- expressions -----
+
+/**
+ * Encode an argument to `emit confirm`. The single positional arg is a record
+ * literal whose `onYes` / `onNo` fields name reducers; encode those as string
+ * literals so the runtime can dispatch by name. Everything else falls back to
+ * the normal expression path.
+ */
+function jsOfConfirmArg(a: Expr, ctx: EvalCtx): string {
+  if (a.kind !== "RecordLit") return jsOfExpr(a, ctx);
+  const parts = a.fields.map((f) => {
+    const v = f.value;
+    if ((f.name === "onYes" || f.name === "onNo") && v.kind === "Ref") {
+      const refName = v.name;
+      const isReducer = ctx.gen.reducers?.some((r) => r.name === refName);
+      if (isReducer) {
+        return `${JSON.stringify(f.name)}: ${JSON.stringify(refName)}`;
+      }
+    }
+    return `${JSON.stringify(f.name)}: ${jsOfExpr(v, ctx)}`;
+  });
+  return `{ ${parts.join(", ")} }`;
+}
 
 function jsOfExpr(e: Expr, ctx: EvalCtx): string {
   switch (e.kind) {

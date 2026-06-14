@@ -428,6 +428,15 @@ export function mountCore(
     handleEffectResult(effect, outcome, value, key);
   });
 
+  // route.leave guard pending state (routing §3.5.2 + lifecycle §7.6):
+  // when a route.leave reducer emits `confirm`, the runtime holds the
+  // transition — the modal stays on top of the OLD route's tile, and Yes/No
+  // (from the confirm effect handler) either commits newRoute + fires
+  // route.enter, or reverts the router to oldRoute's path.
+  let pendingLeave: { oldRoute: ParsedRoute; newRoute: ParsedRoute } | null = null;
+  let observeLeaveConfirm = false;
+  let leaveAskedConfirm = false;
+
   let currentRoot: HTMLElement | null = null;
   let disposed = false;
   // Named timers (`timer(d, name=N)`) are addressable so a reducer can
@@ -628,7 +637,10 @@ export function mountCore(
       if (meta?.refine && !meta.refine(v)) continue;
       slotValues[k] = v;
     }
-    for (const emit of result.emits) dispatcher.dispatch(emit);
+    for (const emit of result.emits) {
+      if (observeLeaveConfirm && emit.effect === "confirm") leaveAskedConfirm = true;
+      dispatcher.dispatch(emit);
+    }
     for (const name of result.stopTimers ?? []) {
       const h = namedTimers.get(name);
       if (h !== undefined) {
@@ -692,20 +704,39 @@ export function mountCore(
 
   function syncRouteFromLocation(): void {
     if (!routing || !router) return;
+    // A pending leave guard is already gating the previous transition; ignore
+    // re-entrant syncs (e.g. a router.replace from the No path would re-call us).
+    if (pendingLeave) return;
     const oldRoute = slotValues.route as ParsedRoute;
     const newRoute = routing.parseLocation(app.routes, router.read());
-    slotValues.route = newRoute;
-    // Fire route.leave / route.enter reducers
+    // Fire route.leave reducers BEFORE committing the new route so a guard can
+    // gate the transition. We observe whether any leave reducer emitted
+    // `confirm` — if so, we hold off updating slotValues.route and firing
+    // route.enter until the confirm modal resolves via `_resolveLeave`.
     if (oldRoute && oldRoute.pattern !== newRoute.pattern) {
-      for (const r of app.reducers) {
-        if (
-          r.event.kind === "lifecycle" &&
-          r.event.name === `route.leave(${JSON.stringify(oldRoute.pattern)})`
-        ) {
-          applyReducer(r, { $route: oldRoute });
+      observeLeaveConfirm = true;
+      leaveAskedConfirm = false;
+      try {
+        for (const r of app.reducers) {
+          if (
+            r.event.kind === "lifecycle" &&
+            r.event.name === `route.leave(${JSON.stringify(oldRoute.pattern)})`
+          ) {
+            applyReducer(r, { $route: oldRoute });
+          }
         }
+      } finally {
+        observeLeaveConfirm = false;
+      }
+      if (leaveAskedConfirm) {
+        pendingLeave = { oldRoute, newRoute };
+        // The OLD route's tile remains visible underneath the modal; render so
+        // any slot writes the leave reducer made (or the modal itself) flush.
+        render();
+        return;
       }
     }
+    slotValues.route = newRoute;
     for (const r of app.reducers) {
       if (
         r.event.kind === "lifecycle" &&
@@ -715,6 +746,32 @@ export function mountCore(
       }
     }
     render();
+  }
+
+  function resolveLeave(outcome: "yes" | "no"): void {
+    const p = pendingLeave;
+    if (!p) return;
+    pendingLeave = null;
+    if (outcome === "yes") {
+      slotValues.route = p.newRoute;
+      for (const r of app.reducers) {
+        if (
+          r.event.kind === "lifecycle" &&
+          r.event.name === `route.enter(${JSON.stringify(p.newRoute.pattern)})`
+        ) {
+          applyReducer(r, { $route: p.newRoute });
+        }
+      }
+      render();
+    } else {
+      // Revert: rewrite the URL back to the old path without re-firing the
+      // leave guard (pendingLeave is already null, but the recursion guard at
+      // the top of syncRouteFromLocation also short-circuits if this somehow
+      // re-enters before the new state is observed).
+      if (router) router.replace(p.oldRoute.path);
+      slotValues.route = p.oldRoute;
+      render();
+    }
   }
 
   // Register the built-in effects this mount carries: `log` is core (a few
@@ -768,6 +825,8 @@ export function mountCore(
   ) => {
     updateRoute(path, !!replace);
   };
+  (app as AppShape & { _resolveLeave?: (outcome: "yes" | "no") => void })._resolveLeave =
+    resolveLeave;
 
   // Fire app.start lifecycle + init effects.
   for (const emit of app.init) dispatcher.dispatch(emit);

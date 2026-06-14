@@ -1,6 +1,8 @@
 import type {
   AppDef,
   AppHttpConfig,
+  AppIndexedDbConfig,
+  AppIndexedDbStore,
   BinOp,
   Def,
   EffectDef,
@@ -1521,6 +1523,7 @@ class Parser {
     let init: Expr[] = [];
     let theme: string | undefined;
     let http: AppHttpConfig | undefined;
+    let indexedDb: AppIndexedDbConfig | undefined;
 
     while (!this.isAppEnd()) {
       const ident = this.eat("ident");
@@ -1531,8 +1534,9 @@ class Parser {
       else if (k === "init") init = this.parseInitList();
       else if (k === "theme") theme = this.eat("ident").value;
       else if (k === "http") http = this.parseAppHttp(ident.pos);
-      else if (k === "meta" || k === "indexed-db" || k === "analytics") {
-        // skip the value (Phase 2: parse record literal but ignore — see #79, #80)
+      else if (k === "indexed-db") indexedDb = this.parseAppIndexedDb(ident.pos);
+      else if (k === "meta" || k === "analytics") {
+        // skip the value (Phase 2: parse record literal but ignore — see #80)
         this.parseExpr();
       } else {
         throw new ParseError(`Unknown app field "${k}"`, ident.pos);
@@ -1542,7 +1546,94 @@ class Parser {
     const def: AppDef = { kind: "AppDef", name, caps, routes, init, pos: start.pos };
     if (theme) def.theme = theme;
     if (http) def.http = http;
+    if (indexedDb) def.indexedDb = indexedDb;
     return def;
+  }
+
+  // app.indexed-db = { name, version, stores: [{ name, key, indexes? }] } — spec http.md §6.7.4.
+  private parseAppIndexedDb(pos: Pos): AppIndexedDbConfig {
+    const rec = this.parseExpr();
+    if (rec.kind !== "RecordLit") {
+      throw new ParseError(`app.indexed-db must be a record literal`, pos);
+    }
+    let dbName: string | undefined;
+    let version: number | undefined;
+    const stores: AppIndexedDbStore[] = [];
+    for (const f of rec.fields) {
+      if (f.name === "name") {
+        if (f.value.kind !== "Str") {
+          throw new ParseError(`app.indexed-db.name must be a string literal`, f.value.pos);
+        }
+        dbName = f.value.value;
+      } else if (f.name === "version") {
+        if (f.value.kind !== "Num") {
+          throw new ParseError(`app.indexed-db.version must be a numeric literal`, f.value.pos);
+        }
+        version = f.value.value;
+      } else if (f.name === "stores") {
+        if (f.value.kind !== "ListLit") {
+          throw new ParseError(`app.indexed-db.stores must be a list literal`, f.value.pos);
+        }
+        for (const item of f.value.items) {
+          stores.push(this.parseIndexedDbStore(item));
+        }
+      } else {
+        throw new ParseError(`Unknown app.indexed-db field "${f.name}"`, pos);
+      }
+    }
+    if (dbName === undefined) {
+      throw new ParseError(`app.indexed-db requires a "name" field`, pos);
+    }
+    if (version === undefined) {
+      throw new ParseError(`app.indexed-db requires a "version" field`, pos);
+    }
+    if (stores.length === 0) {
+      throw new ParseError(`app.indexed-db requires at least one store`, pos);
+    }
+    return { name: dbName, version, stores, pos };
+  }
+
+  private parseIndexedDbStore(expr: Expr): AppIndexedDbStore {
+    if (expr.kind !== "RecordLit") {
+      throw new ParseError(`indexed-db store must be a record literal`, expr.pos);
+    }
+    let name: string | undefined;
+    let key: string | undefined;
+    let indexes: string[] | undefined;
+    for (const f of expr.fields) {
+      if (f.name === "name") {
+        if (f.value.kind !== "Str") {
+          throw new ParseError(`indexed-db store "name" must be a string literal`, f.value.pos);
+        }
+        name = f.value.value;
+      } else if (f.name === "key") {
+        if (f.value.kind !== "Str") {
+          throw new ParseError(`indexed-db store "key" must be a string literal`, f.value.pos);
+        }
+        key = f.value.value;
+      } else if (f.name === "indexes") {
+        if (f.value.kind !== "ListLit") {
+          throw new ParseError(`indexed-db store "indexes" must be a list literal`, f.value.pos);
+        }
+        indexes = f.value.items.map((it) => {
+          if (it.kind !== "Str") {
+            throw new ParseError(`indexed-db store index must be a string literal`, it.pos);
+          }
+          return it.value;
+        });
+      } else {
+        throw new ParseError(`Unknown indexed-db store field "${f.name}"`, expr.pos);
+      }
+    }
+    if (name === undefined) {
+      throw new ParseError(`indexed-db store requires a "name" field`, expr.pos);
+    }
+    if (key === undefined) {
+      throw new ParseError(`indexed-db store requires a "key" field`, expr.pos);
+    }
+    const store: AppIndexedDbStore = { name, key };
+    if (indexes) store.indexes = indexes;
+    return store;
   }
 
   // app.http = { base-url, headers, on-401, on-403, on-5xx, timeout, credentials } — spec http.md §6.3.

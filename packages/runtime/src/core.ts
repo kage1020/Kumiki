@@ -311,6 +311,12 @@ export type AppShape = {
     timeout?: number;
     credentials?: RequestCredentials;
   };
+  /** §6.7.4: declared IndexedDB stores. The runtime opens the DB on first indexed-* effect. */
+  indexedDb?: {
+    name: string;
+    version: number;
+    stores: { name: string; key: string; indexes?: string[] }[];
+  };
   /** Phase 4: registered themes by name. */
   themes?: Record<string, Theme>;
   /** Phase 4: selected theme name. */

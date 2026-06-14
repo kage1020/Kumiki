@@ -97,6 +97,11 @@ export function codegen(program: Program, opts: CodegenOptions): CodegenResult {
   // when an app declares `caps=[http.get]` without an `http={...}` block.
   // `headers` is a closure to re-evaluate slot references per request.
   lines.push(httpConfigJs(app.http, ctx));
+  // App-wide IndexedDB config (#79). Always emitted so indexed-* effect calls
+  // resolve `_idb`; absent declarations produce `undefined`, which the runtime
+  // handlers turn into a clean error (consistent with the storage-unavailable
+  // contract from #37).
+  lines.push(indexedDbConfigJs(app.indexedDb));
   lines.push("");
 
   // effect handlers (per capability, statically dispatched)
@@ -185,6 +190,7 @@ export function codegen(program: Program, opts: CodegenOptions): CodegenResult {
   lines.push(`  themeName: ${themeRef},`);
   lines.push("  motions: _motions,");
   lines.push("  http: _http,");
+  lines.push("  indexedDb: _idb,");
   lines.push("};");
 
   // In-language test tile factories close over this instance's live state, so
@@ -230,6 +236,8 @@ export function codegen(program: Program, opts: CodegenOptions): CodegenResult {
     if (usage.router) header.push(`import { routing } from "${dir}/router.js";`);
     if (usage.storage.length > 0)
       header.push(`import { ${usage.storage.join(", ")} } from "${dir}/effects-storage.js";`);
+    if (usage.indexed.length > 0)
+      header.push(`import { ${usage.indexed.join(", ")} } from "${dir}/effects-indexed.js";`);
     if (usage.http) header.push(`import { httpFetch } from "${dir}/effects-http.js";`);
     if (usage.toast) header.push(`import { installToast } from "${dir}/effects-toast.js";`);
     for (const f of usage.families) {
@@ -247,7 +255,13 @@ export function codegen(program: Program, opts: CodegenOptions): CodegenResult {
     // Monolith mode: ONE import line — `inlineRuntime` (bundle: true) strips
     // exactly this line and resolves the names against the inlined bundle's
     // top-level bindings, so everything must ride on a single statement.
-    const names = ["mount", "_stdlib", ...usage.storage, ...(usage.http ? ["httpFetch"] : [])];
+    const names = [
+      "mount",
+      "_stdlib",
+      ...usage.storage,
+      ...usage.indexed,
+      ...(usage.http ? ["httpFetch"] : []),
+    ];
     header.push(`import { ${names.join(", ")} } from "${opts.runtimeSpecifier}";`);
     header.push("");
     header.push("const _s = _stdlib;");
@@ -290,6 +304,8 @@ function tileFamilyVar(f: TileFamily): string {
   return `${f}Tiles`;
 }
 
+type IndexedHandler = "indexedRead" | "indexedWrite" | "indexedDelete";
+
 type RuntimeUsage = {
   /** Tile family modules the app renders, in stable order. */
   families: TileFamily[];
@@ -297,6 +313,8 @@ type RuntimeUsage = {
   router: boolean;
   /** The storage effect handlers referenced by generated invokes. */
   storage: ("storageRead" | "storageWrite")[];
+  /** The IndexedDB effect handlers referenced by generated invokes. */
+  indexed: IndexedHandler[];
   http: boolean;
   toast: boolean;
   testkit: boolean;
@@ -351,6 +369,12 @@ function analyzeRuntimeUsage(
   const storage: ("storageRead" | "storageWrite")[] = [];
   if (effects.some((e) => e.cap === "storage.read")) storage.push("storageRead");
   if (effects.some((e) => e.cap === "storage.write")) storage.push("storageWrite");
+  const indexed: IndexedHandler[] = [];
+  // `indexed.read` is dispatched at runtime by input shape (point vs range
+  // query), so cap → one handler is enough. Spec §6.7.4.
+  if (effects.some((e) => e.cap === "indexed.read")) indexed.push("indexedRead");
+  if (effects.some((e) => e.cap === "indexed.write")) indexed.push("indexedWrite");
+  if (effects.some((e) => e.cap === "indexed.delete")) indexed.push("indexedDelete");
   const http = effects.some((e) => e.cap.startsWith("http."));
   const toast = app.caps.includes("notification.show") || emits.has("toast");
   const testkit = !!opts.includeTests && hasTests;
@@ -361,11 +385,12 @@ function analyzeRuntimeUsage(
     ...(testkit ? ["testkit"] : []),
     ...(router ? ["router"] : []),
     ...(storage.length > 0 ? ["effects-storage"] : []),
+    ...(indexed.length > 0 ? ["effects-indexed"] : []),
     ...(http ? ["effects-http"] : []),
     ...(toast ? ["effects-toast"] : []),
     ...families.map((f) => `tiles-${f}`),
   ];
-  return { families, router, storage, http, toast, testkit, modules };
+  return { families, router, storage, indexed, http, toast, testkit, modules };
 }
 
 // ----- test layer -----
@@ -727,6 +752,13 @@ function httpConfigJs(http: AppDef["http"], gen: GenCtx): string {
   return `const _http = { ${fields.join(", ")} };`;
 }
 
+// ----- app.indexed-db (#79) -----
+
+function indexedDbConfigJs(idb: AppDef["indexedDb"]): string {
+  if (!idb) return "const _idb = undefined;";
+  return `const _idb = ${JSON.stringify({ name: idb.name, version: idb.version, stores: idb.stores })};`;
+}
+
 // ----- fn -----
 
 function genFn(fn: FnDef, gen: GenCtx): string {
@@ -754,6 +786,9 @@ function builtinEffectCall(eff: EffectDef, reqVar: string): string | null {
       eff.mapRequest ? `{ key: ${reqVar}.key, value: ${reqVar}.value }` : reqVar
     })`;
   }
+  if (eff.cap === "indexed.read") return `indexedRead(${reqVar}, _idb)`;
+  if (eff.cap === "indexed.write") return `indexedWrite(${reqVar}, _idb)`;
+  if (eff.cap === "indexed.delete") return `indexedDelete(${reqVar}, _idb)`;
   if (eff.cap.startsWith("http.")) {
     const method = eff.cap.slice("http.".length).toUpperCase();
     return `httpFetch(${JSON.stringify(method)}, ${reqVar}, _http)`;

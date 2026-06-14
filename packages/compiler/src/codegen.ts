@@ -191,6 +191,8 @@ export function codegen(program: Program, opts: CodegenOptions): CodegenResult {
   lines.push("  motions: _motions,");
   lines.push("  http: _http,");
   lines.push("  indexedDb: _idb,");
+  if (app.meta) lines.push(`  meta: ${JSON.stringify(appMetaJson(app.meta))},`);
+  if (app.analytics) lines.push(`  analytics: ${JSON.stringify(appAnalyticsJson(app.analytics))},`);
   lines.push("};");
 
   // In-language test tile factories close over this instance's live state, so
@@ -757,6 +759,23 @@ function httpConfigJs(http: AppDef["http"], gen: GenCtx): string {
 function indexedDbConfigJs(idb: AppDef["indexedDb"]): string {
   if (!idb) return "const _idb = undefined;";
   return `const _idb = ${JSON.stringify({ name: idb.name, version: idb.version, stores: idb.stores })};`;
+}
+
+// ----- app.meta / app.analytics (#80) -----
+
+function appMetaJson(meta: NonNullable<AppDef["meta"]>): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (meta.title !== undefined) out.title = meta.title;
+  if (meta.description !== undefined) out.description = meta.description;
+  if (meta.ogImage !== undefined) out.ogImage = meta.ogImage;
+  if (meta.favicon !== undefined) out.favicon = meta.favicon;
+  return out;
+}
+
+function appAnalyticsJson(analytics: NonNullable<AppDef["analytics"]>): Record<string, string> {
+  const out: Record<string, string> = { provider: analytics.provider };
+  if (analytics.appId !== undefined) out.appId = analytics.appId;
+  return out;
 }
 
 // ----- fn -----

@@ -91,6 +91,13 @@ export function codegen(program: Program, opts: CodegenOptions): CodegenResult {
     lines.push(genFn(fn, ctx));
   }
 
+  // App-wide HTTP config (#78). Emitted unconditionally so the http effect
+  // handler's `httpFetch(method, req, _http)` reference never trips TDZ even
+  // when an app declares `caps=[http.get]` without an `http={...}` block.
+  // `headers` is a closure to re-evaluate slot references per request.
+  lines.push(httpConfigJs(app.http, ctx));
+  lines.push("");
+
   // effect handlers (per capability, statically dispatched)
   lines.push("const _effects = {");
   for (const eff of effects) {
@@ -176,6 +183,7 @@ export function codegen(program: Program, opts: CodegenOptions): CodegenResult {
   lines.push("  themes: _themes,");
   lines.push(`  themeName: ${themeRef},`);
   lines.push("  motions: _motions,");
+  lines.push("  http: _http,");
   lines.push("};");
 
   // In-language test tile factories close over this instance's live state, so
@@ -699,6 +707,25 @@ function _findTile(tiles: TileDef[], name: string): TileDef {
   return t;
 }
 
+// ----- app.http (#78) -----
+
+function httpConfigJs(http: AppDef["http"], gen: GenCtx): string {
+  if (!http) return "const _http = undefined;";
+  // Plain (non-reducer) scope: slot refs lower to `_live[name]`, not
+  // `_next[name] ?? _live[name]` — `_next` is local to each reducer's
+  // generated body and out of reach from `_http`'s closures.
+  const ctx = makeEvalCtx(gen, new Set(), false);
+  const fields: string[] = [];
+  if (http.baseUrl) fields.push(`baseUrl: ${jsOfExpr(http.baseUrl, ctx)}`);
+  if (http.headers) fields.push(`headers: () => (${jsOfExpr(http.headers, ctx)})`);
+  if (http.timeout) fields.push(`timeout: ${jsOfExpr(http.timeout, ctx)}`);
+  if (http.credentials) fields.push(`credentials: ${jsOfExpr(http.credentials, ctx)}`);
+  if (http.on401) fields.push(`on401: ${JSON.stringify(http.on401)}`);
+  if (http.on403) fields.push(`on403: ${JSON.stringify(http.on403)}`);
+  if (http.on5xx) fields.push(`on5xx: ${JSON.stringify(http.on5xx)}`);
+  return `const _http = { ${fields.join(", ")} };`;
+}
+
 // ----- fn -----
 
 function genFn(fn: FnDef, gen: GenCtx): string {
@@ -728,7 +755,7 @@ function builtinEffectCall(eff: EffectDef, reqVar: string): string | null {
   }
   if (eff.cap.startsWith("http.")) {
     const method = eff.cap.slice("http.".length).toUpperCase();
-    return `httpFetch(${JSON.stringify(method)}, ${reqVar}, "")`;
+    return `httpFetch(${JSON.stringify(method)}, ${reqVar}, _http)`;
   }
   return null;
 }

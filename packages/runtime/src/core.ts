@@ -298,7 +298,10 @@ export type AppShape = {
     baseUrl?: string;
     headers?: () => Record<string, string>;
     on401?: string;
+    on403?: string;
+    on5xx?: string;
     timeout?: number;
+    credentials?: RequestCredentials;
   };
   /** Phase 4: registered themes by name. */
   themes?: Record<string, Theme>;
@@ -544,6 +547,30 @@ export function mountCore(
       if (r.event.kind === "effect" && r.event.effect === effect && r.event.outcome === outcome) {
         applyReducer(r, { $1: value, $2: key });
         matched++;
+      }
+    }
+    // Status-coded routing for HTTP-shaped err payloads (#78, spec §6.3.2):
+    // an err whose value carries a 401/403/5xx is forwarded to the global
+    // `app.http.on-*` reducer — independent of whether a per-effect `.err`
+    // reducer also matched.
+    if (outcome === "err" && app.http) {
+      const status = readStatus(value);
+      if (status !== null) {
+        const name =
+          status === 401
+            ? app.http.on401
+            : status === 403
+              ? app.http.on403
+              : status >= 500
+                ? app.http.on5xx
+                : undefined;
+        if (name) {
+          const r = app.reducers.find((r) => r.name === name);
+          if (r) {
+            applyReducer(r, { $1: value, $2: key });
+            matched++;
+          }
+        }
       }
     }
     // No-silent-failure contract (#37): an `err` result that no `.err` reducer
@@ -874,6 +901,13 @@ function reportPanic(where: string, e: unknown): void {
  * is the app's own choice: wire an `.err` reducer to handle (or deliberately
  * ignore) the error.
  */
+/** Pull `status` off an HttpError-shaped err value; returns null otherwise. */
+function readStatus(value: unknown): number | null {
+  if (!value || typeof value !== "object") return null;
+  const s = (value as { status?: unknown }).status;
+  return typeof s === "number" ? s : null;
+}
+
 function reportUnhandledEffectError(effect: string, value: unknown): void {
   const message =
     value && typeof value === "object" && "message" in value

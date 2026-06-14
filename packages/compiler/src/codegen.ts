@@ -1703,11 +1703,18 @@ function tileCallJs(
       const fbBody = tileExprJs(fb.body, gen, fbCtx, fb.name);
       return `((() => { try { return ${body}; } catch (_err) { const ${jsName("$1")} = { message: String(_err && _err.message || _err), location: ${JSON.stringify(def.name)} }; return ${fbBody}; } })())`;
     };
+    // Each user-tile call site wraps its rendered output with `_named(…, "X")`
+    // so the runtime can diff `tile.mount(X)` / `tile.unmount(X)` against the
+    // rendered tree (lifecycle.md §7.1.6). Builtin tiles are NOT named — only
+    // user-defined tile boundaries fire mount/unmount.
+    const nameLit = JSON.stringify(def.name);
     if (arg1) {
       const v = arg1.value;
       const isTile = TILE_KINDS.has((v as { kind?: string }).kind ?? "");
       if (isTile) {
-        return wrapBoundary(tileExprJs(v as TileExpr, gen, inner, def.name));
+        return wrapBoundary(
+          `_named(${tileExprJs(v as TileExpr, gen, inner, def.name)}, ${nameLit})`,
+        );
       }
       // Evaluate the positional arg and props in the OUTER context (where
       // `_d_1` still refers to the enclosing tile's `$1`), then pass them in
@@ -1717,12 +1724,12 @@ function tileCallJs(
       const propsJs = propsFor(t, ctx);
       const bodyJs = tileExprJs(def.body, gen, addBind(inner, "$1"), def.name);
       return wrapBoundary(
-        `((_arg, _propsOuter) => { const ${jsName("$1")} = _arg; return _attachProps(${bodyJs}, _propsOuter); })(${oneJs}, ${propsJs})`,
+        `((_arg, _propsOuter) => { const ${jsName("$1")} = _arg; return _named(_attachProps(${bodyJs}, _propsOuter), ${nameLit}); })(${oneJs}, ${propsJs})`,
       );
     }
     const propsJs = propsFor(t, ctx);
     const bodyJs = tileExprJs(def.body, gen, inner, def.name);
-    return wrapBoundary(`(_attachProps(${bodyJs}, ${propsJs}))`);
+    return wrapBoundary(`_named(_attachProps(${bodyJs}, ${propsJs}), ${nameLit})`);
   }
 
   // Builtin tiles
@@ -2348,5 +2355,11 @@ function _children(...xs) {
 function _attachProps(node, props) {
   if (!node || !props) return node;
   return { ...node, props: { ...(node.props || {}), ...props } };
+}
+function _named(node, name) {
+  if (node === null || node === undefined) return node;
+  if (Array.isArray(node)) return node.map((n) => _named(n, name));
+  if (typeof node !== "object" || typeof node.kind !== "string") return node;
+  return { ...node, props: { ...(node.props || {}), _tile: name } };
 }
 `;

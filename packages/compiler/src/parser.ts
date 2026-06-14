@@ -45,6 +45,21 @@ export class ParseError extends Error {
 }
 
 const PRIM_TYPES = new Set(["Int", "Text", "Bool", "Unit", "Float", "Time", "Bytes"]);
+// Closed set of `app.*` lifecycle events (docs/spec/language.md §1.6.1,
+// lifecycle.md §7.1). `app.http-*` keep their hyphenated form — the lexer
+// already treats `-` as ident-continuation, so they arrive as a single token.
+const APP_LIFECYCLE_EVENTS = new Set([
+  "start",
+  "stop",
+  "error",
+  "visible",
+  "hidden",
+  "online",
+  "offline",
+  "http-401",
+  "http-403",
+  "http-5xx",
+]);
 const _GENERIC_TYPES = new Set(["Map", "Set", "List", "Option", "Result", "Tuple"]);
 // Builtins whose positional argument is a value expression (Text/Number), not a tile.
 // Named args whose value is always a value expression (Text / Number / etc.),
@@ -506,35 +521,46 @@ class Parser {
         return { kind: "UiEvent", ev: sub as UiEventKind, selector: sel, pos: t.pos };
       }
       if (name === "app") {
+        if (!APP_LIFECYCLE_EVENTS.has(sub)) {
+          throw new ParseError(`Unknown app lifecycle event "app.${sub}"`, t.pos);
+        }
         return { kind: "LifecycleEvent", name: `app.${sub}`, pos: t.pos };
       }
       if (name === "tile") {
-        // tile.mount(X) — not parsed in Phase 2, but reserved
-        if (this.matchOp("(")) {
-          this.next();
-          this.eat("ident");
-          this.eat("op", ")");
+        // `tile.mount(TileName)` / `tile.unmount(TileName)` carry the tile name.
+        // The name is part of the event identity: the runtime fires the reducer
+        // when *that* user-defined tile enters/leaves the rendered tree, so the
+        // ident must be preserved here. Encode the same way the runtime sees it.
+        if (sub !== "mount" && sub !== "unmount") {
+          throw new ParseError(`Unknown tile lifecycle event "tile.${sub}"`, t.pos);
         }
-        return { kind: "LifecycleEvent", name: `tile.${sub}`, pos: t.pos };
+        this.eat("op", "(");
+        const tile = this.eat("ident").value;
+        this.eat("op", ")");
+        return {
+          kind: "LifecycleEvent",
+          name: `tile.${sub}(${JSON.stringify(tile)})`,
+          pos: t.pos,
+        };
       }
       if (name === "route") {
-        // `route.enter("/p")` / `route.leave("/p")` carry the route pattern.
-        // The pattern is part of the event identity: the runtime dispatches by
-        // matching the reducer's name against `route.enter(${JSON.stringify(
-        // matchedPattern)})`, so the literal must be preserved here (dropping it
-        // would leave every route.enter/leave reducer dead). Encode it the same
-        // way the runtime does so the names match verbatim.
-        if (this.matchOp("(")) {
-          this.next();
-          const pattern = this.eat("str").value;
-          this.eat("op", ")");
-          return {
-            kind: "LifecycleEvent",
-            name: `route.${sub}(${JSON.stringify(pattern)})`,
-            pos: t.pos,
-          };
+        // `route.enter("/p")` / `route.leave("/p")` / `route.error("/p")` carry
+        // the route pattern. The pattern is part of the event identity: the
+        // runtime dispatches by matching the reducer's name against
+        // `route.enter(${JSON.stringify(matchedPattern)})`, so the literal must
+        // be preserved here (dropping it would leave every route reducer dead).
+        // Encode it the same way the runtime does so the names match verbatim.
+        if (sub !== "enter" && sub !== "leave" && sub !== "error") {
+          throw new ParseError(`Unknown route lifecycle event "route.${sub}"`, t.pos);
         }
-        return { kind: "LifecycleEvent", name: `route.${sub}`, pos: t.pos };
+        this.eat("op", "(");
+        const pattern = this.eat("str").value;
+        this.eat("op", ")");
+        return {
+          kind: "LifecycleEvent",
+          name: `route.${sub}(${JSON.stringify(pattern)})`,
+          pos: t.pos,
+        };
       }
       // effect-name.ok / .err
       if (sub === "ok" || sub === "err") {

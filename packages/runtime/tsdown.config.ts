@@ -42,6 +42,7 @@ export default defineConfig([
       "effects-storage": "src/effects-storage.ts",
       "effects-http": "src/effects-http.ts",
       "effects-toast": "src/effects-toast.ts",
+      "effects-confirm": "src/effects-confirm.ts",
       "tiles-layout": "src/tiles-layout.ts",
       "tiles-text": "src/tiles-text.ts",
       "tiles-input": "src/tiles-input.ts",

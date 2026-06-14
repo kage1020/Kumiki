@@ -46,6 +46,7 @@ describe("kumiki build CLI (per-app DCE, #71)", () => {
       "effects-storage.js",
       "effects-http.js",
       "effects-toast.js",
+      "effects-confirm.js",
       "tiles-collection.js",
       "tiles-overlay.js",
       "tiles-media.js",

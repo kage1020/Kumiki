@@ -11,6 +11,7 @@ import type {
   Program,
   ReducerDef,
   Refinement,
+  RetryExpr,
   SlotDef,
   Statement,
   TestDef,
@@ -90,6 +91,18 @@ export function codegen(program: Program, opts: CodegenOptions): CodegenResult {
   for (const fn of fns) {
     lines.push(genFn(fn, ctx));
   }
+
+  // App-wide HTTP config (#78). Emitted unconditionally so the http effect
+  // handler's `httpFetch(method, req, _http)` reference never trips TDZ even
+  // when an app declares `caps=[http.get]` without an `http={...}` block.
+  // `headers` is a closure to re-evaluate slot references per request.
+  lines.push(httpConfigJs(app.http, ctx));
+  // App-wide IndexedDB config (#79). Always emitted so indexed-* effect calls
+  // resolve `_idb`; absent declarations produce `undefined`, which the runtime
+  // handlers turn into a clean error (consistent with the storage-unavailable
+  // contract from #37).
+  lines.push(indexedDbConfigJs(app.indexedDb));
+  lines.push("");
 
   // effect handlers (per capability, statically dispatched)
   lines.push("const _effects = {");
@@ -176,6 +189,10 @@ export function codegen(program: Program, opts: CodegenOptions): CodegenResult {
   lines.push("  themes: _themes,");
   lines.push(`  themeName: ${themeRef},`);
   lines.push("  motions: _motions,");
+  lines.push("  http: _http,");
+  lines.push("  indexedDb: _idb,");
+  if (app.meta) lines.push(`  meta: ${JSON.stringify(appMetaJson(app.meta))},`);
+  if (app.analytics) lines.push(`  analytics: ${JSON.stringify(appAnalyticsJson(app.analytics))},`);
   lines.push("};");
 
   // In-language test tile factories close over this instance's live state, so
@@ -221,6 +238,8 @@ export function codegen(program: Program, opts: CodegenOptions): CodegenResult {
     if (usage.router) header.push(`import { routing } from "${dir}/router.js";`);
     if (usage.storage.length > 0)
       header.push(`import { ${usage.storage.join(", ")} } from "${dir}/effects-storage.js";`);
+    if (usage.indexed.length > 0)
+      header.push(`import { ${usage.indexed.join(", ")} } from "${dir}/effects-indexed.js";`);
     if (usage.http) header.push(`import { httpFetch } from "${dir}/effects-http.js";`);
     if (usage.toast) header.push(`import { installToast } from "${dir}/effects-toast.js";`);
     if (usage.confirm) header.push(`import { installConfirm } from "${dir}/effects-confirm.js";`);
@@ -239,7 +258,13 @@ export function codegen(program: Program, opts: CodegenOptions): CodegenResult {
     // Monolith mode: ONE import line — `inlineRuntime` (bundle: true) strips
     // exactly this line and resolves the names against the inlined bundle's
     // top-level bindings, so everything must ride on a single statement.
-    const names = ["mount", "_stdlib", ...usage.storage, ...(usage.http ? ["httpFetch"] : [])];
+    const names = [
+      "mount",
+      "_stdlib",
+      ...usage.storage,
+      ...usage.indexed,
+      ...(usage.http ? ["httpFetch"] : []),
+    ];
     header.push(`import { ${names.join(", ")} } from "${opts.runtimeSpecifier}";`);
     header.push("");
     header.push("const _s = _stdlib;");
@@ -289,6 +314,8 @@ function tileFamilyVar(f: TileFamily): string {
   return `${f}Tiles`;
 }
 
+type IndexedHandler = "indexedRead" | "indexedWrite" | "indexedDelete";
+
 type RuntimeUsage = {
   /** Tile family modules the app renders, in stable order. */
   families: TileFamily[];
@@ -296,6 +323,8 @@ type RuntimeUsage = {
   router: boolean;
   /** The storage effect handlers referenced by generated invokes. */
   storage: ("storageRead" | "storageWrite")[];
+  /** The IndexedDB effect handlers referenced by generated invokes. */
+  indexed: IndexedHandler[];
   http: boolean;
   toast: boolean;
   confirm: boolean;
@@ -351,6 +380,12 @@ function analyzeRuntimeUsage(
   const storage: ("storageRead" | "storageWrite")[] = [];
   if (effects.some((e) => e.cap === "storage.read")) storage.push("storageRead");
   if (effects.some((e) => e.cap === "storage.write")) storage.push("storageWrite");
+  const indexed: IndexedHandler[] = [];
+  // `indexed.read` is dispatched at runtime by input shape (point vs range
+  // query), so cap → one handler is enough. Spec §6.7.4.
+  if (effects.some((e) => e.cap === "indexed.read")) indexed.push("indexedRead");
+  if (effects.some((e) => e.cap === "indexed.write")) indexed.push("indexedWrite");
+  if (effects.some((e) => e.cap === "indexed.delete")) indexed.push("indexedDelete");
   const http = effects.some((e) => e.cap.startsWith("http."));
   const toast = app.caps.includes("notification.show") || emits.has("toast");
   // confirm is gated on actual usage (not the cap alone): a `notification.show`
@@ -364,12 +399,13 @@ function analyzeRuntimeUsage(
     ...(testkit ? ["testkit"] : []),
     ...(router ? ["router"] : []),
     ...(storage.length > 0 ? ["effects-storage"] : []),
+    ...(indexed.length > 0 ? ["effects-indexed"] : []),
     ...(http ? ["effects-http"] : []),
     ...(toast ? ["effects-toast"] : []),
     ...(confirm ? ["effects-confirm"] : []),
     ...families.map((f) => `tiles-${f}`),
   ];
-  return { families, router, storage, http, toast, confirm, testkit, modules };
+  return { families, router, storage, indexed, http, toast, confirm, testkit, modules };
 }
 
 // ----- test layer -----
@@ -712,6 +748,49 @@ function _findTile(tiles: TileDef[], name: string): TileDef {
   return t;
 }
 
+// ----- app.http (#78) -----
+
+function httpConfigJs(http: AppDef["http"], gen: GenCtx): string {
+  if (!http) return "const _http = undefined;";
+  // Plain (non-reducer) scope: slot refs lower to `_live[name]`, not
+  // `_next[name] ?? _live[name]` — `_next` is local to each reducer's
+  // generated body and out of reach from `_http`'s closures.
+  const ctx = makeEvalCtx(gen, new Set(), false);
+  const fields: string[] = [];
+  if (http.baseUrl) fields.push(`baseUrl: ${jsOfExpr(http.baseUrl, ctx)}`);
+  if (http.headers) fields.push(`headers: () => (${jsOfExpr(http.headers, ctx)})`);
+  if (http.timeout) fields.push(`timeout: ${jsOfExpr(http.timeout, ctx)}`);
+  if (http.credentials) fields.push(`credentials: ${jsOfExpr(http.credentials, ctx)}`);
+  if (http.on401) fields.push(`on401: ${JSON.stringify(http.on401)}`);
+  if (http.on403) fields.push(`on403: ${JSON.stringify(http.on403)}`);
+  if (http.on5xx) fields.push(`on5xx: ${JSON.stringify(http.on5xx)}`);
+  return `const _http = { ${fields.join(", ")} };`;
+}
+
+// ----- app.indexed-db (#79) -----
+
+function indexedDbConfigJs(idb: AppDef["indexedDb"]): string {
+  if (!idb) return "const _idb = undefined;";
+  return `const _idb = ${JSON.stringify({ name: idb.name, version: idb.version, stores: idb.stores })};`;
+}
+
+// ----- app.meta / app.analytics (#80) -----
+
+function appMetaJson(meta: NonNullable<AppDef["meta"]>): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (meta.title !== undefined) out.title = meta.title;
+  if (meta.description !== undefined) out.description = meta.description;
+  if (meta.ogImage !== undefined) out.ogImage = meta.ogImage;
+  if (meta.favicon !== undefined) out.favicon = meta.favicon;
+  return out;
+}
+
+function appAnalyticsJson(analytics: NonNullable<AppDef["analytics"]>): Record<string, string> {
+  const out: Record<string, string> = { provider: analytics.provider };
+  if (analytics.appId !== undefined) out.appId = analytics.appId;
+  return out;
+}
+
 // ----- fn -----
 
 function genFn(fn: FnDef, gen: GenCtx): string {
@@ -739,9 +818,12 @@ function builtinEffectCall(eff: EffectDef, reqVar: string): string | null {
       eff.mapRequest ? `{ key: ${reqVar}.key, value: ${reqVar}.value }` : reqVar
     })`;
   }
+  if (eff.cap === "indexed.read") return `indexedRead(${reqVar}, _idb)`;
+  if (eff.cap === "indexed.write") return `indexedWrite(${reqVar}, _idb)`;
+  if (eff.cap === "indexed.delete") return `indexedDelete(${reqVar}, _idb)`;
   if (eff.cap.startsWith("http.")) {
     const method = eff.cap.slice("http.".length).toUpperCase();
-    return `httpFetch(${JSON.stringify(method)}, ${reqVar}, "")`;
+    return `httpFetch(${JSON.stringify(method)}, ${reqVar}, _http)`;
   }
   return null;
 }
@@ -773,8 +855,15 @@ function genEffect(eff: EffectDef, gen: GenCtx): string {
     name: ${JSON.stringify(eff.name)},
     cap: ${JSON.stringify(eff.cap)},
     policy: ${policyJs(eff.policy)},
+    retry: ${retryJs(eff.retry)},
     invoke: ${invokeBody},
   }`;
+}
+
+function retryJs(r?: RetryExpr): string {
+  if (!r || r.kind === "RetryNone") return "undefined";
+  if (r.kind === "RetryLinear") return `{ kind: "linear", n: ${r.n}, ms: ${r.ms} }`;
+  return `{ kind: "exponential", n: ${r.n}, ms: ${r.ms}, factor: ${r.factor} }`;
 }
 
 function policyJs(p?: PolicyExpr): string {
@@ -1657,11 +1746,18 @@ function tileCallJs(
       const fbBody = tileExprJs(fb.body, gen, fbCtx, fb.name);
       return `((() => { try { return ${body}; } catch (_err) { const ${jsName("$1")} = { message: String(_err && _err.message || _err), location: ${JSON.stringify(def.name)} }; return ${fbBody}; } })())`;
     };
+    // Each user-tile call site wraps its rendered output with `_named(…, "X")`
+    // so the runtime can diff `tile.mount(X)` / `tile.unmount(X)` against the
+    // rendered tree (lifecycle.md §7.1.6). Builtin tiles are NOT named — only
+    // user-defined tile boundaries fire mount/unmount.
+    const nameLit = JSON.stringify(def.name);
     if (arg1) {
       const v = arg1.value;
       const isTile = TILE_KINDS.has((v as { kind?: string }).kind ?? "");
       if (isTile) {
-        return wrapBoundary(tileExprJs(v as TileExpr, gen, inner, def.name));
+        return wrapBoundary(
+          `_named(${tileExprJs(v as TileExpr, gen, inner, def.name)}, ${nameLit})`,
+        );
       }
       // Evaluate the positional arg and props in the OUTER context (where
       // `_d_1` still refers to the enclosing tile's `$1`), then pass them in
@@ -1671,12 +1767,12 @@ function tileCallJs(
       const propsJs = propsFor(t, ctx);
       const bodyJs = tileExprJs(def.body, gen, addBind(inner, "$1"), def.name);
       return wrapBoundary(
-        `((_arg, _propsOuter) => { const ${jsName("$1")} = _arg; return _attachProps(${bodyJs}, _propsOuter); })(${oneJs}, ${propsJs})`,
+        `((_arg, _propsOuter) => { const ${jsName("$1")} = _arg; return _named(_attachProps(${bodyJs}, _propsOuter), ${nameLit}); })(${oneJs}, ${propsJs})`,
       );
     }
     const propsJs = propsFor(t, ctx);
     const bodyJs = tileExprJs(def.body, gen, inner, def.name);
-    return wrapBoundary(`(_attachProps(${bodyJs}, ${propsJs}))`);
+    return wrapBoundary(`_named(_attachProps(${bodyJs}, ${propsJs}), ${nameLit})`);
   }
 
   // Builtin tiles
@@ -2302,5 +2398,11 @@ function _children(...xs) {
 function _attachProps(node, props) {
   if (!node || !props) return node;
   return { ...node, props: { ...(node.props || {}), ...props } };
+}
+function _named(node, name) {
+  if (node === null || node === undefined) return node;
+  if (Array.isArray(node)) return node.map((n) => _named(n, name));
+  if (typeof node !== "object" || typeof node.kind !== "string") return node;
+  return { ...node, props: { ...(node.props || {}), _tile: name } };
 }
 `;

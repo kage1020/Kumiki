@@ -225,8 +225,8 @@ describe("scenario runner", () => {
   // Issue #82: route.leave guard + confirm effect. Drives the example end-to-end
   // through the compiled .kumiki: dirty edit → navigation triggers the modal
   // → click No reverts → click Yes commits and the user reducer cleans up dirty.
-  it("gates a route.leave with confirm; No reverts, Yes commits (36-confirm-leave-guard)", async () => {
-    const app = await loadApp(join(examples, "features", "36-confirm-leave-guard.kumiki"));
+  it("gates a route.leave with confirm; No reverts, Yes commits (38-confirm-leave-guard)", async () => {
+    const app = await loadApp(join(examples, "features", "38-confirm-leave-guard.kumiki"));
     const root = freshRoot();
     const report = await runScenario(
       app,

@@ -10,6 +10,7 @@
 import { type AppShape, type MountOptions, mountCore, type TileRenderers } from "./core.ts";
 import { installConfirm } from "./effects-confirm.ts";
 import { httpFetch } from "./effects-http.ts";
+import { indexedDelete, indexedQuery, indexedRead, indexedWrite } from "./effects-indexed.ts";
 import { storageRead, storageWrite } from "./effects-storage.ts";
 import { installToast } from "./effects-toast.ts";
 import { routing } from "./router.ts";
@@ -59,6 +60,15 @@ export {
 } from "./core.ts";
 export { installConfirm } from "./effects-confirm.ts";
 export { httpFetch } from "./effects-http.ts";
+export {
+  type IndexedDbCfg,
+  type IndexedDbStore,
+  type IndexRange,
+  indexedDelete,
+  indexedQuery,
+  indexedRead,
+  indexedWrite,
+} from "./effects-indexed.ts";
 export { storageRead, storageWrite } from "./effects-storage.ts";
 export { installToast } from "./effects-toast.ts";
 export {
@@ -135,4 +145,12 @@ export function mount(
 export const _stdlib = { ..._stdlibCore, ..._stdlibTest };
 
 /** Built-in capability handlers, grouped — kept for back-compat (#70 contract). */
-export const builtinEffects = { storageRead, storageWrite, httpFetch };
+export const builtinEffects = {
+  storageRead,
+  storageWrite,
+  httpFetch,
+  indexedRead,
+  indexedWrite,
+  indexedDelete,
+  indexedQuery,
+};

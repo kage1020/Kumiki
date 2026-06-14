@@ -11,6 +11,7 @@ import type {
   Program,
   ReducerDef,
   Refinement,
+  RetryExpr,
   SlotDef,
   Statement,
   TestDef,
@@ -787,8 +788,15 @@ function genEffect(eff: EffectDef, gen: GenCtx): string {
     name: ${JSON.stringify(eff.name)},
     cap: ${JSON.stringify(eff.cap)},
     policy: ${policyJs(eff.policy)},
+    retry: ${retryJs(eff.retry)},
     invoke: ${invokeBody},
   }`;
+}
+
+function retryJs(r?: RetryExpr): string {
+  if (!r || r.kind === "RetryNone") return "undefined";
+  if (r.kind === "RetryLinear") return `{ kind: "linear", n: ${r.n}, ms: ${r.ms} }`;
+  return `{ kind: "exponential", n: ${r.n}, ms: ${r.ms}, factor: ${r.factor} }`;
 }
 
 function policyJs(p?: PolicyExpr): string {

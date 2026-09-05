@@ -79,33 +79,31 @@ export const QUALIFIED_BUILTIN_CALLS: ReadonlyMap<string, BuiltinArity> = new Ma
 ]);
 
 /**
- * Qualifiers the parser reads as the head of a call rather than as a value, so
- * `Qualifier.member` written without parentheses is a zero-argument call —
- * which is how `docs/spec/http.md` §6.1.4 writes `Decoder.Text` /
- * `Decoder.Bytes` / `Decoder.None` and how `stdlib.md` §2.1.1.1 writes
- * `EffectId.none`. Without that, the paren-less form was a field read on a
- * freshly built variant and emitted `undefined`, which `check` had no reason to
- * object to.
+ * The qualifiers of `QUALIFIED_BUILTIN_CALLS`, which is what the parser reads
+ * `Qualifier.member` by as the head of a call rather than as a value — so the
+ * member is a zero-argument call even written without parentheses. That is how
+ * `docs/spec/http.md` §6.1.4 writes `Decoder.Text` / `Decoder.Bytes` /
+ * `Decoder.None` and how `stdlib.md` §2.1.1.1 writes `EffectId.none`.
  *
- * Every qualifier `QUALIFIED_BUILTIN_CALLS` names is listed, which is not what
- * the name of this set suggests: `Duration` and `Bytes` have no constant
- * members at all. They are here because leaving a qualifier out never made its
- * bare spelling an error, it made it that same field read — `Duration.s` was
- * `{_tag: "Duration"}["s"]`, an `undefined` nothing reported, and a
- * `setTimeout(undefined)` is a `setTimeout(0)`. The reason they were excluded
- * was that reading them as calls turned that silence into another one, because
- * a missing argument was defaulted to `0`; that reason is gone, so the bare
- * spelling now answers by count (`Duration.s` is E0213) and by name
- * (`Duration.nope` is E0116). `Decoder.Json` is the same rule from the other
- * side: a member with an argument in an otherwise constant namespace, so it is
- * the one `Decoder` member with no paren-less spelling.
+ * Left out, a qualifier's bare spelling is not an error but a field read on a
+ * freshly built variant: `Duration.s` was `{_tag: "Duration"}["s"]`, an
+ * `undefined` nothing reported, and a `setTimeout(undefined)` is a
+ * `setTimeout(0)`. So the list holds every qualifier the map names, and a
+ * member of one is answered by name (E0116) and by count (E0213) in either
+ * spelling. It is written out rather than derived from the map because listing
+ * a qualifier claims `Q.<member>` in every expression position — a decision
+ * about the language surface, not a consequence of adding a lowering.
  *
- * The membership rule is enforced by `checkCallee`, not by this table alone:
- * `TYPE_MEMBER_CALLS` resolves `fresh` / `parse` / `show` on any capitalised
- * qualifier, and without that check `EffectId.fresh` passed and minted an id
- * where the author wrote the empty sentinel.
+ * Not every qualifier codegen lowers: `TYPE_MEMBER_CALLS` resolves `fresh` /
+ * `parse` / `show` on any capitalised name, and those are deliberately absent,
+ * which is why a bare `Int.parse` is still that field read.
+ *
+ * Membership is closed, and `checkCallee` is what closes it: without that,
+ * `TYPE_MEMBER_CALLS` reached inside these namespaces and `EffectId.fresh`
+ * minted an id where the author wrote the empty sentinel — so within a listed
+ * namespace those three members resolve to nothing, in either spelling.
  */
-export const CONSTANT_NAMESPACES: ReadonlySet<string> = new Set([
+export const QUALIFIED_CALL_NAMESPACES: ReadonlySet<string> = new Set([
   "Decoder",
   "EffectId",
   "Duration",

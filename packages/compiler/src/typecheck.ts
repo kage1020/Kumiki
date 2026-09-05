@@ -33,9 +33,9 @@ import { assertNever, isTileExpr } from "./ast.ts";
 import {
   type BuiltinArity,
   builtinArity,
-  CONSTANT_NAMESPACES,
   isQualifierName,
   QUALIFIED_BUILTIN_CALLS,
+  QUALIFIED_CALL_NAMESPACES,
   TYPE_MEMBER_CALLS,
   UNIMPLEMENTED_CALLS,
 } from "./builtin-calls.ts";
@@ -1951,20 +1951,30 @@ function checkCallee(
     });
     return;
   }
-  // A listed namespace has exactly the members `QUALIFIED_BUILTIN_CALLS` lists.
-  // Without this, `TYPE_MEMBER_CALLS` resolves `fresh` / `parse` / `show` on
-  // *any* capitalised qualifier, so `EffectId.fresh` passed and lowered to
-  // `_s.freshId()` — a real id minted where the author wrote the empty
-  // sentinel, which a later `http.cancel` then aims at nothing. It is also what
-  // answers a bare `Duration.nope`, which the parser now hands over as a
-  // zero-argument call rather than leaving as a field read. Only the
-  // zero-argument form is refused: `EffectId.show(h)` is the qualified spelling
-  // of `h.show` and means what it says.
+  // A `QUALIFIED_CALL_NAMESPACES` qualifier has exactly the members
+  // `QUALIFIED_BUILTIN_CALLS` lists. Without this, `TYPE_MEMBER_CALLS` resolves
+  // `fresh` / `parse` / `show` on *any* capitalised qualifier, so
+  // `EffectId.fresh` passed and lowered to `_s.freshId()` — a real id minted
+  // where the author wrote the empty sentinel, which a later `http.cancel` then
+  // aims at nothing. It is also what answers a bare `Duration.nope`, which the
+  // parser now hands over as a zero-argument call rather than leaving as a
+  // field read.
+  //
+  // The test is the count and the namespace, not the parentheses, so it closes
+  // those three members inside a listed namespace in *both* spellings:
+  // `Duration.fresh()` lowered to `_s.freshId()` and put a UUID in a `Duration`
+  // slot, which is the same defect as `EffectId.fresh` and is refused the same
+  // way. E0116 is the sentence for all of them, `Duration.parse()` included —
+  // within these namespaces the member does not exist, so a count for it would
+  // be describing something that is not there. `docs/spec/errors.md` E0117
+  // records the carve-out. Given an argument the member is not zero-argument
+  // and this branch is not reached: `EffectId.show(h)` is the qualified
+  // spelling of `h.show` and means what it says.
   const dot = callee.indexOf(".");
   if (
     dot > 0 &&
     argCount === 0 &&
-    CONSTANT_NAMESPACES.has(callee.slice(0, dot)) &&
+    QUALIFIED_CALL_NAMESPACES.has(callee.slice(0, dot)) &&
     !QUALIFIED_BUILTIN_CALLS.has(callee)
   ) {
     errors.push({

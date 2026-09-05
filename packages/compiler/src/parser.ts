@@ -37,7 +37,7 @@ import type {
   TypeExpr,
   UiEventKind,
 } from "./ast.ts";
-import { CONSTANT_NAMESPACES } from "./builtin-calls.ts";
+import { QUALIFIED_CALL_NAMESPACES } from "./builtin-calls.ts";
 import { BUILTIN_TILES, VALUE_ARG_BUILTINS } from "./builtins.ts";
 
 export class ParseError extends Error {
@@ -1232,7 +1232,8 @@ class Parser {
       // capital-cased identifier; otherwise this is a method call on a value and
       // should be parsed by parsePostfix.
       const isQualifierReceiver = !!name[0] && name[0]! >= "A" && name[0]! <= "Z";
-      // A member of a constant namespace, written without parentheses:
+      // A member of a `QUALIFIED_CALL_NAMESPACES` qualifier, written without
+      // parentheses:
       // `EffectId.none` (stdlib §2.1.1.1), `Decoder.Text` / `Decoder.Bytes` /
       // `Decoder.None` (http §6.1.4). Read as a 0-arg Call so typecheck and
       // codegen handle it through the same builtin-call channel as
@@ -1241,13 +1242,20 @@ class Parser {
       // the qualifier's name, which emits `undefined` and which nothing objects
       // to; the member being wrong is then an E0116 rather than silence.
       //
+      // `Duration` and `Bytes` are in that set too, though neither has a
+      // constant member. Reading `Duration.s` as a call is how the missing
+      // argument gets reported at all: as a field read it was `undefined`, and
+      // a `setTimeout(undefined)` is a `setTimeout(0)` — so the spelling
+      // without parentheses reached the failure the arity check exists for,
+      // past the arity check. It is now the same E0213 as `Duration.s()`.
+      //
       // `kw` is accepted alongside `ident` to mirror the parenthesised branch
       // below, which needs it — none of the constants named above lex as a
       // keyword. Matching the two shapes keeps `Decoder.if` a resolvable callee
       // that `checkCallee` names, rather than a parse error in one form and a
       // diagnostic in the other.
       if (
-        CONSTANT_NAMESPACES.has(name) &&
+        QUALIFIED_CALL_NAMESPACES.has(name) &&
         this.matchOp(".") &&
         (this.matchTAt(1, "ident") || this.matchTAt(1, "kw")) &&
         !this.matchTAt(2, "op", "(")

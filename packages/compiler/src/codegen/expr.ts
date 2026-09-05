@@ -25,18 +25,18 @@ export function reducerNameArg(e: Expr | undefined): string {
  * milliseconds, which is a timer that fires immediately and forever.
  *
  * `checkCallee` reports E0213 wherever `checkExpr` walks, which is not
- * everywhere: an `app.http` field, a `test` body and an effect's
- * `policy=latest-per-key(...)` key are never walked, so a call in one of those
- * checks clean and lands here. That is why the throw carries its position —
- * it is the only thing the author is given, and an error without one is the
- * failure this file is otherwise closing.
+ * everywhere: an `app.http` field (#319) and a `test` body (#276) are never
+ * walked, so a call in one of those checks clean and lands here. The effect
+ * policy key was the third and is walked now (#341). That is why the throw
+ * carries its position — it is the only thing the author is given, and an
+ * error without one is the failure this file is otherwise closing.
  */
 function requiredArg(callee: string, args: Expr[], pos: Pos, ctx: EvalCtx): string {
   const arg = args[0];
   if (!arg) {
     throw new Error(
       `${callee}() at ${pos.line}:${pos.col} is missing its argument ` +
-        "(in a position `check` does not walk: an app.http field, a test body, or an effect policy key)",
+        "(in a position `check` does not walk: an app.http field or a test body)",
     );
   }
   return jsOfExpr(arg, ctx);

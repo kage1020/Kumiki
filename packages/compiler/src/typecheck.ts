@@ -2008,7 +2008,9 @@ function checkCallee(
         message: `Function "${callee}" expects ${wantedArguments(arity)} but got ${argCount}`,
         pos,
       });
+      return;
     }
+    if (callee === "fmt") reportFmtPlaceholders(args, pos, errors);
     return;
   }
   if (!fn) {
@@ -2048,6 +2050,52 @@ function reportRunReducerPosition(ctx: Ctx, pos: Pos, errors: KumikiError[]): vo
     kind: "undef-call",
     message: 'Call to "run-reducer" outside a property-test invariant',
     pos,
+  });
+}
+
+/**
+ * `fmt`'s placeholders against its arguments (stdlib.md §2.4.5), when the
+ * template is a literal and there is therefore a count to check.
+ *
+ * Neither direction stops the program: an index the arguments do not reach
+ * keeps its placeholder, and an argument no placeholder names is dropped. That
+ * is what makes this worth a warning rather than nothing — the second one has
+ * no trace anywhere. `fmt("Hello {0}", name, count)` renders exactly what a
+ * correct call renders, and the value the author added is gone.
+ *
+ * Only a literal template is checked. `fmt(tpl, x)` over a slot has no
+ * placeholder set at compile time, and reporting on the shape of whatever
+ * literal happened to initialise the slot would be a guess.
+ */
+function reportFmtPlaceholders(args: Expr[], pos: Pos, errors: KumikiError[]): void {
+  const template = args[0];
+  if (template?.kind !== "Str") return;
+  const supplied = args.length - 1;
+  const indices = new Set<number>();
+  for (const m of template.value.matchAll(/\{(\d+)\}/g)) indices.add(Number(m[1]));
+  const missing = [...indices].filter((i) => i >= supplied).sort((a, b) => a - b);
+  const unused = [...Array(supplied).keys()].filter((i) => !indices.has(i));
+  if (missing.length === 0 && unused.length === 0) return;
+  // Both halves in one message: a call can be wrong in both directions at once
+  // (`fmt("{1}", "a")` names an index it does not have AND ignores the one it
+  // does), and two warnings on one call would read as two mistakes.
+  const parts: string[] = [];
+  if (missing.length > 0) {
+    parts.push(
+      `${missing.map((i) => `{${i}}`).join(", ")} ${missing.length === 1 ? "has" : "have"} no argument`,
+    );
+  }
+  if (unused.length > 0) {
+    parts.push(
+      `argument${unused.length === 1 ? "" : "s"} ${unused.map((i) => i + 2).join(", ")} ${unused.length === 1 ? "is" : "are"} named by no placeholder`,
+    );
+  }
+  errors.push({
+    code: "W0214",
+    kind: "fmt-placeholder-argument-mismatch",
+    message: `fmt template and arguments disagree: ${parts.join("; ")}`,
+    pos,
+    severity: "warning",
   });
 }
 

@@ -7,14 +7,36 @@
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { mount } from "@kumikijs/runtime";
-import { afterEach, describe, expect, it } from "vitest";
-import { clickByText, type FetchDouble, readHeader, stubFetch } from "./helpers/http-double.ts";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  clickByText,
+  type FetchCall,
+  type FetchDouble,
+  readHeader,
+  stubFetch,
+} from "./helpers/http-double.ts";
 import { loadApp } from "./helpers/load.ts";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const APP_HTTP_EXAMPLE = join(here, "..", "examples", "apps", "07-app-http", "app.kumiki");
 
 const tick = (ms = 30): Promise<void> => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Wait for `done()` rather than for a duration. A fixed sleep long enough for
+ * the longest chain here — mount → `boot` → storage read → index fetch →
+ * `indexIn` → detail fetch — is a number that holds on an idle machine and
+ * stops holding on a loaded one; the condition is the thing actually being
+ * waited for. Throws on the deadline so a chain that never completes fails
+ * where it stalled instead of at whatever assertion came next.
+ */
+async function waitUntil(done: () => boolean, timeoutMs = 2000): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (!done()) {
+    if (Date.now() > deadline) throw new Error(`condition not met within ${timeoutMs}ms`);
+    await tick(5);
+  }
+}
 
 describe("app.http (#78) — end-to-end", () => {
   let double: FetchDouble | undefined;
@@ -29,8 +51,13 @@ describe("app.http (#78) — end-to-end", () => {
     double = stubFetch(() => new Response(JSON.stringify({ text: "hi", author: "k" })));
     const root = document.createElement("div");
     document.body.appendChild(root);
+    let dispose: (() => void) | undefined;
     try {
-      const { dispose } = mount(app, root);
+      // `dispose` is bound before the assertions and released in `finally`: a
+      // failing expectation must not leak a mounted app — its router
+      // subscription and in-flight effects outlive the test and turn one
+      // failure into a run of them.
+      ({ dispose } = mount(app, root));
       // Trigger ui.click(LoadBtn) → emit fetchQuote()
       clickByText(root, "Load");
       await tick();
@@ -38,8 +65,8 @@ describe("app.http (#78) — end-to-end", () => {
       expect(double.calls[0]?.url).toBe("https://api.example.com/quote");
       expect(readHeader(double.calls[0]?.init.headers, "X-Session")).toBe("anon");
       expect(double.calls[0]?.init.credentials).toBe("include");
-      dispose();
     } finally {
+      dispose?.();
       root.remove();
     }
   });
@@ -51,13 +78,14 @@ describe("app.http (#78) — end-to-end", () => {
     double = stubFetch(() => new Response("nope", { status: 401, statusText: "Unauthorized" }));
     const root = document.createElement("div");
     document.body.appendChild(root);
+    let dispose: (() => void) | undefined;
     try {
-      const { dispose } = mount(app, root);
+      ({ dispose } = mount(app, root));
       clickByText(root, "Load");
       await tick(60);
       expect((app.live as Record<string, unknown>).session).toBe("anon");
-      dispose();
     } finally {
+      dispose?.();
       root.remove();
     }
   });
@@ -73,8 +101,20 @@ const BLOG_EXAMPLE = join(here, "..", "examples", "apps", "03-blog", "app.kumiki
 
 describe("the blog app's Authorization header (#340)", () => {
   let double: FetchDouble | undefined;
+  let errors: unknown[][];
+
+  beforeEach(() => {
+    // The channel the headless tiers decide failure from, captured rather than
+    // printed: a thrown header expression and a rejected decode both arrive
+    // here, and both would otherwise leave the request assertions intact.
+    errors = [];
+    vi.spyOn(console, "error").mockImplementation((...args) => {
+      errors.push(args);
+    });
+  });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     double?.restore();
     double = undefined;
     localStorage.removeItem("session");
@@ -87,7 +127,12 @@ describe("the blog app's Authorization header (#340)", () => {
       title: "Seven layers, one file",
       body: "Every definition stands on its own.",
       authorId: "5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f",
-      publishedAt: "2026-01-15T09:00:00.000Z",
+      // Epoch milliseconds, the representation `Time` has (stdlib.md §2.2.9)
+      // and the one the blog's own scenario.json uses. An ISO string would be
+      // rejected by `Decoder.Json(Post)` and send `fetchPost` down its
+      // `retry=exponential` ladder — which this test would still pass, because
+      // a retried request carries the header too.
+      publishedAt: 1737018000000,
       tags: ["kumiki"],
     };
     // What `loadSession` reads at boot: the storage handler JSON.parses the
@@ -104,21 +149,26 @@ describe("the blog app's Authorization header (#340)", () => {
     );
     const root = document.createElement("div");
     document.body.appendChild(root);
+    let dispose: (() => void) | undefined;
     try {
-      const { dispose } = mount(app, root);
-      // Boot restores the session and loads the index; the index then fetches
-      // each post it named, and that request is the one made with a session in
-      // hand. Asserted on the last call rather than the first: the very first
-      // request races the storage read on purpose — an app that has not logged
-      // in yet sends `Bearer `, which is the empty-token case, not this one.
-      await tick(80);
-      const detail = double.calls.filter((c) => c.url.endsWith(`/api/posts/${postId}`));
-      expect(detail.length).toBeGreaterThan(0);
-      for (const call of detail) {
+      ({ dispose } = mount(app, root));
+      // Only the `/api/posts/{id}` calls are read, and every one of them must
+      // carry the token. The index request `/api/posts` is excluded by URL, not
+      // by position: `boot` emits `loadSession()` and `fetchIndex()` in one
+      // batch, so the index request may legitimately race the storage read and
+      // go out with an empty token. A detail request cannot — it is emitted by
+      // `indexIn` on `fetchIndex.ok`, by which time `sessIn` has run.
+      const isDetail = (c: FetchCall): boolean => c.url.endsWith(`/api/posts/${postId}`);
+      await waitUntil(() => double?.calls.some(isDetail) === true);
+      for (const call of double.calls.filter(isDetail)) {
         expect(readHeader(call.init.headers, "Authorization")).toBe("Bearer session-token");
       }
-      dispose();
+      // The app also has to have worked: a decode failure or a thrown header
+      // expression would leave the request assertions above intact and the app
+      // broken, and `console.error` is where both of those land.
+      expect(errors).toEqual([]);
     } finally {
+      dispose?.();
       root.remove();
     }
   });

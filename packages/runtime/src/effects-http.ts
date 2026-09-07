@@ -123,10 +123,26 @@ function isAbortError(e: unknown): boolean {
   return false;
 }
 
+/**
+ * `app.http.headers` is an expression, evaluated per request. A throw from it
+ * cannot take the request down — one bad header would otherwise mean no HTTP
+ * at all — so the request goes out with no global headers.
+ *
+ * Reported, not swallowed. Dropping every global header silently is worse than
+ * the throw: an app whose `Authorization` vanished gets a 401 and runs its
+ * `on-401` reducer, so the visible symptom is a logout with no stated cause,
+ * and the headless tiers (which decide failure from `console.error`) see a run
+ * that passed. A `panic()` or a `.get` on a `None` in a header expression is
+ * the same signal lifecycle.md §7.2 sends everywhere else, and it reaches the
+ * console here too.
+ */
 function safeCallHeaders(thunk: () => Record<string, string>): Record<string, string> {
   try {
     return thunk() ?? {};
-  } catch {
+  } catch (e) {
+    console.error(
+      `app.http.headers threw — the request carries no global headers: ${e instanceof Error ? e.message : String(e)}`,
+    );
     return {};
   }
 }

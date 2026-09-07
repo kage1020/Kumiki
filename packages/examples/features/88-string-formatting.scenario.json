@@ -4,7 +4,14 @@
       "label": "nothing has been formatted yet",
       "expect": {
         "noErrors": true,
-        "state": { "greeting": "", "reordered": "", "rendered": "", "missing": "", "literal": "" }
+        "state": {
+          "greeting": "",
+          "reordered": "",
+          "rendered": "",
+          "missing": "",
+          "extra": "",
+          "literal": ""
+        }
       }
     },
     {
@@ -17,6 +24,7 @@
           "reordered": "b a b",
           "rendered": "3 and true",
           "missing": "a {1}",
+          "extra": "a b",
           "literal": "{} {a} {x}"
         },
         "domIncludes": [
@@ -24,6 +32,7 @@
           "reordered=b a b",
           "rendered=3 and true",
           "missing=a {1}",
+          "extra=a b",
           "literal={} {a} {x}"
         ]
       }

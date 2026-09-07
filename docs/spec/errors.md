@@ -726,6 +726,22 @@ When the walk finds no kind at all, nothing is reported — the tile's own root 
 
 **Fix**: Move the handler onto the tile that fires the event, or wrap the content in a `button` — on a user tile, either at the call site or inside the tile itself, so its root is the tile that fires. To react to a click anywhere in a region, subscribe a reducer with `on=ui.click(<the clickable child>)`.
 
+### W0214 `fmt-placeholder-argument-mismatch` (warning)
+
+A `fmt` call whose **literal** template and argument list disagree — a `{n}` with no argument at that index, an argument no placeholder names, or both at once. Neither is a runtime error ([Standard Library §2.4.5](./stdlib.md#_2-4-5-string-formatting)): a placeholder the arguments do not reach is rendered as written, and an argument no placeholder names is dropped.
+
+> `fmt template and arguments disagree: {1} has no argument`
+> `fmt template and arguments disagree: argument 3 is named by no placeholder`
+> `fmt template and arguments disagree: {2} has no argument; argument 2 is named by no placeholder`
+
+The second form is why this warning exists. `fmt("Hello {0}", name, count)` renders exactly what the correct call renders, so the dropped `count` leaves nothing behind in the output, in the state, or in the DOM — no tier can tell it from a program that never passed it. The first form does leave a trace (`"Hello {1}"` on screen), and is reported here so both halves of one mistake arrive together rather than as one warning and one bug report.
+
+Arguments are numbered as the call writes them, so the template is argument 1 and `{0}` is argument 2.
+
+Only a literal template is checked. `fmt(tpl, x)` over a slot or a field has no placeholder set at compile time, and the shape of whatever literal initialised that slot is not the shape the call will see. Arity itself — that a `fmt` has a template at all — is [E0213](#e0213-call-arity-mismatch), which is fatal and reported instead of this.
+
+**Fix**: Add the missing argument, or the missing placeholder, or delete the argument that is not wanted. Where the extra value belongs elsewhere in the sentence, `+` concatenates it without a placeholder.
+
 ## E03xx — Capabilities and Purity
 
 ### E0301 `missing-capability`

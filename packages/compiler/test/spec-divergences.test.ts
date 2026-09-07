@@ -500,7 +500,11 @@ app A
 `;
 
   it("calls `_s.fmt` with the template and every argument after it", () => {
-    expect(build(source)).toContain('_s.fmt("Hello {0}, you have {1}", "Ada", 3)');
+    // The negative lookbehind is what makes this stand on its own: the old
+    // lowering `_s.fmt ? _s.fmt(…) : "…"` *contains* the call, so a plain
+    // `toContain` passed before the fix as well as after it and discriminated
+    // nothing without the test below.
+    expect(build(source)).toMatch(/(?<!\?\s)_s\.fmt\("Hello \{0\}, you have \{1\}", "Ada", 3\)/);
   });
 
   it("emits no fallback to the template", () => {

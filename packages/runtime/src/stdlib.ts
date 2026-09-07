@@ -260,8 +260,22 @@ export const _stdlibCore = {
     cur[k] = true;
     return cur;
   },
+  /**
+   * `+`. Numeric on two numbers; on anything with a `Text` side it is
+   * concatenation, and stdlib.md §2.4.5 says what that renders: "the
+   * equivalent of `show` is called automatically".
+   *
+   * Through `show` rather than `String`, which is what it used to do. `Text +
+   * <anything>` type-checks (`inferBinOp`), so the two ways a value reaches a
+   * sentence — `"x=" + v` and `fmt("x={0}", v)` — have to agree on what it
+   * looks like, and `String` disagrees exactly where a reader would notice: an
+   * absent `Option` rendered `[object Object]` and a `null` rendered `"null"`
+   * where the spec asks for `None` and for nothing at all.
+   */
   add(a: unknown, b: unknown): unknown {
-    if (typeof a === "string" || typeof b === "string") return String(a) + String(b);
+    if (typeof a === "string" || typeof b === "string") {
+      return _stdlibCore.show(a) + _stdlibCore.show(b);
+    }
     return (a as number) + (b as number);
   },
   show(v: unknown): string {

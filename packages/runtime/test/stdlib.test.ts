@@ -85,14 +85,25 @@ describe("fmt (docs/spec/stdlib.md §2.4.5)", () => {
     expect(_stdlibCore.fmt("{1} {0} {1}", "a", "b")).toBe("b a b");
   });
 
-  it("renders an argument the way `+` does — through `show`", () => {
+  it("renders an argument through `show`", () => {
     // `show`: a variant is its tag, a nullish is the empty string, everything
-    // else is `String(v)`. A `fmt` that stringified differently would make the
-    // same value read two ways in one sentence.
+    // else is `String(v)`.
     expect(_stdlibCore.fmt("{0}", { _tag: "None" })).toBe("None");
     expect(_stdlibCore.fmt("[{0}]", null)).toBe("[]");
     expect(_stdlibCore.fmt("{0}", true)).toBe("true");
     expect(_stdlibCore.fmt("{0}", 1.5)).toBe("1.5");
+  });
+
+  it("agrees with `+` on every value, which is what §2.4.5 promises", () => {
+    // Asserted against `add` rather than restated: `"x=" + v` and
+    // `fmt("x={0}", v)` are two ways to put one value in one sentence, and
+    // §2.4.5 says both render it through `show`. `add` used to be
+    // `String(a) + String(b)`, which disagreed exactly here — `[object Object]`
+    // for an absent Option, `"null"` for a nullish — so this is the assertion
+    // that keeps the two halves of the promise from drifting apart again.
+    for (const v of [{ _tag: "None" }, { _tag: "Some", _0: 1 }, null, undefined, true, 1.5, "s"]) {
+      expect(_stdlibCore.fmt("{0}", v)).toBe(_stdlibCore.add("", v));
+    }
   });
 
   it("leaves an index the arguments do not reach exactly as written", () => {
@@ -101,12 +112,25 @@ describe("fmt (docs/spec/stdlib.md §2.4.5)", () => {
     expect(_stdlibCore.fmt("{0}")).toBe("{0}");
   });
 
+  it("drops an argument no placeholder names", () => {
+    // The direction with no trace in the output: the result is what a correct
+    // call would render, so nothing downstream can tell the value was passed.
+    // W0214 is what makes it visible, and only for a literal template — this
+    // is what the runtime does when the template is an expression.
+    expect(_stdlibCore.fmt("{0}", "a", "b")).toBe("a");
+    expect(_stdlibCore.fmt("none here", "a")).toBe("none here");
+  });
+
   it("copies through a `{` that opens no placeholder, with no escape", () => {
     expect(_stdlibCore.fmt("{}", "a")).toBe("{}");
     expect(_stdlibCore.fmt("{a}", "a")).toBe("{a}");
     expect(_stdlibCore.fmt("{ 0 }", "a")).toBe("{ 0 }");
     expect(_stdlibCore.fmt("{01", "a")).toBe("{01");
     expect(_stdlibCore.fmt("0}", "a")).toBe("0}");
+    // …but `{01}` IS one: the digits are read as a decimal index, so a leading
+    // zero is a digit and nothing more. Pinned beside the unclosed `{01` it
+    // sits next to in the spec, where the two are easy to conflate.
+    expect(_stdlibCore.fmt("{01}", "a", "b")).toBe("b");
     // No escape: the inner `{0}` is the placeholder and the outer braces are text.
     expect(_stdlibCore.fmt("{{0}}", "a")).toBe("{a}");
   });

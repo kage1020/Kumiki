@@ -212,18 +212,15 @@ export function jsOfExpr(e: Expr, ctx: EvalCtx): string {
       if (cn === "Decoder.Bytes") return `"bytes"`;
       if (cn === "Decoder.None") return `"none"`;
       if (cn === "fmt") {
-        // `fmt(template, ...args)` — the runtime helper substitutes `{0}`…`{n}`
-        // (stdlib.md §2.4.5). Called unguarded: a `_s.fmt ? … : template`
-        // fallback would answer a missing helper with the template, which is a
-        // `Text` and therefore indistinguishable downstream from a formatted
-        // one — the shape that let the substitution go missing while `check`,
-        // `build` and `smoke` all stayed green (#340).
+        // `fmt(template, ...args)` — stdlib.md §2.4.5. No guard: a fallback
+        // answers a missing helper with a `Text` that reads like a formatted
+        // one, which is the shape that let the substitution go missing (#340).
         const template = requiredArg(cn, e.args, e.pos, ctx);
         const rest = e.args.slice(1).map((a) => jsOfExpr(a, ctx));
         return `_s.fmt(${[template, ...rest].join(", ")})`;
       }
       // `panic(message)` — Kumiki's controlled stop-the-program signal
-      // (docs/spec/stdlib.md §2.2). Lowers to the runtime helper that throws a
+      // (docs/spec/stdlib.md §2.4.6). Lowers to the runtime helper that throws a
       // KumikiPanic, which the live dispatch / render boundary catches.
       if (cn === "panic") return `_s.panic(${requiredArg(cn, e.args, e.pos, ctx)})`;
       // `prefers-dark()` — reads `prefers-color-scheme: dark` (style.md §4.6.1).

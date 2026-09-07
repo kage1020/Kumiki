@@ -454,7 +454,19 @@ The rest of the arithmetic is [§2.2.7](#_2-2-7-int-float), as methods on the nu
 fmt(template, ...args)     : Text         ; "Hello {0}, you have {1}"
 ```
 
-Substitution is **not implemented yet**: the runtime carries no `fmt` helper, so a `fmt` call evaluates to its template with the placeholders intact — `fmt("{0}-{1}", "a", "b")` is `"{0}-{1}"`. The call is still counted ([E0213](./errors.md#e0213-call-arity-mismatch)) against the signature above, not against that gap.
+A **placeholder** is `{`, one or more decimal digits, `}`. Each one is replaced by the argument at that index — `{0}` is the first argument after the template — rendered the way `+` renders it (the `show` equivalent named below: a variant is its tag, a nullish is the empty string, anything else is its text form), so `fmt("{0}-{1}", "a", "b")` is `"a-b"`. An index may repeat, and the indices may appear in any order: `fmt("{1} {0} {1}", "a", "b")` is `"b a b"`. Substitution is a single left-to-right pass over the template: a `{0}` that appears *inside* a substituted value is text, not a placeholder to fill again.
+
+The digits are read as one decimal index, so a leading zero is significant only as a digit: `{01}` is index 1.
+
+Three cases are decided here rather than left to the implementation:
+
+- **An index the arguments do not reach** — `fmt("{0} {1}", "a")` — leaves that placeholder as written: `"a {1}"`. It is neither an error nor the empty string. A template whose placeholders outran its arguments is a mistake, and the rendering that shows *which* index went missing is the one that puts the mistake where its author will see it.
+- **An argument no placeholder names** — `fmt("{0}", "a", "b")` — is dropped, so the result is `"a"`. There is nowhere in the result to show it, which is exactly why the check below exists: an extra argument is the half of this pair that leaves no trace at all.
+- **A `{` that does not open a placeholder** is copied through verbatim, and so is a `}` that closes nothing: `{}`, `{a}`, `{ 0 }` and the unclosed `{01` are all literal text. There is **no escape**, the same way `Time.format` ([§2.2.8](#_2-2-8-time)) has none: `fmt("{{0}}", "a")` is `"{a}"`, because the inner `{0}` is a placeholder and the outer braces are text. A template that has to show a literal `{0}` builds it with `+`.
+
+Neither of the first two stops a program, and neither is silent where it can be seen: when the template is a **literal**, its placeholders are counted against the call's arguments and a disagreement in either direction is [W0214](./errors.md#w0214-fmt-placeholder-argument-mismatch-warning). A template that is an expression carries no count to check, and is answered by the rules above at runtime.
+
+The call is counted ([E0213](./errors.md#e0213-call-arity-mismatch)) against the signature above — the template is all that is required, because a template with no placeholders takes no arguments.
 
 When you concatenate `Text` with another type using `+`, the equivalent of `show` is called automatically.
 

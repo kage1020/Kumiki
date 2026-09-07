@@ -212,17 +212,15 @@ export function jsOfExpr(e: Expr, ctx: EvalCtx): string {
       if (cn === "Decoder.Bytes") return `"bytes"`;
       if (cn === "Decoder.None") return `"none"`;
       if (cn === "fmt") {
-        // `fmt(template, ...args)` — the runtime has no `fmt` helper, so this
-        // guard always takes the else branch and the template is returned with
-        // its `{0}` placeholders intact. The lowering is written as though the
-        // helper existed, and the arity follows the spec's signature rather
-        // than what the else branch reads.
+        // `fmt(template, ...args)` — stdlib.md §2.4.5. No guard: a fallback
+        // answers a missing helper with a `Text` that reads like a formatted
+        // one, which is the shape that let the substitution go missing (#340).
         const template = requiredArg(cn, e.args, e.pos, ctx);
         const rest = e.args.slice(1).map((a) => jsOfExpr(a, ctx));
-        return `_s.fmt ? _s.fmt(${[template, ...rest].join(", ")}) : ${template}`;
+        return `_s.fmt(${[template, ...rest].join(", ")})`;
       }
       // `panic(message)` — Kumiki's controlled stop-the-program signal
-      // (docs/spec/stdlib.md §2.2). Lowers to the runtime helper that throws a
+      // (docs/spec/stdlib.md §2.4.6). Lowers to the runtime helper that throws a
       // KumikiPanic, which the live dispatch / render boundary catches.
       if (cn === "panic") return `_s.panic(${requiredArg(cn, e.args, e.pos, ctx)})`;
       // `prefers-dark()` — reads `prefers-color-scheme: dark` (style.md §4.6.1).

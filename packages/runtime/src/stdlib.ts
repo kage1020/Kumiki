@@ -260,8 +260,22 @@ export const _stdlibCore = {
     cur[k] = true;
     return cur;
   },
+  /**
+   * `+`. Numeric on two numbers; on anything with a `Text` side it is
+   * concatenation, and stdlib.md §2.4.5 says what that renders: "the
+   * equivalent of `show` is called automatically".
+   *
+   * Through `show` rather than `String`, which is what it used to do. `Text +
+   * <anything>` type-checks (`inferBinOp`), so the two ways a value reaches a
+   * sentence — `"x=" + v` and `fmt("x={0}", v)` — have to agree on what it
+   * looks like, and `String` disagrees exactly where a reader would notice: an
+   * absent `Option` rendered `[object Object]` and a `null` rendered `"null"`
+   * where the spec asks for `None` and for nothing at all.
+   */
   add(a: unknown, b: unknown): unknown {
-    if (typeof a === "string" || typeof b === "string") return String(a) + String(b);
+    if (typeof a === "string" || typeof b === "string") {
+      return _stdlibCore.show(a) + _stdlibCore.show(b);
+    }
     return (a as number) + (b as number);
   },
   show(v: unknown): string {
@@ -271,6 +285,29 @@ export const _stdlibCore = {
       return obj._tag;
     }
     return String(v);
+  },
+  /**
+   * `fmt(template, ...args)` (stdlib.md §2.4.5). A placeholder is `{`, decimal
+   * digits, `}`; each is replaced by the argument at that index, rendered
+   * through `show` so `fmt("{0}", v)` and `"" + v` never disagree about what a
+   * value looks like.
+   *
+   * One left-to-right pass, which is what a `/g` replace does: a `{0}` that
+   * arrives *inside* a substituted value is text, not a placeholder to fill
+   * again — otherwise a formatted user string could reach back into the
+   * argument list.
+   *
+   * An index the arguments do not reach keeps its placeholder verbatim rather
+   * than rendering empty: a template that outran its arguments is a mistake,
+   * and `"a {1}"` says which index went missing where its author will see it.
+   * Everything that is not `{<digits>}` is copied through, so there is nothing
+   * to escape — the same bargain `formatTime` makes with its own tokens.
+   */
+  fmt(template: unknown, ...args: unknown[]): string {
+    return _stdlibCore.show(template).replace(/\{(\d+)\}/g, (placeholder, digits: string) => {
+      const i = Number(digits);
+      return i < args.length ? _stdlibCore.show(args[i]) : placeholder;
+    });
   },
   eq(a: unknown, b: unknown): boolean {
     if (a === b) return true;

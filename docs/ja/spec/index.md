@@ -100,6 +100,7 @@ AI 編集の CRDT op（add / replace / remove / rename、[§9.3.1](./ai-edit.md#
 | [E0217](./errors.md#e0217-int-literal-precision) | `int-literal-precision` | type | コア |
 | [E0218](./errors.md#e0218-for-over-non-list) | `for-over-non-list` | type | コア |
 | [W0213](./errors.md#w0213-handler-on-inert-tile-warning) | `handler-on-inert-tile` | tile | コア |
+| [W0214](./errors.md#w0214-fmt-placeholder-argument-mismatch-warning) | `fmt-placeholder-argument-mismatch` | all | 標準ライブラリ |
 | [E0301](./errors.md#e0301-missing-capability) | `missing-capability` | effect | 標準ライブラリ |
 | [E0302](./errors.md#e0302-unknown-capability) | `unknown-capability` | app | 標準ライブラリ |
 | [E0303](./errors.md#e0303-invalid-cancel-target) | `invalid-cancel-target` | effect | HTTP/Storage |
@@ -214,5 +215,6 @@ Layers はその example が中心に据える定義、Spec は実演してい�
 | `85-capitalised-reducer-handler.kumiki` | slot, reducer, tile | コア | [§1.7.3](./language.md#_1-7-3-event-handler-props) |
 | `86-container-selector-through-reference.kumiki` | slot, reducer, tile | コア | [§1.6.2](./language.md#_1-6-2-セレクタ) |
 | `87-replayed-environment-read.kumiki` | slot, reducer, tile | コア | [§10.5.1](./runtime.md#_10-5-1-structure-of-an-episode) |
+| `88-string-formatting.kumiki` | slot, reducer, tile | 標準ライブラリ | [§2.4.5](./stdlib.md#_2-4-5-文字列フォーマット) |
 <!-- examples:end -->
 :::

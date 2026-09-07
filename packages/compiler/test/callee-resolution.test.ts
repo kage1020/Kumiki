@@ -145,7 +145,7 @@ describe("E0213 call-arity-mismatch", () => {
     // The one variadic builtin: `fmt(template, ...args)`. A minimum is all
     // that can be asked of it, and the message has to say so rather than name
     // a number the call could never satisfy.
-    expect(codes(inReducer('t := fmt("{0}")'))).toEqual([]);
+    expect(codes(inReducer('t := fmt("nothing to fill")'))).toEqual([]);
     expect(codes(inReducer('t := fmt("{0} {1}", a, a)'))).toEqual([]);
     expect(check(parse(lex(inReducer("t := fmt()"))))).toEqual([
       {
@@ -155,6 +155,64 @@ describe("E0213 call-arity-mismatch", () => {
         pos: { line: 4, col: 35 },
       },
     ]);
+  });
+});
+
+// stdlib.md §2.4.5 decides what a disagreeing `fmt` call does at runtime — a
+// placeholder the arguments do not reach stays as written, an argument no
+// placeholder names is dropped — and neither stops the program. The second is
+// the one with no trace: `fmt("{0}", a, a)` renders exactly what the correct
+// call renders, so no tier below this one can see the value that went missing.
+describe("W0214 fmt-placeholder-argument-mismatch", () => {
+  it("reports a placeholder the arguments do not reach", () => {
+    expect(check(parse(lex(inReducer('t := fmt("{0} {1}", a)'))))).toEqual([
+      {
+        code: "W0214",
+        kind: "fmt-placeholder-argument-mismatch",
+        message: "fmt template and arguments disagree: {1} has no argument",
+        pos: { line: 4, col: 35 },
+        severity: "warning",
+      },
+    ]);
+  });
+
+  it("reports an argument no placeholder names", () => {
+    expect(check(parse(lex(inReducer('t := fmt("{0}", a, a)'))))).toEqual([
+      {
+        code: "W0214",
+        kind: "fmt-placeholder-argument-mismatch",
+        message: "fmt template and arguments disagree: argument 3 is named by no placeholder",
+        pos: { line: 4, col: 35 },
+        severity: "warning",
+      },
+    ]);
+  });
+
+  it("says both halves in one warning when a call is wrong in both directions", () => {
+    // `fmt("{1}", a)` names an index it does not have AND ignores the one it
+    // does. Two warnings on one call would read as two mistakes.
+    expect(check(parse(lex(inReducer('t := fmt("{1}", a)')))).map((e) => e.message)).toEqual([
+      "fmt template and arguments disagree: {1} has no argument; argument 2 is named by no placeholder",
+    ]);
+  });
+
+  it("is silent on a call that agrees, in any order and with repeats", () => {
+    expect(codes(inReducer('t := fmt("{1} {0} {1}", a, a)'))).toEqual([]);
+    // `{01}` is index 1 — the digits are one decimal index. Read as literal
+    // text instead, the second argument would be unnamed and this would warn.
+    expect(codes(inReducer('t := fmt("{0}{01}", a, a)'))).toEqual([]);
+  });
+
+  it("says nothing about a template it cannot count", () => {
+    // A slot carries no placeholder set at compile time. Reporting on the
+    // shape of the literal that initialised it would be a guess about a value
+    // any reducer may since have replaced.
+    expect(codes(inReducer("t := fmt(t, a, a)"))).toEqual([]);
+    expect(codes(inReducer('t := fmt(t + "{0}", a, a)'))).toEqual([]);
+  });
+
+  it("leaves a call with no template to E0213, which is fatal", () => {
+    expect(codes(inReducer("t := fmt()"))).toEqual(["E0213"]);
   });
 });
 

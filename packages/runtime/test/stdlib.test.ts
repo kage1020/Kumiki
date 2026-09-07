@@ -70,3 +70,79 @@ describe("listSort (docs/spec/stdlib.md §2.2.3 List.sort)", () => {
     expect(xs).toEqual([3, 1, 2]);
   });
 });
+
+// Issue #340: `fmt` had no helper at all, so codegen's `_s.fmt ? … : template`
+// guard always took the else branch and every call returned its template with
+// the placeholders intact. The rules pinned here are the ones docs/spec/stdlib.md
+// §2.4.5 now states — including the two it used to leave open.
+describe("fmt (docs/spec/stdlib.md §2.4.5)", () => {
+  it("replaces each {n} with the argument at that index", () => {
+    expect(_stdlibCore.fmt("{0}-{1}", "a", "b")).toBe("a-b");
+    expect(_stdlibCore.fmt("Hello {0}, you have {1}", "Ada", 3)).toBe("Hello Ada, you have 3");
+  });
+
+  it("reuses an index as many times as the template names it, in any order", () => {
+    expect(_stdlibCore.fmt("{1} {0} {1}", "a", "b")).toBe("b a b");
+  });
+
+  it("renders an argument through `show`", () => {
+    // `show`: a variant is its tag, a nullish is the empty string, everything
+    // else is `String(v)`.
+    expect(_stdlibCore.fmt("{0}", { _tag: "None" })).toBe("None");
+    expect(_stdlibCore.fmt("[{0}]", null)).toBe("[]");
+    expect(_stdlibCore.fmt("{0}", true)).toBe("true");
+    expect(_stdlibCore.fmt("{0}", 1.5)).toBe("1.5");
+  });
+
+  it("agrees with `+` on every value, which is what §2.4.5 promises", () => {
+    // Asserted against `add` rather than restated: `"x=" + v` and
+    // `fmt("x={0}", v)` are two ways to put one value in one sentence, and
+    // §2.4.5 says both render it through `show`. `add` used to be
+    // `String(a) + String(b)`, which disagreed exactly here — `[object Object]`
+    // for an absent Option, `"null"` for a nullish — so this is the assertion
+    // that keeps the two halves of the promise from drifting apart again.
+    for (const v of [{ _tag: "None" }, { _tag: "Some", _0: 1 }, null, undefined, true, 1.5, "s"]) {
+      expect(_stdlibCore.fmt("{0}", v)).toBe(_stdlibCore.add("", v));
+    }
+  });
+
+  it("leaves an index the arguments do not reach exactly as written", () => {
+    expect(_stdlibCore.fmt("{0} {1}", "a")).toBe("a {1}");
+    expect(_stdlibCore.fmt("{3}", "a")).toBe("{3}");
+    expect(_stdlibCore.fmt("{0}")).toBe("{0}");
+  });
+
+  it("drops an argument no placeholder names", () => {
+    // The direction with no trace in the output: the result is what a correct
+    // call would render, so nothing downstream can tell the value was passed.
+    // W0214 is what makes it visible, and only for a literal template — this
+    // is what the runtime does when the template is an expression.
+    expect(_stdlibCore.fmt("{0}", "a", "b")).toBe("a");
+    expect(_stdlibCore.fmt("none here", "a")).toBe("none here");
+  });
+
+  it("copies through a `{` that opens no placeholder, with no escape", () => {
+    expect(_stdlibCore.fmt("{}", "a")).toBe("{}");
+    expect(_stdlibCore.fmt("{a}", "a")).toBe("{a}");
+    expect(_stdlibCore.fmt("{ 0 }", "a")).toBe("{ 0 }");
+    expect(_stdlibCore.fmt("{01", "a")).toBe("{01");
+    expect(_stdlibCore.fmt("0}", "a")).toBe("0}");
+    // …but `{01}` IS one: the digits are read as a decimal index, so a leading
+    // zero is a digit and nothing more. Pinned beside the unclosed `{01` it
+    // sits next to in the spec, where the two are easy to conflate.
+    expect(_stdlibCore.fmt("{01}", "a", "b")).toBe("b");
+    // No escape: the inner `{0}` is the placeholder and the outer braces are text.
+    expect(_stdlibCore.fmt("{{0}}", "a")).toBe("{a}");
+  });
+
+  it("does not re-scan what it substituted", () => {
+    // One left-to-right pass. Otherwise a formatted user string could reach
+    // back into the argument list and print an argument it was never given.
+    expect(_stdlibCore.fmt("{0}", "{1}", "secret")).toBe("{1}");
+  });
+
+  it("takes a nullish template as the empty string rather than throwing", () => {
+    expect(_stdlibCore.fmt(null, "a")).toBe("");
+    expect(_stdlibCore.fmt(undefined)).toBe("");
+  });
+});

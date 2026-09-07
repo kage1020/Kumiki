@@ -100,6 +100,7 @@ AI-editing CRDT ops (add / replace / remove / rename, [§9.3.1](./ai-edit.md#_9-
 | [E0217](./errors.md#e0217-int-literal-precision) | `int-literal-precision` | type | core |
 | [E0218](./errors.md#e0218-for-over-non-list) | `for-over-non-list` | type | core |
 | [W0213](./errors.md#w0213-handler-on-inert-tile-warning) | `handler-on-inert-tile` | tile | core |
+| [W0214](./errors.md#w0214-fmt-placeholder-argument-mismatch-warning) | `fmt-placeholder-argument-mismatch` | all | stdlib |
 | [E0301](./errors.md#e0301-missing-capability) | `missing-capability` | effect | stdlib |
 | [E0302](./errors.md#e0302-unknown-capability) | `unknown-capability` | app | stdlib |
 | [E0303](./errors.md#e0303-invalid-cancel-target) | `invalid-cancel-target` | effect | http |
@@ -214,5 +215,6 @@ Layers name the definitions the example centers on; Spec links the section it de
 | `85-capitalised-reducer-handler.kumiki` | slot, reducer, tile | core | [§1.7.3](./language.md#_1-7-3-event-handler-props) |
 | `86-container-selector-through-reference.kumiki` | slot, reducer, tile | core | [§1.6.2](./language.md#_1-6-2-selectors) |
 | `87-replayed-environment-read.kumiki` | slot, reducer, tile | core | [§10.5.1](./runtime.md#_10-5-1-structure-of-an-episode) |
+| `88-string-formatting.kumiki` | slot, reducer, tile | stdlib | [§2.4.5](./stdlib.md#_2-4-5-string-formatting) |
 <!-- examples:end -->
 :::

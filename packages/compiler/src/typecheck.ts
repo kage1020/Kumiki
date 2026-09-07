@@ -784,9 +784,11 @@ type Ctx = {
    * (`reducer`), and whether the runtime has installed `route` yet
    * (`app-init` — it has not).
    *
-   * These name a position, not a definition: an `effect`'s `map-request` is
-   * checked as `slot-init`, because what it needs is the same pure, payloadless
-   * treatment. A new check conditioned on one of these values inherits every
+   * These name a position, not a definition. Three positions besides a slot's
+   * own initializer borrow `slot-init` — an `effect`'s `map-request` and its
+   * `latest-per-key` key, and `app.http`'s fields — because what each needs is
+   * the same pure, payloadless treatment; all three build it through
+   * `pureScope`. A new check conditioned on one of these values inherits every
    * position that borrows it, so widen the value's meaning here before adding
    * one rather than assuming the name is the whole story.
    *
@@ -3489,13 +3491,35 @@ function checkEffect(eff: EffectDef, sym: SymbolTable, errors: KumikiError[]): v
       });
     }
   }
-  if (eff.mapRequest)
-    checkExpr(eff.mapRequest, sym, errors, {
-      kind: "slot-init", // treat as pure context (no slots, no fns)
-      localBinds: new Set(["$1"]),
-      routeBind: "no-payload",
-      localTypes: new Map(),
-    });
+  if (eff.mapRequest) checkExpr(eff.mapRequest, sym, errors, pureScope(["$1"]));
+  // The key runs at dispatch time, so a name unchecked here fails on the first
+  // dispatch rather than at check time.
+  if (eff.policy?.kind === "PolLatestKey")
+    checkExpr(eff.policy.key, sym, errors, pureScope(["$1"]));
+}
+
+/**
+ * The scope for an expression evaluated with no payload and nothing in scope
+ * but `binds`: an `effect`'s `map-request` and its `latest-per-key` key
+ * (`["$1"]`, the effect's input), and `app.http`'s fields (nothing).
+ *
+ * `slot-init` is the position, not the definition — what these need is its
+ * pure, payloadless treatment. `map-request` carried this inline under the
+ * note "treat as pure context (no slots, no fns)", which was never what it
+ * did: a slot is readable here, because E0305 `fn-impurity` fires only for
+ * `kind === "fn"` and `slot-init` does not enter that branch. (A slot's own
+ * initializer may not read one either, but that is E0304 `derived-slot` from a
+ * separate pass over slot definitions — not a rule `Ctx.kind` carries.)
+ *
+ * Shared rather than repeated so the three positions cannot drift apart.
+ */
+function pureScope(binds: string[]): Ctx {
+  return {
+    kind: "slot-init",
+    localBinds: new Set(binds),
+    routeBind: "no-payload",
+    localTypes: new Map(),
+  };
 }
 
 function wildcardText(e: Expr & { kind: "Wildcard" }): string {
@@ -4471,12 +4495,7 @@ function checkAppHttp(app: AppDef, sym: SymbolTable, errors: KumikiError[]): voi
       pos: handler.pos,
     });
   }
-  const fieldCtx: Ctx = {
-    kind: "slot-init",
-    localBinds: new Set(),
-    localTypes: new Map(),
-    routeBind: "no-payload",
-  };
+  const fieldCtx = pureScope([]);
   for (const e of [http.baseUrl, http.headers, http.timeout, http.credentials]) {
     if (e !== undefined) checkExpr(e, sym, errors, fieldCtx);
   }

@@ -24,19 +24,17 @@ export function reducerNameArg(e: Expr | undefined): string {
  * plausible value instead of a diagnostic: `Duration.s()` was zero
  * milliseconds, which is a timer that fires immediately and forever.
  *
- * `checkCallee` reports E0213 wherever `checkExpr` walks, which is not
- * everywhere: an `app.http` field, a `test` body and an effect's
- * `policy=latest-per-key(...)` key are never walked, so a call in one of those
- * checks clean and lands here. That is why the throw carries its position —
- * it is the only thing the author is given, and an error without one is the
- * failure this file is otherwise closing.
+ * `checkCallee` reports E0213 wherever `checkExpr` walks, and this throw is
+ * the guard for a call that arrives without having been walked at all —
+ * `codegen()` can be called without `check()`. The position is interpolated
+ * because a plain `Error` carries none, and an error that cannot say where it
+ * came from is the failure this file is otherwise closing.
  */
 function requiredArg(callee: string, args: Expr[], pos: Pos, ctx: EvalCtx): string {
   const arg = args[0];
   if (!arg) {
     throw new Error(
-      `${callee}() at ${pos.line}:${pos.col} is missing its argument ` +
-        "(in a position `check` does not walk: an app.http field, a test body, or an effect policy key)",
+      `${callee}() at ${pos.line}:${pos.col} is missing its argument — run \`check\` for the diagnostic`,
     );
   }
   return jsOfExpr(arg, ctx);

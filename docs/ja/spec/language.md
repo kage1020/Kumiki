@@ -284,7 +284,11 @@ map-expr        ::= record-literal       ; 高レベル effect → 低レベル�
 - 実行は **runtime の effect dispatcher**
 - 実行前に **capability check**（未宣言なら**コンパイル時エラー**）
 - 結果は `effect-name.ok($value, $key)` または `effect-name.err($error, $key)` として reducer に届く
-- `policy=latest-per-key(<expr>)` と `map-request` は effect 自身の式。どちらも effect の入力に対して評価されるため、`$1` が入力でありただ 1 つの束縛。slot と `fn` は読めるが、`$route` はここでは名前ではない。両者とも他の式と同様に検査される — key 中の未定義名は dispatch 時の実行時エラーではなく [E0103](./errors.md#e0103-undef-ref-undef-slot)
+- `policy=latest-per-key(<expr>)` と `map-request` は effect 自身の式。どちらも
+  effect の入力に適用されるため、`$1` が唯一の束縛であり、slot と `fn` は読めるが
+  `$route` はここでは名前ではない
+- 両者とも他の式と同様に検査される — key 中の未定義名は dispatch 時の実行時
+  エラーではなく [E0103](./errors.md#e0103-undef-ref-undef-slot)
 
 ### 1.5.3 例
 

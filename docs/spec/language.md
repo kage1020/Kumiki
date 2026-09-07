@@ -284,7 +284,11 @@ map-expr        ::= record-literal       ; conversion from high-level effect →
 - Execution is performed by the **runtime's effect dispatcher**
 - A **capability check** is performed before execution (if undeclared, **compile-time error**)
 - The result is delivered to a reducer as `effect-name.ok($value, $key)` or `effect-name.err($error, $key)`
-- `policy=latest-per-key(<expr>)` and `map-request` are the effect's own expressions. Both are evaluated against the effect's input, so `$1` is the input and the only bind; a slot and a `fn` are readable, and `$route` is not a name here. Both are checked like any other expression — an undefined name in the key is [E0103](./errors.md#e0103-undef-ref-undef-slot), not a runtime failure at dispatch
+- `policy=latest-per-key(<expr>)` and `map-request` are the effect's own
+  expressions: both are applied to the effect's input, so `$1` is the only bind,
+  a slot and a `fn` are readable, and `$route` is not a name here
+- Both are checked like any other expression — an undefined name in the key is
+  [E0103](./errors.md#e0103-undef-ref-undef-slot), not a runtime failure at dispatch
 
 ### 1.5.3 Examples
 

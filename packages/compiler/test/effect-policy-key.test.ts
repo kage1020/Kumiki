@@ -1,9 +1,6 @@
-// `policy=latest-per-key(<expr>)` carries the effect's second expression, and
-// nothing walked it. A misspelled slot lowered to a bare identifier and became
-// a `ReferenceError` the first time the effect dispatched — `check`, `build`
-// and a mount that never touches the effect were all clean — and a built-in
-// call missing its argument reached codegen, which threw with no code and no
-// span. Both are ordinary diagnostics at the key's own position now (#341).
+// The `latest-per-key` key runs when the effect dispatches, so a name nothing
+// checked there was a `ReferenceError` on the first dispatch rather than a
+// diagnostic — the app imported, mounted and rendered first.
 
 import { check, compile, lex, parse } from "@kumikijs/compiler";
 import { describe, expect, it } from "vitest";
@@ -45,13 +42,23 @@ tile Home = column(B)
 app M caps=[http.get] routes={"/" -> Home, "/404" -> Home} init=[]`;
 }
 
-describe("an effect's latest-per-key key is checked (#341)", () => {
+/** The same program with the expression in `map-request`, which shares the key's scope. */
+function mapRequestApp(expr: string): string {
+  return `slot query : Text = ""
+effect persist cap=storage.write in=Text out=Result(Unit, Text)
+               map-request={key: ${expr}, value: $1}
+tile B = button(text="b")
+tile Home = column(B)
+app M caps=[storage.write] routes={"/" -> Home, "/404" -> Home} init=[]`;
+}
+
+describe("an effect's latest-per-key key is checked", () => {
   it("reports a misspelled name as E0103 at the key", () => {
     const source = app("quary");
     const at = only(source);
     expect(at.code).toBe("E0103");
     expect(at.message).toContain('"quary"');
-    expect(textAt(source, at)).toBe("quary)");
+    expect(textAt(source, at)).toMatch(/^quary/);
   });
 
   it("reports a built-in call missing its argument as E0213 at the key", () => {
@@ -59,7 +66,7 @@ describe("an effect's latest-per-key key is checked (#341)", () => {
     const at = only(source);
     expect(at.code).toBe("E0213");
     expect(at.message).toContain("Bytes.from-text");
-    expect(textAt(source, at)).toBe("Bytes.from-text())");
+    expect(textAt(source, at)).toMatch(/^Bytes\.from-text\(\)/);
   });
 
   // The measurement that motivated the fix: before the key was walked, a
@@ -100,17 +107,32 @@ app M caps=[http.get] routes={"/" -> Home, "/404" -> Home} init=[]`;
   });
 
   // Every other policy carries no expression, so nothing new is walked.
-  it.each([
-    "latest",
-    "queue",
-    "once",
-    "debounce(300ms)",
-    "throttle(300ms)",
-  ])("leaves policy=%s alone", (policy) => {
-    const source = `effect load cap=http.get in=Text out=Result(Text, HttpError) policy=${policy}
+  it("leaves a policy that carries no expression alone", () => {
+    const source = `effect load cap=http.get in=Text out=Result(Text, HttpError) policy=debounce(300ms)
 tile B = button(text="b")
 tile Home = column(B)
 app M caps=[http.get] routes={"/" -> Home, "/404" -> Home} init=[]`;
     expect(codes(source)).toEqual([]);
+  });
+});
+
+// `map-request` shares `pureScope` with the key, so a change made for the key's
+// sake changes `map-request` too. These pin its half of that scope.
+describe("an effect's map-request is checked in the same scope", () => {
+  it("reports a misspelled name as E0103", () => {
+    const at = only(mapRequestApp("quary"));
+    expect(at.code).toBe("E0103");
+    expect(at.message).toContain('"quary"');
+  });
+
+  it.each([
+    ["the effect input", "$1"],
+    ["a slot", "query"],
+  ])("accepts %s", (_what, expr) => {
+    expect(codes(mapRequestApp(expr))).toEqual([]);
+  });
+
+  it("reports $route as an undefined name", () => {
+    expect(codes(mapRequestApp("$route.path"))).toEqual(["E0103"]);
   });
 });

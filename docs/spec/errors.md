@@ -879,7 +879,7 @@ A literal `icon(name="<x>")` reference whose name is not in the `iconNames` set 
 
 **Fix**: Correct the typo, register the custom path in `theme.icons`, or install `@kumikijs/icons` so the built-in name is in scope.
 
-Testing-DSL invariants (currently E0712 and E0713; E0710–E0719 reserved for this purpose) fire only inside test-family definitions and do not require an opt-in flag.
+Testing-DSL invariants (currently E0712, E0713 and E0714; E0710–E0719 reserved for this purpose) fire only inside test-family definitions and do not require an opt-in flag.
 
 ### E0712 `episode-mock-invalid`
 
@@ -902,6 +902,30 @@ Two positions have one today:
 > `` `expect.effects` must be a list of effects ``
 
 **Fix**: Write the accepted shape. Both positions also throw at codegen now, so a caller that skips `check` gets a named failure rather than a silently rewritten assertion.
+
+### E0714 `test-section-unknown`
+
+A `given` / `expect` key in a test body names no section of that test kind. The sections are a closed vocabulary per kind ([Testing §8.1.1](./testing.md#_8-1-1-the-names-a-test-body-writes)) — `reducer-test` takes `slots` / `event` / `mocks` and asserts through `slots` / `effects` / `panic`, `tile-test` takes `slots` / `in`, `property-test` takes `slots` / `event`, and an `episode-test` asserts through `slots-equal` / `no-panics` / `no-errors` — and the lowering reads each one by name.
+
+A name outside the set was read by nothing and reported by nothing, so the section simply did not happen. That is not a weaker test but a different one, and it passes:
+
+```kumiki invalid
+test typo-section =
+    reducer-test inc
+        given  = {slot: {count: 41}, event: {type: ui.click, target: B}}
+        expect = {slots: {count: 1}, effects: []}
+```
+
+`slot` instead of `slots`, so the 41 is never set: `count` starts at its declared `0`, `inc` makes it `1`, and the `expect` holds — against a state the author did not choose.
+
+> `` Unknown section "<name>" in a|an <kind> `<given|expect>` — did you mean "<nearest>"? (accepted: <the kind's set>) ``
+> `` Unknown section "<name>" in a|an <kind> `<given>` — "<name>" is an `expect` section (accepted: <the kind's set>) ``
+
+The accepted set is always named, because it is the answer whenever the nearest name is not one: the vocabulary is three words long, so printing it costs less than a guess, and two equally close names offer nothing at all. A name that is a section of the test's *other* clause — `effects` written in a `given` — is reported as that rather than as a misspelling: the name is right and the place is wrong, which no distance rule can say.
+
+No name *inside* the unknown key is resolved: a name belonging to a section that does not exist would be a second diagnostic at a position that stops existing once the first is fixed. What still reports there is what is wrong wherever it is written — a wildcard in a `given` is [E0109](#e0109-test-wildcard-misuse) in any section, and survives fixing the section name.
+
+**Fix**: Spell the section the way its kind writes it. The accepted set is in the message, and it is the same table `codegen/emit-test.ts` reads a section by — so a section the checker rejects is one nothing lowers, and an `episode-test` `expect` it does not recognise throws at codegen rather than lowering to an assertion about nothing.
 
 ## E08xx — Runtime Hazards
 

@@ -13,6 +13,7 @@ import {
   calleeCandidates,
   check,
   collectTimerNames,
+  levenshtein,
   lex,
   parse,
   typeCandidates,
@@ -97,22 +98,6 @@ function debugFixEnabled(): boolean {
 function debugSkip(where: string, reason: string, detail?: string): void {
   if (!debugFixEnabled()) return;
   console.warn(`[kumiki fix] skip ${where}: ${reason}${detail ? ` — ${detail}` : ""}`);
-}
-
-function levenshtein(a: string, b: string): number {
-  const m = a.length;
-  const n = b.length;
-  // Rolling single-row DP — `prev` holds the previous row's distances.
-  let prev = Array.from({ length: n + 1 }, (_, j) => j);
-  for (let i = 1; i <= m; i++) {
-    const curr = [i, ...new Array<number>(n).fill(0)];
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      curr[j] = Math.min((prev[j] ?? 0) + 1, (curr[j - 1] ?? 0) + 1, (prev[j - 1] ?? 0) + cost);
-    }
-    prev = curr;
-  }
-  return prev[n] ?? 0;
 }
 
 function escapeRegex(s: string): string {
@@ -252,9 +237,9 @@ function atomicWriteFileSync(path: string, content: string): void {
 }
 
 /**
- * Closest candidate name for `missing` under the same threshold used by every
- * name-suggest branch (Levenshtein ≤ 2 edits or ≤ 25% of the missing name's
- * length). Takes candidates as an iterable so callers can supply a scoped
+ * Closest candidate name for `missing` under this file's threshold: at most 2
+ * edits, or at most `ceil(missing.length / 4)` of them. Takes candidates as an
+ * iterable so callers can supply a scoped
  * set — top-level defs for the generic `NAME_SUGGEST_CODES` codes, timer
  * names for E0106, variant tags for E0209.
  */

@@ -117,6 +117,7 @@ AI-editing CRDT ops (add / replace / remove / rename, [§9.3.1](./ai-edit.md#_9-
 | [E0705](./errors.md#e0705-a11y-label-for) | `a11y-label-for` | tile | lifecycle |
 | [E0712](./errors.md#e0712-episode-mock-invalid) | `episode-mock-invalid` | effect | testing |
 | [E0713](./errors.md#e0713-test-shape-invalid) | `test-shape-invalid` | effect | testing |
+| [E0714](./errors.md#e0714-test-section-unknown) | `test-section-unknown` | effect | testing |
 | [E0801](./errors.md#e0801-unimplemented-method) | `unimplemented-method` | fn | stdlib |
 | [E0802](./errors.md#e0802-unimplemented-function) | `unimplemented-function` | fn | stdlib |
 <!-- codes:end -->

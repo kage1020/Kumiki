@@ -19,7 +19,7 @@ test-expr ::= reducer-test | tile-test | episode-test | property-test
 
 > **実装状況.** 実装済み：`reducer-test`、`tile-test`、`property-test`（[Property テスト](#_8-3-property-tests)）、`kumiki test` ランナー（名前 / `prefix*` フィルタ、テストごとの**時間**表示 `(1ms)` / `(100 cases, 23ms)`、`--coverage`、`--watch`）、`kumiki fix --auto-patch <test-name>`（[失敗テストからの修正](#_8-7-2-fixing-from-a-failing-test)）、`expect` の**ワイルドカード**（`<any-id>` / `<slots.X>`、[ワイルドカード](#_8-2-2-wildcards)）、`reducer-test` 内の **effect 結果モック**（`given.mocks`、[Effect mock](#_8-5-effect-mock)）、および `episode-test`（[Episode リプレイ](#_8-6-episode-replay)、ランタイムの [Episode Loop](./runtime.md#_10-5-episode-loop) に支えられる）。ランナーは `PASS` / `FAIL` 行と、失敗時に `expected` / `actual` / `diff at <path>`、およびスカラーのリーフを特定できる場合は値矢印（`"a" -> "b"`）を表示する。
 
-### 8.1.1 テスト本体が書く名前
+### 8.1.1 テスト本体が書く名前 {#_8-1-1-the-names-a-test-body-writes}
 
 テスト本体は式ではなくスキーマである。したがって各位置は、それが何であるかに従って解決される：
 
@@ -30,6 +30,21 @@ test-expr ::= reducer-test | tile-test | episode-test | property-test
 | `expect.effects` の要素 | effect（宣言されたもの、または標準 effect） | [E0104](./errors.md#e0104-undef-effect-init-not-effect-call) |
 | `given.mocks` のキー | effect | [E0104](./errors.md#e0104-undef-effect-init-not-effect-call) |
 | すべての式——slot の値、`given.in`、`expect.panic`、`invariant`、モックのペイロード、`episode-test` の `expect` | 式レイヤの規則どおり | E0103 / E0116 など |
+| `given` / `expect` の**セクション**キー | そのテスト種別が受理する閉じた集合の 1 つ | [E0714](./errors.md#e0714-test-section-unknown) |
+
+セクション名そのものは解決すべき名前ではなく語彙であり、テスト種別ごと・節ごとに閉じている：
+
+| テスト種別 | `given` | `expect` |
+|---|---|---|
+| `reducer-test` | `slots` / `event` / `mocks` | `slots` / `effects` / `panic` |
+| `tile-test` | `slots` / `in` | tile 式——セクションは無い |
+| `property-test` | `slots` / `event` | 無し。主張は `invariant` 節 |
+| `episode-test` | 無し。読み込んだログが given | `slots-equal` / `no-panics` / `no-errors` |
+
+その集合に無いキーは **E0714**（キー自身の位置で報告し、受理される集合を示し、十分近いものがあれば最も近い受理名を提示する）。セクションは lowering がテストの前提を読み出す場所なので、落ちたセクションはテストを弱めるのではなく別のテストに*置き換える*：`given = {slot: {count: 41}}` は何も設定せず、reducer は slot の宣言された既定値に対して走る。
+
+落ちたキーの*中*の名前は解決しない——存在しないセクションに属しているからである。そこでもなお報告されるのは、どこに書かれていても間違っているもの：`given` の中のワイルドカードはどのセクションでも **E0109** であり、セクション名を直しても残る。
+
 
 `given.event.type` が名指すのは event であり、その語彙は式レイヤではなくトリガ文法のものである。`target` が tile なのはその event が `ui.*` のときだけで、timer で駆動される reducer は timer 名を書き、effect の結果で駆動される reducer には書く名前が無い。どちらのフィールドも生成されたテストには届かない——payload は event の*その他の*フィールドから作られ、ランナーが適用する reducer はテスト自身の target である——ので、この規則はテストが何を*する*かではなく何を*言っている*かについてのものである。
 

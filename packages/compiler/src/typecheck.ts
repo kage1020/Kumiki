@@ -52,6 +52,15 @@ import { boundaryTarget, expansionTargets, findCycles, type GraphEdge } from "./
 import { buildDefIndex, type DefIndex, referencesIn } from "./references.ts";
 import { RESERVED_BIND_NAMES } from "./reserved-binds.ts";
 import { isPrimTypeName, STDLIB_TYPES } from "./stdlib-types.ts";
+import {
+  givenSection,
+  isSectionName,
+  nearestSection,
+  type SectionName,
+  sectionNames,
+  type TestKind,
+  type TestPart,
+} from "./test-sections.ts";
 // One handler-name set for the whole compiler. A local copy here had drifted
 // from the lifted set — it was missing `onKeyDown` and `onMouseEnter`, so
 // `input(onKeyDown=bump)` compiled to a working listener but was reported as
@@ -3993,19 +4002,18 @@ function checkTest(t: TestDef, sym: SymbolTable, errors: KumikiError[]): void {
     }
     // §8.5: each `given.mocks` key must name a declared effect — a typo would
     // otherwise silently never match an emit (the M1-review no-silent-typo rule).
-    const given = t.given;
-    if (given.kind === "RecordLit") {
-      const mocks = given.fields.find((f) => f.name === "mocks")?.value;
-      if (mocks?.kind === "RecordLit") {
-        for (const m of mocks.fields) {
-          if (!sym.effects.has(m.name)) {
-            errors.push({
-              code: "E0104",
-              kind: "undef-effect",
-              message: `Mock targets undefined effect "${m.name}"`,
-              pos: mocks.pos,
-            });
-          }
+    // The section is read through the shared table for the same reason codegen
+    // is: a second spelling of "mocks" in this file is a second vocabulary.
+    const mocks = givenSection(t, "reducer-test", "mocks");
+    if (mocks?.kind === "RecordLit") {
+      for (const m of mocks.fields) {
+        if (!sym.effects.has(m.name)) {
+          errors.push({
+            code: "E0104",
+            kind: "undef-effect",
+            message: `Mock targets undefined effect "${m.name}"`,
+            pos: mocks.pos,
+          });
         }
       }
     }
@@ -4065,32 +4073,135 @@ function checkTestNames(t: TestDef, sym: SymbolTable, errors: KumikiError[]): vo
   // reported. Nothing walks an invariant or an `episode-test` expect.
   const owned: Ctx = { ...base, wildcardsReportedElsewhere: true };
 
-  for (const f of recordFieldsOf(t.given)) {
-    if (f.name === "slots") checkTestSlotMap(f.value, sym, errors, owned);
-    else if (f.name === "event") checkTestEvent(f.value, sym, errors, owned);
-    else if (f.name === "mocks") checkTestMockValues(f.value, sym, errors, owned);
-    // `in` (tile-test), and any key other than the three above.
-    else checkExpr(f.value, sym, errors, owned);
+  // Every arm below is a section name the table lists, and the `default`s are
+  // `never` — so a section added to the table is a compile error here until it
+  // is given a rule, which is the half of "one vocabulary" the accessors in
+  // `codegen/emit-test.ts` cannot state.
+  for (const f of sectionsOf(t, t.testKind, "given", errors)) {
+    switch (f.section) {
+      case "slots":
+        checkTestSlotMap(f.value, sym, errors, owned);
+        break;
+      case "event":
+        checkTestEvent(f.value, sym, errors, owned);
+        break;
+      case "mocks":
+        checkTestMockValues(f.value, sym, errors, owned);
+        break;
+      case "in":
+        checkExpr(f.value, sym, errors, owned);
+        break;
+      default:
+        assertNever(f.section);
+    }
   }
   if (t.invariant) checkExpr(t.invariant, sym, errors, { ...base, runReducerScope: true });
   if (t.testKind === "reducer-test") {
-    for (const f of recordFieldsOf(t.expect)) {
-      if (f.name === "slots") checkTestSlotMap(f.value, sym, errors, owned);
-      else if (f.name === "effects") checkTestEffects(f.value, sym, errors, owned);
-      else checkExpr(f.value, sym, errors, owned); // `panic`
+    for (const f of sectionsOf(t, "reducer-test", "expect", errors)) {
+      switch (f.section) {
+        case "slots":
+          checkTestSlotMap(f.value, sym, errors, owned);
+          break;
+        case "effects":
+          checkTestEffects(f.value, sym, errors, owned);
+          break;
+        case "panic":
+          checkExpr(f.value, sym, errors, owned);
+          break;
+        default:
+          assertNever(f.section);
+      }
     }
   }
   if (t.testKind === "episode-test") {
-    for (const f of recordFieldsOf(t.expect)) {
-      if (f.name === "slots-equal" || f.name === "slotsEqual") {
-        // `from-log` is the literal that means "take the log's own values".
-        if (f.value.kind === "Ref" && f.value.name === "from-log") continue;
-        checkTestSlotMap(f.value, sym, errors, base);
-      } else checkExpr(f.value, sym, errors, base);
+    for (const f of sectionsOf(t, "episode-test", "expect", errors)) {
+      switch (f.section) {
+        case "slots-equal":
+          // `from-log` is the literal that means "take the log's own values".
+          if (f.value.kind === "Ref" && f.value.name === "from-log") break;
+          checkTestSlotMap(f.value, sym, errors, base);
+          break;
+        case "no-panics":
+        case "no-errors":
+          checkExpr(f.value, sym, errors, base);
+          break;
+        default:
+          assertNever(f.section);
+      }
     }
     checkTestMockValues(t.mocks, sym, errors, base, true);
   }
   // A tile-test's `expect` is a tile expression, checked by `checkTileExpr`.
+}
+
+/**
+ * The sections of a test's `given` / `expect`, each under the name the lowering
+ * reads it by — and an E0714 for every key that names none of them
+ * ([test-sections.ts](./test-sections.ts) is the table both sides share).
+ *
+ * A dropped section is not a weaker test, it is a different one: the setup the
+ * author wrote never happens, so the assertion runs against the slots'
+ * declared defaults and passes. `given = {slot: {count: 41}}` is the whole bug
+ * — `slots` is never seen, `count` stays 0, and `inc` makes the 1 the `expect`
+ * asks for.
+ *
+ * No name *inside* the unknown key is resolved: a name belonging to a section
+ * that does not exist would be a second diagnostic at a position that stops
+ * existing as soon as the first is fixed. What still reports there is what is
+ * wrong wherever it is written — a wildcard in a `given` is E0109 in any
+ * section, and survives fixing the section name.
+ *
+ * `kind` is passed rather than read off `t` so the returned names are the ones
+ * that kind actually has: the caller's `switch` is then exhaustive over the
+ * table rather than over `string`.
+ */
+function sectionsOf<K extends TestKind, P extends TestPart>(
+  t: TestDef,
+  kind: K,
+  part: P,
+  errors: KumikiError[],
+): { section: SectionName<K, P>; value: Expr }[] {
+  const out: { section: SectionName<K, P>; value: Expr }[] = [];
+  for (const f of recordFieldsOf(part === "given" ? t.given : t.expect)) {
+    if (isSectionName(kind, part, f.name)) {
+      out.push({ section: f.name, value: f.value });
+      continue;
+    }
+    errors.push({
+      code: "E0714",
+      kind: "test-section-unknown",
+      message: unknownSectionMessage(kind, part, f.name),
+      pos: f.pos,
+    });
+  }
+  return out;
+}
+
+/**
+ * What an E0714 says. The accepted set is always named, because it is the
+ * answer whenever the nearest name is not one: the vocabulary is three words
+ * long, so printing it costs less than a guess.
+ *
+ * The other clause is worth naming on its own. Writing `effects` in a `given`
+ * is not a misspelling of anything in that clause's set — the name is right and
+ * the place is wrong — so a distance rule has nothing to offer and the position
+ * is the whole of the mistake.
+ */
+function unknownSectionMessage(kind: TestKind, part: TestPart, written: string): string {
+  const other: TestPart = part === "given" ? "expect" : "given";
+  const article = /^[aeiou]/.test(kind) ? "an" : "a";
+  const hint = isSectionName(kind, other, written)
+    ? ` — "${written}" is ${other === "expect" ? "an" : "a"} \`${other}\` section`
+    : nearestSectionHint(kind, part, written);
+  return (
+    `Unknown section "${written}" in ${article} ${kind} \`${part}\`${hint}` +
+    ` (accepted: ${sectionNames(kind, part).join(", ")})`
+  );
+}
+
+function nearestSectionHint(kind: TestKind, part: TestPart, written: string): string {
+  const nearest = nearestSection(kind, part, written);
+  return nearest === undefined ? "" : ` — did you mean "${nearest}"?`;
 }
 
 /** The fields of `e` when it is a record literal, and none when it is not. */

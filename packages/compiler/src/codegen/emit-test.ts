@@ -1,15 +1,11 @@
 import type { EffectDef, Expr, ReducerDef, TestDef, TileDef, TileExpr } from "../ast.ts";
 import type { CodegenOptions } from "../codegen.ts";
+import { canonicalSection, expectSection, givenSection } from "../test-sections.ts";
 import { bindRef, type EvalCtx, type GenCtx, makeEvalCtx } from "./context.ts";
 import { collectEmits, scanRunReducers } from "./emit-reducer.ts";
 import { tileExprJs } from "./emit-tile.ts";
 import { typeToGenDesc } from "./emit-type.ts";
 import { jsOfExpr } from "./expr.ts";
-
-function recordField(e: Expr | TileExpr, name: string): Expr | undefined {
-  if ((e as Expr).kind !== "RecordLit") return undefined;
-  return (e as Expr & { kind: "RecordLit" }).fields.find((f) => f.name === name)?.value;
-}
 
 /** The outcome of a mock value `ok(v)` / `err(e)` / `delay(ms, ok(v)|err(e))`. */
 function mockOutcome(v: Expr): "ok" | "err" | undefined {
@@ -56,7 +52,7 @@ export function coverageJs(
   for (const t of tests) {
     if (t.testKind === "reducer-test") {
       if (t.target) markReducer(t.target);
-      const mocks = recordField(t.given, "mocks");
+      const mocks = givenSection(t, "reducer-test", "mocks");
       if (mocks?.kind === "RecordLit") {
         for (const f of mocks.fields) {
           usedEffects.add(f.name);
@@ -142,9 +138,9 @@ export function genTest(t: TestDef, gen: GenCtx, opts: CodegenOptions): string {
     const binds = forAll
       .map((f) => `const ${bindRef(pctx, f.name)} = _b[${JSON.stringify(f.name)}];`)
       .join(" ");
-    const givenSlots = recordField(t.given, "slots");
+    const givenSlots = givenSection(t, "property-test", "slots");
     const initSlotsJs = givenSlots ? jsOfExpr(givenSlots, pctx) : "({})";
-    const event = recordField(t.given, "event");
+    const event = givenSection(t, "property-test", "event");
     const eventJs = eventPayloadJs(event, pctx);
     const invariantJs = t.invariant ? jsOfExpr(t.invariant, pctx) : "true";
     const runOpts = [
@@ -169,26 +165,24 @@ export function genTest(t: TestDef, gen: GenCtx, opts: CodegenOptions): string {
   },`;
   }
   if (t.testKind === "reducer-test") {
-    // A reducer-test always has an Expr `expect` (only property-test omits it).
-    const expectExpr = t.expect as Expr;
-    const slots = recordField(t.given, "slots");
-    const event = recordField(t.given, "event");
+    const slots = givenSection(t, "reducer-test", "slots");
+    const event = givenSection(t, "reducer-test", "event");
     const slotsJs = slots ? jsOfExpr(slots, ctx) : "({})";
     const elJs = eventPayloadJs(event, ctx);
-    const panic = recordField(expectExpr, "panic");
+    const panic = expectSection(t, "reducer-test", "panic");
     let expectJs: string;
     if (panic) {
       expectJs = `{ kind: "panic", message: ${jsOfExpr(panic, ctx)} }`;
     } else {
-      const xs = recordField(expectExpr, "slots");
-      const xe = recordField(expectExpr, "effects");
+      const xs = expectSection(t, "reducer-test", "slots");
+      const xe = expectSection(t, "reducer-test", "effects");
       const xsJs = xs ? jsOfExpr(xs, ctx) : "({})";
       const effectsJs = xe ? effectListJs(xe, ctx) : "[]";
       expectJs = `{ kind: "state", slots: ${xsJs}, effects: ${effectsJs} }`;
     }
     // §8.5: with `given.mocks`, drive the multi-step emit→result→reducer flow
     // (effect results injected from the mocks) instead of a single reducer apply.
-    const mocks = recordField(t.given, "mocks");
+    const mocks = givenSection(t, "reducer-test", "mocks");
     if (mocks) {
       return `  {
     name: ${nameJs},
@@ -216,9 +210,9 @@ export function genTest(t: TestDef, gen: GenCtx, opts: CodegenOptions): string {
   },`;
   }
   // tile-test
-  const slots = recordField(t.given, "slots");
+  const slots = givenSection(t, "tile-test", "slots");
   const slotsJs = slots ? jsOfExpr(slots, ctx) : "({})";
-  const inField = recordField(t.given, "in");
+  const inField = givenSection(t, "tile-test", "in");
   const inJs = inField ? jsOfExpr(inField, ctx) : "undefined";
   const expectedJs = tileExprJs(t.expect as TileExpr, gen, ctx);
   return `  {
@@ -317,16 +311,25 @@ function episodeExpectJs(e: Expr, ctx: EvalCtx): string {
   if (e.kind !== "RecordLit") return "{}";
   const parts: string[] = [];
   for (const f of e.fields) {
-    if (f.name === "slots-equal" || f.name === "slotsEqual") {
-      if (f.value.kind === "Ref" && f.value.name === "from-log") {
-        parts.push(`slotsEqual: "from-log"`);
-      } else {
-        parts.push(`slotsEqual: ${jsOfExpr(f.value, ctx)}`);
-      }
-    } else if (f.name === "no-panics" || f.name === "noPanics") {
-      parts.push(`noPanics: ${jsOfExpr(f.value, ctx)}`);
-    } else if (f.name === "no-errors" || f.name === "noErrors") {
-      parts.push(`noErrors: ${jsOfExpr(f.value, ctx)}`);
+    // The section table owns the spellings — the hyphenated ones the spec
+    // writes and the camelCase ones this lowering has always read — so a name
+    // it does not list (E0714) is skipped here rather than silently accepted
+    // under a fourth spelling.
+    switch (canonicalSection("episode-test", "expect", f.name)) {
+      case "slots-equal":
+        // `from-log` is the literal that means "take the log's own values".
+        parts.push(
+          f.value.kind === "Ref" && f.value.name === "from-log"
+            ? `slotsEqual: "from-log"`
+            : `slotsEqual: ${jsOfExpr(f.value, ctx)}`,
+        );
+        break;
+      case "no-panics":
+        parts.push(`noPanics: ${jsOfExpr(f.value, ctx)}`);
+        break;
+      case "no-errors":
+        parts.push(`noErrors: ${jsOfExpr(f.value, ctx)}`);
+        break;
     }
   }
   return `{ ${parts.join(", ")} }`;

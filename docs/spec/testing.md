@@ -31,6 +31,24 @@ what it is:
 | an `expect.effects` entry | an effect, declared or standard | [E0104](./errors.md#e0104-undef-effect-init-not-effect-call) |
 | a `given.mocks` key | an effect | [E0104](./errors.md#e0104-undef-effect-init-not-effect-call) |
 | every expression — a slot value, `given.in`, `expect.panic`, an `invariant`, a mock payload, an `episode-test` `expect` | whatever the expression layer says | E0103, E0116, … |
+| a `given` / `expect` **section** key | one of the closed set that kind accepts | [E0714](./errors.md#e0714-test-section-unknown) |
+
+The sections themselves are a vocabulary rather than names to resolve, one
+closed set per kind and per clause:
+
+| Test kind | `given` | `expect` |
+|---|---|---|
+| `reducer-test` | `slots`, `event`, `mocks` | `slots`, `effects`, `panic` |
+| `tile-test` | `slots`, `in` | a tile expression — no sections |
+| `property-test` | `slots`, `event` | none; the assertion is the `invariant` clause |
+| `episode-test` | none; the loaded log is the given | `slots-equal`, `no-panics`, `no-errors` |
+
+A key outside its kind's set is **E0714**, at the key's own position and with
+the nearest accepted name offered. The section is what the lowering reads the
+test's setup out of, so a dropped one does not weaken the test — it replaces
+it: `given = {slot: {count: 41}}` never sets anything, and the reducer runs
+against the slot's declared default. The names *inside* the dropped section are
+left unresolved, because they belong to a section that does not exist.
 
 `given.event.type` names an event, whose vocabulary belongs to the trigger
 grammar rather than to the expression layer. `target` is only a tile when that

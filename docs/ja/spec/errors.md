@@ -857,7 +857,7 @@ strict-icons 検査は `check(program, { strictIcons: true, iconNames })` で有
 
 **修正**：タイポを直す、カスタムパスを `theme.icons` に登録する、または `@kumikijs/icons` をインストールして組み込み名を有効化する。
 
-テスト DSL 不変条件（現時点では E0712 のみ。E0710–E0719 はこの用途のために予約）は test 系定義の内部でのみ発火し、オプトインフラグを必要としない。
+テスト DSL 不変条件（現時点では E0712 / E0713 / E0714。E0710–E0719 はこの用途のために予約）は test 系定義の内部でのみ発火し、オプトインフラグを必要としない。
 
 ### E0712 `episode-mock-invalid`
 
@@ -880,6 +880,27 @@ strict-icons 検査は `check(program, { strictIcons: true, iconNames })` で有
 > `` `expect.effects` must be a list of effects ``
 
 **修正**：受理される形で書く。どちらの位置も codegen 側で throw するようになったため、`check` を飛ばした呼び出し元は、静かに書き換えられた主張ではなく名前付きの失敗を受け取る。
+
+### E0714 `test-section-unknown`
+
+テスト本体の `given` / `expect` のキーが、そのテスト種別のどのセクションも名指していない。セクションは種別ごとに閉じた語彙であり（[テスト §8.1.1](./testing.md#_8-1-1-the-names-a-test-body-writes)）——`reducer-test` は `slots` / `event` / `mocks` を取り `slots` / `effects` / `panic` で主張する、`tile-test` は `slots` / `in`、`property-test` は `slots` / `event`、`episode-test` は `slots-equal` / `no-panics` / `no-errors` で主張する——lowering はそれぞれを名前で読む。
+
+集合に無い名前は誰にも読まれず、誰にも報告されなかった。つまりそのセクションは起こらなかった。これはテストが弱くなるのではなく別のテストになるということであり、しかも成功する：
+
+```
+test typo-section =
+    reducer-test inc
+        given  = {slot: {count: 41}, event: {type: ui.click, target: B}}
+        expect = {slots: {count: 1}, effects: []}
+```
+
+`slots` ではなく `slot` なので 41 は決して設定されない：`count` は宣言された `0` から始まり、`inc` が `1` にし、`expect` は成立する——作者が選んでいない状態に対して。
+
+> `` Unknown section "<name>" in a <kind> `<given|expect>` — did you mean "<nearest>"? (accepted: <その種別の集合>) ``
+
+未知セクションの*中*の名前は解決しない：存在しないセクションに属しており、報告したところで、最初の間違いを直した瞬間に消える位置で 2 つ目の間違いを名指すだけだからである。
+
+**修正**：その種別の綴りでセクション名を書く。受理される集合はメッセージに載っており、それは `codegen/emit-test.ts` がセクションを読むのと同じテーブルである——checker が拒否するセクションは、どこも lowering しないセクションである。
 
 ## E08xx — ランタイムハザード
 

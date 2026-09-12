@@ -445,3 +445,90 @@ describe("a qualifier is spelled the way codegen matches one", () => {
     expect(codes(src)).toEqual(["E0117"]);
   });
 });
+
+describe("a section name is one the test kind accepts (#342)", () => {
+  // The sections are read by name — `slots`, `event`, `mocks`, … — and a name
+  // outside that set was dropped rather than reported. The dropped section is
+  // the test's own setup, so what ran was the defaults:
+  //
+  //   given  = {slot: {count: 41}, event: {type: ui.click, target: B}}
+  //   expect = {slots: {count: 1}, effects: []}
+  //
+  // passes — `count` starts at its declared 0, `inc` makes it 1, and the 41 the
+  // author wrote never happens. The assertion holds against a state nobody chose.
+  const message = (src: string): string | undefined => check(parse(lex(src)))[0]?.message;
+
+  it("reports a `given` section a reducer-test does not have", () => {
+    expect(
+      codes(reducerTest(`{slot: {count: 41}, event: {type: ui.click, target: B}}`, EXPECT)),
+    ).toEqual(["E0714"]);
+  });
+
+  it("names the section it would have been, and the set it came from", () => {
+    const src = reducerTest(`{slot: {count: 41}, event: {type: ui.click, target: B}}`, EXPECT);
+    expect(message(src)).toBe(
+      'Unknown section "slot" in a reducer-test `given` — did you mean "slots"? ' +
+        "(accepted: slots, event, mocks)",
+    );
+  });
+
+  it("offers no suggestion for a name that is close to none of them", () => {
+    const src = reducerTest(`{initial: {count: 41}, event: {type: ui.click, target: B}}`, EXPECT);
+    expect(message(src)).toBe(
+      'Unknown section "initial" in a reducer-test `given` (accepted: slots, event, mocks)',
+    );
+  });
+
+  it("reports an `expect` section a reducer-test does not have", () => {
+    expect(codes(reducerTest(GIVEN, `{slots: {count: 1}, effect: []}`))).toEqual(["E0714"]);
+    expect(codes(reducerTest(GIVEN, `{panics: "boom"}`))).toEqual(["E0714"]);
+  });
+
+  it("reports one in a tile-test's `given`", () => {
+    const src = withTest(`    tile-test Greeting
+        given  = {slots: {}, input: "Ada"}
+        expect = heading("Hi, Ada")`);
+    expect(codes(src)).toEqual(["E0714"]);
+  });
+
+  it("reports one in a property-test's `given`", () => {
+    expect(codes(property("{n: Int}", "{slot: {count: n}}", "double(n) == n * 2"))).toEqual([
+      "E0714",
+    ]);
+  });
+
+  it("reports one in an episode-test's `expect`", () => {
+    const src = withTest(`    episode-test
+        load   = "nope.jsonl"
+        mocks  = {}
+        expect = {slots-eq: from-log, no-panics: true}`);
+    expect(codes(src)).toEqual(["E0714"]);
+    expect(message(src)).toBe(
+      'Unknown section "slots-eq" in an episode-test `expect` — did you mean "slots-equal"? ' +
+        "(accepted: slots-equal, no-panics, no-errors)",
+    );
+  });
+
+  it("draws one diagnostic, not one per name inside the section it dropped", () => {
+    // The section names nothing, so neither do the names under it: resolving
+    // them would report a second mistake the author did not make, at a position
+    // that stops existing once the first is fixed.
+    expect(codes(reducerTest(`{slot: {conut: doubel(1)}}`, EXPECT))).toEqual(["E0714"]);
+  });
+
+  it("accepts every section each kind does have", () => {
+    const mocked = `{slots: {count: 0}, event: {type: ui.click, target: B}, mocks: {persist: err("x")}}`;
+    expect(codes(reducerTest(mocked, EXPECT))).toEqual([]);
+    expect(codes(reducerTest(GIVEN, `{panic: "boom"}`))).toEqual([]);
+    expect(codes(property("{n: Int}", "{slots: {count: n}}", "double(n) == n * 2"))).toEqual([]);
+    const tile = withTest(`    tile-test Greeting
+        given  = {slots: {}, in: "Ada"}
+        expect = heading("Hi, Ada")`);
+    expect(codes(tile)).toEqual([]);
+    const episode = withTest(`    episode-test
+        load   = "nope.jsonl"
+        mocks  = {}
+        expect = {slots-equal: from-log, no-panics: true, no-errors: true}`);
+    expect(codes(episode)).toEqual([]);
+  });
+});

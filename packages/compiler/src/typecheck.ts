@@ -52,6 +52,7 @@ import { boundaryTarget, expansionTargets, findCycles, type GraphEdge } from "./
 import { buildDefIndex, type DefIndex, referencesIn } from "./references.ts";
 import { RESERVED_BIND_NAMES } from "./reserved-binds.ts";
 import { isPrimTypeName, STDLIB_TYPES } from "./stdlib-types.ts";
+import { canonicalSection, nearestSection, sectionNames, type TestPart } from "./test-sections.ts";
 // One handler-name set for the whole compiler. A local copy here had drifted
 // from the lifted set — it was missing `onKeyDown` and `onMouseEnter`, so
 // `input(onKeyDown=bump)` compiled to a working listener but was reported as
@@ -4065,24 +4066,24 @@ function checkTestNames(t: TestDef, sym: SymbolTable, errors: KumikiError[]): vo
   // reported. Nothing walks an invariant or an `episode-test` expect.
   const owned: Ctx = { ...base, wildcardsReportedElsewhere: true };
 
-  for (const f of recordFieldsOf(t.given)) {
-    if (f.name === "slots") checkTestSlotMap(f.value, sym, errors, owned);
-    else if (f.name === "event") checkTestEvent(f.value, sym, errors, owned);
-    else if (f.name === "mocks") checkTestMockValues(f.value, sym, errors, owned);
-    // `in` (tile-test), and any key other than the three above.
+  for (const f of sectionsOf(t, "given", errors)) {
+    if (f.section === "slots") checkTestSlotMap(f.value, sym, errors, owned);
+    else if (f.section === "event") checkTestEvent(f.value, sym, errors, owned);
+    else if (f.section === "mocks") checkTestMockValues(f.value, sym, errors, owned);
+    // `in` (tile-test), the only other section a `given` has.
     else checkExpr(f.value, sym, errors, owned);
   }
   if (t.invariant) checkExpr(t.invariant, sym, errors, { ...base, runReducerScope: true });
   if (t.testKind === "reducer-test") {
-    for (const f of recordFieldsOf(t.expect)) {
-      if (f.name === "slots") checkTestSlotMap(f.value, sym, errors, owned);
-      else if (f.name === "effects") checkTestEffects(f.value, sym, errors, owned);
+    for (const f of sectionsOf(t, "expect", errors)) {
+      if (f.section === "slots") checkTestSlotMap(f.value, sym, errors, owned);
+      else if (f.section === "effects") checkTestEffects(f.value, sym, errors, owned);
       else checkExpr(f.value, sym, errors, owned); // `panic`
     }
   }
   if (t.testKind === "episode-test") {
-    for (const f of recordFieldsOf(t.expect)) {
-      if (f.name === "slots-equal" || f.name === "slotsEqual") {
+    for (const f of sectionsOf(t, "expect", errors)) {
+      if (f.section === "slots-equal") {
         // `from-log` is the literal that means "take the log's own values".
         if (f.value.kind === "Ref" && f.value.name === "from-log") continue;
         checkTestSlotMap(f.value, sym, errors, base);
@@ -4091,6 +4092,51 @@ function checkTestNames(t: TestDef, sym: SymbolTable, errors: KumikiError[]): vo
     checkTestMockValues(t.mocks, sym, errors, base, true);
   }
   // A tile-test's `expect` is a tile expression, checked by `checkTileExpr`.
+}
+
+/**
+ * The sections of a test's `given` / `expect`, each under the canonical name
+ * the lowering reads it by — and an E0714 for every key that names none of
+ * them ([test-sections.ts](./test-sections.ts) is the table both sides share).
+ *
+ * A dropped section is not a weaker test, it is a different one: the setup the
+ * author wrote never happens, so the assertion runs against the slots'
+ * declared defaults and passes. `given = {slot: {count: 41}}` is the whole bug
+ * — `slots` is never seen, `count` stays 0, and `inc` makes the 1 the `expect`
+ * asks for.
+ *
+ * The unknown key's value is left unchecked on purpose: it belongs to a
+ * section that does not exist, so resolving the names inside it would report a
+ * second mistake the author did not make, at a position that stops existing as
+ * soon as the first is fixed.
+ */
+function sectionsOf(
+  t: TestDef,
+  part: TestPart,
+  errors: KumikiError[],
+): { section: string; value: Expr }[] {
+  const kind = t.testKind;
+  const out: { section: string; value: Expr }[] = [];
+  for (const f of recordFieldsOf(part === "given" ? t.given : t.expect)) {
+    const section = canonicalSection(kind, part, f.name);
+    if (section === undefined) {
+      const accepted = sectionNames(kind, part);
+      const nearest = nearestSection(kind, part, f.name);
+      const article = /^[aeiou]/.test(kind) ? "an" : "a";
+      errors.push({
+        code: "E0714",
+        kind: "test-section-unknown",
+        message:
+          `Unknown section "${f.name}" in ${article} ${kind} \`${part}\`` +
+          `${nearest ? ` — did you mean "${nearest}"?` : ""}` +
+          ` (accepted: ${accepted.join(", ")})`,
+        pos: f.pos,
+      });
+      continue;
+    }
+    out.push({ section, value: f.value });
+  }
+  return out;
 }
 
 /** The fields of `e` when it is a record literal, and none when it is not. */

@@ -909,7 +909,7 @@ A `given` / `expect` key in a test body names no section of that test kind. The 
 
 A name outside the set was read by nothing and reported by nothing, so the section simply did not happen. That is not a weaker test but a different one, and it passes:
 
-```
+```kumiki invalid
 test typo-section =
     reducer-test inc
         given  = {slot: {count: 41}, event: {type: ui.click, target: B}}
@@ -918,11 +918,14 @@ test typo-section =
 
 `slot` instead of `slots`, so the 41 is never set: `count` starts at its declared `0`, `inc` makes it `1`, and the `expect` holds — against a state the author did not choose.
 
-> `` Unknown section "<name>" in a <kind> `<given|expect>` — did you mean "<nearest>"? (accepted: <the kind's set>) ``
+> `` Unknown section "<name>" in a|an <kind> `<given|expect>` — did you mean "<nearest>"? (accepted: <the kind's set>) ``
+> `` Unknown section "<name>" in a|an <kind> `<given>` — "<name>" is an `expect` section (accepted: <the kind's set>) ``
 
-The names *inside* the unknown section are left unresolved: they belong to a section that does not exist, and reporting them would name a second mistake at a position that stops existing once the first is fixed.
+The accepted set is always named, because it is the answer whenever the nearest name is not one: the vocabulary is three words long, so printing it costs less than a guess, and two equally close names offer nothing at all. A name that is a section of the test's *other* clause — `effects` written in a `given` — is reported as that rather than as a misspelling: the name is right and the place is wrong, which no distance rule can say.
 
-**Fix**: Spell the section the way its kind writes it. The accepted set is in the message, and it is the same table `codegen/emit-test.ts` reads a section by — so a section the checker rejects is one nothing lowers.
+No name *inside* the unknown key is resolved: a name belonging to a section that does not exist would be a second diagnostic at a position that stops existing once the first is fixed. What still reports there is what is wrong wherever it is written — a wildcard in a `given` is [E0109](#e0109-test-wildcard-misuse) in any section, and survives fixing the section name.
+
+**Fix**: Spell the section the way its kind writes it. The accepted set is in the message, and it is the same table `codegen/emit-test.ts` reads a section by — so a section the checker rejects is one nothing lowers, and an `episode-test` `expect` it does not recognise throws at codegen rather than lowering to an assertion about nothing.
 
 ## E08xx — Runtime Hazards
 

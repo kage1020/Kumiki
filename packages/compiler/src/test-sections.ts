@@ -1,4 +1,5 @@
 import { type Expr, isTileExpr, type TestDef, type TileExpr } from "./ast.ts";
+import { levenshtein } from "./text-distance.ts";
 
 /**
  * The section vocabulary of a test body, per test kind (spec §8.1.1).
@@ -14,59 +15,56 @@ import { type Expr, isTileExpr, type TestDef, type TileExpr } from "./ast.ts";
  * passes, because `count` starts at its declared default and the 41 is never
  * set. The test asserts the reducer against a state nobody chose.
  *
- * Each entry maps a canonical section name to the other spellings the lowering
- * also reads. Only `episode-test`'s `expect` has any: `episodeExpectJs` has
- * always accepted the camelCase forms alongside the hyphenated ones the spec
- * writes, so they are accepted here too rather than becoming a diagnostic for
- * something codegen still lowers. The canonical name is the one a message
- * offers.
- *
  * An empty part is one with no sections at all: a `tile-test`'s `expect` is a
  * tile expression, a `property-test` asserts through its `invariant` clause,
  * and an `episode-test`'s given is the log it loads. The type of a section name
- * is derived from this table (see `GivenSection` / `ExpectSection`), so the
- * accessors below cannot name a section it does not list — which is what keeps
- * `codegen/emit-test.ts` and the checker reading one vocabulary.
+ * is derived from this table (see `SectionName`), so neither
+ * `codegen/emit-test.ts` nor the checker can name a section it does not list —
+ * which is what keeps the two of them reading one vocabulary.
+ *
+ * The `satisfies` binds the keys to the AST's own kind union, so a kind here
+ * that the parser cannot produce, and a kind the parser produces that is
+ * missing here, are both compile errors.
  */
 export const TEST_SECTIONS = {
   "reducer-test": {
-    given: { slots: [], event: [], mocks: [] },
-    expect: { slots: [], effects: [], panic: [] },
+    given: ["slots", "event", "mocks"],
+    expect: ["slots", "effects", "panic"],
   },
   "tile-test": {
-    given: { slots: [], in: [] },
-    expect: {},
+    given: ["slots", "in"],
+    expect: [],
   },
   "property-test": {
-    given: { slots: [], event: [] },
-    expect: {},
+    given: ["slots", "event"],
+    expect: [],
   },
   "episode-test": {
-    given: {},
-    expect: {
-      "slots-equal": ["slotsEqual"],
-      "no-panics": ["noPanics"],
-      "no-errors": ["noErrors"],
-    },
+    given: [],
+    expect: ["slots-equal", "no-panics", "no-errors"],
   },
-} as const satisfies Record<string, Record<TestPart, Record<string, readonly string[]>>>;
+} as const satisfies Record<TestDef["testKind"], Record<TestPart, readonly string[]>>;
 
 /** The two clauses whose value is a record of sections. */
 export type TestPart = "given" | "expect";
 
 export type TestKind = keyof typeof TEST_SECTIONS;
 
-/** The sections a kind's `given` accepts — `never` for a kind that has none. */
-export type GivenSection<K extends TestKind> = keyof (typeof TEST_SECTIONS)[K]["given"] & string;
+/**
+ * The sections `part` accepts, across every kind in `K` — `never` for a part
+ * that has none. Distributed over `K` rather than indexed by it, so a caller
+ * holding a union of kinds (the checker, walking a `given` for whatever kind
+ * the test is) gets the union of their sections rather than `never`.
+ */
+export type SectionName<K extends TestKind, P extends TestPart> = {
+  [KK in K]: (typeof TEST_SECTIONS)[KK][P][number];
+}[K];
 
-/** The sections a kind's `expect` accepts — `never` for a kind that has none. */
-export type ExpectSection<K extends TestKind> = keyof (typeof TEST_SECTIONS)[K]["expect"] & string;
+/** The sections a kind's `given` accepts. */
+export type GivenSection<K extends TestKind> = SectionName<K, "given">;
 
-type PartTable = Record<string, readonly string[]>;
-
-function partTable(kind: TestKind, part: TestPart): PartTable {
-  return TEST_SECTIONS[kind][part] as PartTable;
-}
+/** The sections a kind's `expect` accepts. */
+export type ExpectSection<K extends TestKind> = SectionName<K, "expect">;
 
 /** The fields of `e` when it is a record literal, and none when it is not. */
 function fieldsOf(e: Expr | TileExpr | undefined): { name: string; value: Expr }[] {
@@ -74,28 +72,27 @@ function fieldsOf(e: Expr | TileExpr | undefined): { name: string; value: Expr }
   return e.fields;
 }
 
-/**
- * The canonical name `written` spells, or `undefined` when the kind's part has
- * no such section. This is the checker's half of the table: it answers for a
- * name read off the source, where the accessors below answer for one the
- * compiler wrote.
- */
-export function canonicalSection(
-  kind: TestKind,
-  part: TestPart,
-  written: string,
-): string | undefined {
-  const table = partTable(kind, part);
-  if (Object.hasOwn(table, written)) return written;
-  for (const [name, aliases] of Object.entries(table)) {
-    if (aliases.includes(written)) return name;
-  }
-  return undefined;
+/** The names a kind's part accepts, in the order the table lists them. */
+export function sectionNames<K extends TestKind, P extends TestPart>(
+  kind: K,
+  part: P,
+): readonly SectionName<K, P>[] {
+  return TEST_SECTIONS[kind][part];
 }
 
-/** The canonical names a kind's part accepts, in the order the table lists them. */
-export function sectionNames(kind: TestKind, part: TestPart): string[] {
-  return Object.keys(partTable(kind, part));
+/**
+ * Whether `written` names a section of `kind`'s `part`. A type predicate rather
+ * than a lookup returning the name, because the answer is the narrowing: a
+ * caller that has asked this question can then dispatch on the name with the
+ * compiler checking the arms, which is the whole point of the table.
+ */
+export function isSectionName<K extends TestKind, P extends TestPart>(
+  kind: K,
+  part: P,
+  written: string,
+): written is SectionName<K, P> {
+  const names: readonly string[] = TEST_SECTIONS[kind][part];
+  return names.includes(written);
 }
 
 /**
@@ -110,7 +107,7 @@ export function givenSection<K extends TestKind>(
   kind: K,
   name: GivenSection<K>,
 ): Expr | undefined {
-  return sectionValue(t.given, kind, "given", name);
+  return fieldsOf(t.given).find((f) => f.name === name)?.value;
 }
 
 /** The value of one section of a test's `expect`. See `givenSection`. */
@@ -119,19 +116,7 @@ export function expectSection<K extends TestKind>(
   kind: K,
   name: ExpectSection<K>,
 ): Expr | undefined {
-  return sectionValue(t.expect, kind, "expect", name);
-}
-
-function sectionValue(
-  body: Expr | TileExpr | undefined,
-  kind: TestKind,
-  part: TestPart,
-  name: string,
-): Expr | undefined {
-  for (const f of fieldsOf(body)) {
-    if (canonicalSection(kind, part, f.name) === name) return f.value;
-  }
-  return undefined;
+  return fieldsOf(t.expect).find((f) => f.name === name)?.value;
 }
 
 /**
@@ -139,12 +124,16 @@ function sectionValue(
  * close to none of them — a suggestion that is not the word the author meant
  * sends the repair at the wrong name.
  *
- * A candidate qualifies on the threshold every name-suggest branch uses (≤ 2
- * edits, or ≤ 25% of the written name's length), or on being an abbreviation
- * of one: `slots-eq` is three edits from `slots-equal`, which no distance rule
- * this tight reaches, and `input` is three from `in`. The prefix rule is safe
- * here in a way it would not be over a program's names, because the candidates
- * are a closed set of three or four words fixed by the language.
+ * A candidate qualifies at 2 edits or fewer, or at no more than
+ * `ceil(written.length / 4)`, or on being an abbreviation of one at least three
+ * characters long: `slots-eq` is three edits from `slots-equal`, which no
+ * distance rule this tight reaches. The length floor is what keeps the
+ * two-character `in` from claiming every `tile-test` key that happens to start
+ * with it — `initial` means `slots`, and a rule without the floor answers `in`.
+ *
+ * A tie answers nothing. `no` is equidistant from `no-panics` and `no-errors`,
+ * and picking whichever the table lists first is a coin flip dressed as an
+ * answer; the diagnostic prints the accepted set either way.
  */
 export function nearestSection(
   kind: TestKind,
@@ -153,31 +142,18 @@ export function nearestSection(
 ): string | undefined {
   let best: string | undefined;
   let bestScore = Number.POSITIVE_INFINITY;
+  let tied = false;
   for (const name of sectionNames(kind, part)) {
     const d = levenshtein(written, name);
-    const abbreviates =
-      Math.min(written.length, name.length) >= 2 &&
-      (name.startsWith(written) || written.startsWith(name));
-    if (!abbreviates && d > 2 && d > Math.ceil(written.length * 0.25)) continue;
+    const abbreviates = name.length >= 3 && (name.startsWith(written) || written.startsWith(name));
+    if (!abbreviates && d > 2 && d > Math.ceil(written.length / 4)) continue;
     if (d < bestScore) {
       bestScore = d;
       best = name;
+      tied = false;
+    } else if (d === bestScore) {
+      tied = true;
     }
   }
-  return best;
-}
-
-function levenshtein(a: string, b: string): number {
-  const n = b.length;
-  // Rolling single-row DP — `prev` holds the previous row's distances.
-  let prev = Array.from({ length: n + 1 }, (_, j) => j);
-  for (let i = 1; i <= a.length; i++) {
-    const curr = [i, ...new Array<number>(n).fill(0)];
-    for (let j = 1; j <= n; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      curr[j] = Math.min((prev[j] ?? 0) + 1, (curr[j - 1] ?? 0) + 1, (prev[j - 1] ?? 0) + cost);
-    }
-    prev = curr;
-  }
-  return prev[n] ?? 0;
+  return tied ? undefined : best;
 }

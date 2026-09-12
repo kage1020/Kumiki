@@ -1,6 +1,14 @@
-import type { EffectDef, Expr, ReducerDef, TestDef, TileDef, TileExpr } from "../ast.ts";
+import {
+  assertNever,
+  type EffectDef,
+  type Expr,
+  type ReducerDef,
+  type TestDef,
+  type TileDef,
+  type TileExpr,
+} from "../ast.ts";
 import type { CodegenOptions } from "../codegen.ts";
-import { canonicalSection, expectSection, givenSection } from "../test-sections.ts";
+import { expectSection, givenSection, isSectionName } from "../test-sections.ts";
 import { bindRef, type EvalCtx, type GenCtx, makeEvalCtx } from "./context.ts";
 import { collectEmits, scanRunReducers } from "./emit-reducer.ts";
 import { tileExprJs } from "./emit-tile.ts";
@@ -311,11 +319,14 @@ function episodeExpectJs(e: Expr, ctx: EvalCtx): string {
   if (e.kind !== "RecordLit") return "{}";
   const parts: string[] = [];
   for (const f of e.fields) {
-    // The section table owns the spellings — the hyphenated ones the spec
-    // writes and the camelCase ones this lowering has always read — so a name
-    // it does not list (E0714) is skipped here rather than silently accepted
-    // under a fourth spelling.
-    switch (canonicalSection("episode-test", "expect", f.name)) {
+    if (!isSectionName("episode-test", "expect", f.name)) {
+      // Dropping it silently is what an episode-test asserting nothing is made
+      // of: `testkit` leaves `expectedSlots` null, skips both flags, and
+      // reports PASS. E0714 says so at check time; this is what a caller that
+      // skipped `check` gets, as with `effectListJs` and `episodeMockJs`.
+      throw new Error(`episode-test expect has no section "${f.name}"`);
+    }
+    switch (f.name) {
       case "slots-equal":
         // `from-log` is the literal that means "take the log's own values".
         parts.push(
@@ -330,6 +341,8 @@ function episodeExpectJs(e: Expr, ctx: EvalCtx): string {
       case "no-errors":
         parts.push(`noErrors: ${jsOfExpr(f.value, ctx)}`);
         break;
+      default:
+        assertNever(f.name);
     }
   }
   return `{ ${parts.join(", ")} }`;

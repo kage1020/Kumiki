@@ -887,7 +887,7 @@ strict-icons 検査は `check(program, { strictIcons: true, iconNames })` で有
 
 集合に無い名前は誰にも読まれず、誰にも報告されなかった。つまりそのセクションは起こらなかった。これはテストが弱くなるのではなく別のテストになるということであり、しかも成功する：
 
-```
+```kumiki invalid
 test typo-section =
     reducer-test inc
         given  = {slot: {count: 41}, event: {type: ui.click, target: B}}
@@ -896,11 +896,14 @@ test typo-section =
 
 `slots` ではなく `slot` なので 41 は決して設定されない：`count` は宣言された `0` から始まり、`inc` が `1` にし、`expect` は成立する——作者が選んでいない状態に対して。
 
-> `` Unknown section "<name>" in a <kind> `<given|expect>` — did you mean "<nearest>"? (accepted: <その種別の集合>) ``
+> `` Unknown section "<name>" in a|an <kind> `<given|expect>` — did you mean "<nearest>"? (accepted: <その種別の集合>) ``
+> `` Unknown section "<name>" in a|an <kind> `<given>` — "<name>" is an `expect` section (accepted: <その種別の集合>) ``
 
-未知セクションの*中*の名前は解決しない：存在しないセクションに属しており、報告したところで、最初の間違いを直した瞬間に消える位置で 2 つ目の間違いを名指すだけだからである。
+受理される集合は常に示す。最も近い名前が答えでない場合の答えがそれだからであり、語彙は 3 語しかないので推測より安い——同じ距離の候補が 2 つあるときは何も提示しない。テストの*もう一方*の節のセクション名（`given` に書かれた `effects` など）は、綴り間違いではなく位置の間違いとして報告する。名前は正しく場所が違うのであって、距離の規則には言えないことである。
 
-**修正**：その種別の綴りでセクション名を書く。受理される集合はメッセージに載っており、それは `codegen/emit-test.ts` がセクションを読むのと同じテーブルである——checker が拒否するセクションは、どこも lowering しないセクションである。
+未知キーの*中*の名前は解決しない：存在しないセクションに属する名前は、最初の間違いを直した瞬間に消える位置に出る 2 つ目の診断になるからである。そこでもなお報告されるのは、どこに書かれていても間違っているもの——`given` の中のワイルドカードはどのセクションでも [E0109](#e0109-test-wildcard-misuse) であり、セクション名を直しても残る。
+
+**修正**：その種別の綴りでセクション名を書く。受理される集合はメッセージに載っており、それは `codegen/emit-test.ts` がセクションを読むのと同じテーブルである——checker が拒否するセクションは、どこも lowering しないセクションであり、`episode-test` の `expect` が認識しないセクションは codegen で throw する（何も主張しないテストに降ろさない）。
 
 ## E08xx — ランタイムハザード
 

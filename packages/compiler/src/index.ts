@@ -52,4 +52,8 @@ export {
 // internal, and only the candidate-set question a repair asks is published.
 export { typeCandidates } from "./stdlib-types.ts";
 export { collectTimerNames, variantTagsOf } from "./symbols.ts";
+// The distance every did-you-mean measures with. Published because
+// `kumiki fix` ranks its own candidate sets with it, and two copies of one
+// metric is two answers to "which name did they mean".
+export { levenshtein } from "./text-distance.ts";
 export { A11Y_CODES, check, type KumikiError, ROUTE_SLOT_FIELDS } from "./typecheck.ts";

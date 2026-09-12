@@ -43,12 +43,16 @@ closed set per kind and per clause:
 | `property-test` | `slots`, `event` | none; the assertion is the `invariant` clause |
 | `episode-test` | none; the loaded log is the given | `slots-equal`, `no-panics`, `no-errors` |
 
-A key outside its kind's set is **E0714**, at the key's own position and with
-the nearest accepted name offered. The section is what the lowering reads the
-test's setup out of, so a dropped one does not weaken the test — it replaces
-it: `given = {slot: {count: 41}}` never sets anything, and the reducer runs
-against the slot's declared default. The names *inside* the dropped section are
-left unresolved, because they belong to a section that does not exist.
+A key outside its kind's set is **E0714**, at the key's own position, with the
+accepted set named and the nearest of them offered when one is close enough.
+The section is what the lowering reads the test's setup out of, so a dropped
+one does not weaken the test — it replaces it: `given = {slot: {count: 41}}`
+never sets anything, and the reducer runs against the slot's declared default.
+
+No name *inside* the dropped key is resolved, because it belongs to a section
+that does not exist. What still reports there is what is wrong wherever it is
+written: a wildcard in a `given` is **E0109** in any section, and survives
+fixing the section name.
 
 `given.event.type` names an event, whose vocabulary belongs to the trigger
 grammar rather than to the expression layer. `target` is only a tile when that

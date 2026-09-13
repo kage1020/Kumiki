@@ -949,8 +949,11 @@ describe("the result type of a qualified `show`", () => {
   //
   // That is the expensive direction: a program the runtime runs, refused, with
   // no spelling of it left for the author — `ms.show` is the method, not this.
-  // `fresh` and `parse` are deliberately not here: their result *is* the
-  // qualifier's, so the qualifier answering for them is correct (#344).
+  // `fresh` and `parse` are deliberately not here, for two different reasons:
+  // `fresh` produces the qualifier's own type, so the qualifier answering it is
+  // correct; `parse` produces `Option(T)` of the qualifier and is answered with
+  // a bare `T`, which is wrong but is its own defect (#424), not this one
+  // (#344).
   const QUALIFIERS = [
     // The primitives, which never reach `sym.types`.
     "Int",

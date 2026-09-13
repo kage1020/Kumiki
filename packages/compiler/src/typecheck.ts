@@ -3310,8 +3310,13 @@ function inferType(e: Expr, sym: SymbolTable, ctx: Ctx): TypeExpr | null {
       // method `ms.show` being a different expression (#344). The read is
       // ordered the way the lowering is, which is what keeps the two agreeing.
       //
-      // The other two members of `TYPE_MEMBER_CALLS` stay below deliberately:
-      // `fresh` and `parse` produce the qualifier's type, not a fixed one.
+      // The other two members of `TYPE_MEMBER_CALLS` stay below. For `fresh`
+      // that is the right answer: it produces the qualifier's own type. For
+      // `parse` it is not — the spec gives it `Option(T)` of the qualifier
+      // (stdlib §2.4.3) and the branch returns a bare `T`, so an
+      // `Option(Duration)` target refuses `Duration.parse(t)` and a `Duration`
+      // one accepts it. That is a separate defect, #424, left as it was rather
+      // than widened into this fix.
       if (qualifier !== null && isQualifierName(qualifier) && e.callee.slice(dot + 1) === "show")
         return prim("Text", e.pos);
       // `Duration.ms(500)` and friends build the standard library's `Duration`;
